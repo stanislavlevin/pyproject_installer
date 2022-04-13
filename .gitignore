@@ -1,0 +1,28 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+/build/
+/dist/
+*.egg
+*.eggs
+*.egg-info/
+*.dist-info/
+MANIFEST
+
+# Unit test / coverage reports
+.tox/
+htmlcov/
+.coverage
+.coverage.*
+.*cache
+
+# Misc
+*~
+.*.sw?
+.env/
+.venv/
+
+# win files
+*.exe

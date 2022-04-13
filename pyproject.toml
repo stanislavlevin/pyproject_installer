@@ -1,0 +1,123 @@
+[project]
+name = "pyproject-installer"
+description = "Pyproject installer"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+  {name = "Stanislav Levin", email = "slev@altlinux.org"},
+]
+keywords = ["packaging", "PEP517", "build", "install"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries",
+]
+dynamic = ["version"]
+
+[project.urls]
+source = "https://github.com/stanislavlevin/pyproject_installer"
+tracker = "https://github.com/stanislavlevin/pyproject_installer/issues"
+
+[build-system]
+requires = []
+build-backend = "backend"
+backend-path = ["."]
+
+[tool.pyproject_installer.backend]
+package_dir = "src"
+version_file = "src/pyproject_installer/version.py"
+include_dirs_sdist = ["backend"]
+
+[tool.black]
+line-length = 80
+extend-exclude = '''
+    .*/_vendor/.*
+'''
+
+[tool.pylint."master"]
+ignore-paths = [
+    ".*/_vendor/.*",
+]
+suggestion-mode = "yes"
+persistent="no"
+
+[tool.pylint."messages control"]
+enable = [
+    "all",
+    "useless-suppression",
+]
+
+disable = [
+    "bad-inline-option",
+    "c-extension-no-member",
+    "deprecated-pragma",
+    "file-ignored",
+    "locally-disabled",
+    "raw-checker-failed",
+    "suppressed-message",
+    "use-symbolic-message-instead",
+    "bad-indentation",
+    "broad-except",
+    "dangerous-default-value",
+    "duplicate-code",
+    "fixme",
+    "invalid-name",
+    "line-too-long",
+    "missing-docstring",
+    "protected-access",
+    "raise-missing-from",
+    "redefined-builtin",
+    "redefined-outer-name",
+    "super-init-not-called",
+    "superfluous-parens",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-nested-blocks",
+    "too-many-public-methods",
+    "too-many-return-statements",
+    "too-many-statements",
+    "trailing-newlines",
+    "trailing-whitespace",
+    "ungrouped-imports",
+    "unused-argument",
+    "wrong-import-order",
+    "wrong-import-position",
+    "consider-using-with",  # pylint 2.8.0, contextmanager is not mandatory
+    "consider-using-max-builtin",  # pylint 2.8.0, code can be more readable
+    "consider-using-min-builtin",  # pylint 2.8.0, code can be more readable
+    "consider-using-f-string",  # pylint 2.11.0, format can be more readable
+]
+
+[tool.pylint."reports"]
+output-format = "colorized"
+
+[tool.coverage.run]
+source = [
+    "pyproject_installer",
+]
+omit = [
+    "*/_vendor/*",
+]
+
+[tool.coverage.report]
+skip_covered = false
+show_missing = true
+
+[tool.coverage.paths]
+source = [
+    "src/pyproject_installer",
+    "*/.tox/*/lib/python*/site-packages/pyproject_installer",
+    "*/src/pyproject_installer",
+]
