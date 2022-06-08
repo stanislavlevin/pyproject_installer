@@ -86,10 +86,6 @@ def normalized_name(request):
                 None,
             ),
             "pdm-pep517",
-            marks=pytest.mark.xfail(
-                reason="https://github.com/pdm-project/pdm-pep517/issues/90",
-                strict=True,
-            ),
             id="pdm-pep517",
         ),
         pytest.param(
