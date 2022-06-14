@@ -125,3 +125,8 @@ source = [
     "*/.tox/*/lib/python*/site-packages/pyproject_installer",
     "*/src/pyproject_installer",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+]
