@@ -275,8 +275,6 @@ def test_build_cli_backend_settings_empty(mock_build_wheel):
     ("key", '["val1", "val2"]'),
 )
 def test_build_cli_invalid_backend_settings(config, mock_build_wheel):
-    srcdir = Path.cwd()
-    outdir = srcdir / "dist"
     build_args = ["build", "--backend-config-settings", config]
 
     with pytest.raises(ValueError) as exc:
@@ -350,15 +348,18 @@ def test_install_cli_wheel_destdir(
 
 
 def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
+    wheel = Path("/wheel.whl")
     installer_tool = "my_installer"
-    install_args = ["install", "--installer", installer_tool]
+    install_args = ["install", str(wheel), "--installer", installer_tool]
 
     destdir = Path("/")
-    wheel = Path.cwd() / "dist" / "foo.whl"
     i_args = (wheel,)
     i_kwargs = {"destdir": destdir, "installer": installer_tool}
 
     project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+    # check if wheel path was not read from tracker
+    mock_read_tracker.assert_not_called()
 
 
 def test_install_default_wheel_missing_tracker(mocker, mock_read_tracker):
