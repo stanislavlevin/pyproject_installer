@@ -1,16 +1,13 @@
 from contextlib import suppress
-from pathlib import Path
 import logging
 import json
 import textwrap
-import shutil
 import subprocess
 import sys
 
 import pytest
 
 from pyproject_installer.build_cmd.helper import backend_caller
-from pyproject_installer.build_cmd._build import BACKEND_CALLER
 
 
 @pytest.fixture
@@ -477,7 +474,7 @@ def test_backend_object(be_object, build_backend, wheeldir):
 def test_in_tree_backend_object(
     be_object, in_tree_build_backend, wheeldir, build_backend_path
 ):
-    be = in_tree_build_backend(*be_object)
+    in_tree_build_backend(*be_object)
 
     hook_result = backend_caller.call_hook(
         ":".join(be_object),

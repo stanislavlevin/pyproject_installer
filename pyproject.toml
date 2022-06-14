@@ -43,8 +43,11 @@ extend-exclude = '''
 '''
 
 [tool.pylint."master"]
+recursive = true
 ignore-paths = [
     ".*/_vendor/.*",
+    '.*/\.git/.*',
+    '.*/\.tox/.*',
 ]
 suggestion-mode = "yes"
 persistent="no"
@@ -98,6 +101,7 @@ disable = [
     "consider-using-max-builtin",  # pylint 2.8.0, code can be more readable
     "consider-using-min-builtin",  # pylint 2.8.0, code can be more readable
     "consider-using-f-string",  # pylint 2.11.0, format can be more readable
+    "subprocess-run-check",  # subprocess result can be check later or ignored
 ]
 
 [tool.pylint."reports"]

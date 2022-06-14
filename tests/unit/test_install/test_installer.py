@@ -80,7 +80,6 @@ class WheelContents(MutableMapping):
             self.record = ws.getvalue()
 
     def drop_from_record(self, file):
-        new_records = []
         with StringIO(self.record, newline="") as rs, StringIO(
             newline=""
         ) as ws:
