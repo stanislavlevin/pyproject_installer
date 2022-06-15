@@ -76,38 +76,39 @@ python -m pyproject_installer build
 
 Build positional arguments:
 <pre>
-<em>description</em>: source directory
-<em>default</em>: current working directory
-<em>example</em>: python -m pyproject_installer build .
+<em><strong>description</strong></em>: source directory
+<em><strong>default</strong></em>: current working directory
+<em><strong>example</strong></em>: python -m pyproject_installer build .
 </pre>
 
 Build options:
 <pre>
-<em>name</em>: --outdir OUTDIR, -o OUTDIR
-<em>description</em>: output directory for built wheel
-<em>default</em>: {srcdir}/dist
-<em>example</em>: python -m pyproject_installer build --outdir ~/outdir
+<em><strong>name</strong></em>: --outdir OUTDIR, -o OUTDIR
+<em><strong>description</strong></em>: output directory for built wheel
+<em><strong>default</strong></em>: {srcdir}/dist
+<em><strong>example</strong></em>: python -m pyproject_installer build --outdir ~/outdir
 </pre>
 Upon successful build `pyproject_installer` dumps wheel filename into
 `{OUTDIR}/.wheeltracker`.
 
 <pre>
-<em>name</em>: --sdist
-<em>description</em>: build source distribution(sdist) instead of binary
-one(wheel).<br> Note: installer supports only wheel format.
-<em>default</em>: build wheel
-<em>example</em>: python -m pyproject_installer build --sdist
+<em><strong>name</strong></em>: --sdist
+<em><strong>description</strong></em>: build source distribution(sdist) instead of binary
+one(wheel).
+<em><strong>note</strong></em>: installer supports only wheel format.
+<em><strong>default</strong></em>: build wheel
+<em><strong>example</strong></em>: python -m pyproject_installer build --sdist
 </pre>
 
 <pre>
-<em>name</em>: --backend-config-settings BACKEND_CONFIG_SETTINGS
-<em>description</em>: ad-hoc configuration for build backend as dumped JSON dictionary
-<em>default</em>: None
+<em><strong>name</strong></em>: --backend-config-settings BACKEND_CONFIG_SETTINGS
+<em><strong>description</strong></em>: ad-hoc configuration for build backend as dumped JSON dictionary
+<em><strong>default</strong></em>: None
 
-Example of passing `config_settings` for setuptools backend:
+Example of passing <em><strong>config_settings</strong></em> for setuptools backend:
 python -m pyproject_installer build --backend-config-settings='{"--global-option": ["--python-tag=sometag", "--build-number=123"]}'
 
-Example of passing `config_settings` for pdm backend:
+Example of passing <em><strong>config_settings</strong></em> for pdm backend:
 python -m pyproject_installer build --backend-config-settings='{"--python-tag": "sometag"}'
 </pre>
 
@@ -118,34 +119,34 @@ python -m pyproject_installer install
 
 Install positional arguments:
 <pre>
-<em>description</em>: wheel file to install
-<em>default</em>: contructed as directory {cwd}/dist and wheel filename read from
+<em><strong>description</strong></em>: wheel file to install
+<em><strong>default</strong></em>: contructed as directory {cwd}/dist and wheel filename read from
 {cwd}/dist/.wheeltracker
-<em>example</em>: python -m pyproject_installer install wheel.whl
+<em><strong>example</strong></em>: python -m pyproject_installer install wheel.whl
 </pre>
 
 Install options:
 <pre>
-<em>name</em>: --destdir DESTDIR, -d DESTDIR
-<em>description</em>: Wheel installation root will be prepended with destdir
-<em>default</em>: /
-<em>example</em>: python -m pyproject_installer install --destdir ~/destdir
+<em><strong>name</strong></em>: --destdir DESTDIR, -d DESTDIR
+<em><strong>description</strong></em>: Wheel installation root will be prepended with destdir
+<em><strong>default</strong></em>: /
+<em><strong>example</strong></em>: python -m pyproject_installer install --destdir ~/destdir
 </pre>
 
 <pre>
-<em>name</em>: --installer INSTALLER
-<em>description</em>: Name of installer to be recorded in dist-info/INSTALLER
-<em>default</em>: pyproject_installer
-<em>example</em>: python -m pyproject_installer install --installer custom_installer
+<em><strong>name</strong></em>: --installer INSTALLER
+<em><strong>description</strong></em>: Name of installer to be recorded in dist-info/INSTALLER
+<em><strong>default</strong></em>: pyproject_installer
+<em><strong>example</strong></em>: python -m pyproject_installer install --installer custom_installer
 </pre>
 
 <pre>
-<em>name</em>: --no-strip-dist-info
-<em>description</em>: Don't strip dist-info. By default only `METADATA` and 
-`entry_points.txt` files are allowed in `dist-info` directory.<br>Note: RECORD 
-is unconditionally filtered out.
-<em>default</em>: False
-<em>example</em>: python -m pyproject_installer install --no-strip-dist-info
+<em><strong>name</strong></em>: --no-strip-dist-info
+<em><strong>description</strong></em>: Don't strip dist-info. By default only <em><strong>METADATA</strong></em>
+and <em><strong>entry_points.txt</strong></em> files are allowed in <em>dist-info</em> directory.
+<em><strong>note</strong></em>: <em><strong>RECORD</strong></em> is unconditionally filtered out.
+<em><strong>default</strong></em>: False
+<em><strong>example</strong></em>: python -m pyproject_installer install --no-strip-dist-info
 </pre>
 
 ## Comparison with other tools
