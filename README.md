@@ -139,6 +139,14 @@ Install options:
 <em>example</em>: python -m pyproject_installer install --installer custom_installer
 </pre>
 
+<pre>
+<em>name</em>: --no-strip-dist-info
+<em>description</em>: Don't strip dist-info. By default only `METADATA` and 
+`entry_points.txt` files are allowed in `dist-info` directory.<br>Note: RECORD 
+is unconditionally filtered out.
+<em>default</em>: False
+<em>example</em>: python -m pyproject_installer install --no-strip-dist-info
+</pre>
 
 ## Comparison with other tools
 

@@ -32,6 +32,8 @@ if __name__ == "__main__":
     sys.exit({main}())
 """
 
+ALLOW_DIST_INFO_LIST = ("METADATA", "entry_points.txt")
+DENY_DIST_INFO_LIST = ("RECORD",)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class WheelFile:
 
         # zipfile.Path mutates namelist of original object by adding dirs,
         # while ZipFile.NameToInfo includes only files and fails on extract
-        self.memberlist = self._zipfile.namelist()
+        self._memberlist = self._zipfile.namelist()
 
         self.root = ZipPath(self._zipfile)
         self.dist_info = (
@@ -91,6 +93,10 @@ class WheelFile:
         self.data = self.root / f"{self.dist_name}-{self.dist_version}.data"
         self._wheel_metadata = None
         self.validate()
+
+    @property
+    def memberlist(self):
+        yield from self._memberlist
 
     @property
     def wheel_metadata(self):
@@ -335,8 +341,10 @@ class WheelFile:
 
         return dist_name, dist_version
 
-    def extract(self, path):
-        self._zipfile.extractall(path, members=self.memberlist)
+    def extract(self, path, members=None):
+        if members is None:
+            members = self.memberlist
+        self._zipfile.extractall(path, members=members)
 
     def __enter__(self):
         return self
@@ -477,7 +485,35 @@ def validate_destdir(destdir):
     return destdir.resolve(strict=True)
 
 
-def install_wheel(wheel_path, destdir, installer="pyproject_installer"):
+def filter_dist_info(dist_info, members, strip_dist_info=True):
+    """
+    If `strip_dist_info` is True then only `allow_list` is allowed in
+    dist-info directory. The `deny_list` is unconditionally filtered out.
+    """
+    dist_info_path = Path(dist_info)
+    allow_list = [str(dist_info_path / f) for f in ALLOW_DIST_INFO_LIST]
+    deny_list = [str(dist_info_path / f) for f in DENY_DIST_INFO_LIST]
+
+    for file in members:
+        # select files from root's dist-info dir
+        if Path(file).parts[0] == str(dist_info_path):
+            if strip_dist_info and file not in allow_list:
+                logger.debug("Filtering out not allowed file: %s", file)
+                continue
+
+            if file in deny_list:
+                logger.debug("Filtering out denied file: %s", file)
+                continue
+
+        yield file
+
+
+def install_wheel(
+    wheel_path,
+    destdir,
+    installer="pyproject_installer",
+    strip_dist_info=True,
+):
     wheel_path = validate_wheel_path(wheel_path)
     destdir = validate_destdir(destdir)
 
@@ -494,24 +530,23 @@ def install_wheel(wheel_path, destdir, installer="pyproject_installer"):
         extraction_root = whl.extraction_root(scheme)
         rootdir = destdir / extraction_root.relative_to(extraction_root.root)
         logger.info("Wheel installation root: %s", rootdir)
-        logger.info("Extracting wheel")
-        whl.extract(rootdir)
 
-    dist_info_path = rootdir / f"{dist_name}-{dist_version}.dist-info"
+        dist_info = f"{dist_name}-{dist_version}.dist-info"
+        members = filter_dist_info(
+            dist_info, members=whl.memberlist, strip_dist_info=strip_dist_info
+        )
+
+        logger.info("Extracting wheel")
+        whl.extract(rootdir, members=members)
+
+    dist_info_path = rootdir / dist_info
 
     if (dist_info_path / "entry_points.txt").exists():
         generate_entrypoints_scripts(
             dist_info_path, scheme=scheme, destdir=destdir
         )
 
-    # PEP627
-    # Two files in installed .dist-info directories are made optional: RECORD
-    # (which PEP 376 lists as mandatory, but suggests it can be left out for
-    # "system packages"), and INSTALLER.
-    record_path = dist_info_path / "RECORD"
-    record_path.unlink()
-
-    # and write installer of this distribution
+    # write installer of this distribution
     installer_path = dist_info_path / "INSTALLER"
     installer_path.write_text(f"{installer}\n", encoding="utf-8")
 

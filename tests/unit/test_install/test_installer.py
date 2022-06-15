@@ -17,6 +17,8 @@ from pyproject_installer.install_cmd._install import (
     digest_for_record,
     get_installation_scheme,
     SCRIPT_TEMPLATE,
+    ALLOW_DIST_INFO_LIST,
+    DENY_DIST_INFO_LIST,
 )
 
 
@@ -464,10 +466,20 @@ def test_extraction_root(purelib, wheel_contents, wheel, installed_wheel):
     assert dest_wheel.sitedir.is_dir()
 
 
-def test_unlinked_record(wheel_contents, wheel, installed_wheel):
+@pytest.mark.parametrize(
+    "strip_dist_info", (None, True, False), ids=("default", "strip", "no_strip")
+)
+def test_record_not_installed(
+    strip_dist_info, wheel_contents, wheel, installed_wheel
+):
+    """Check RECORD is not installed"""
     contents = wheel_contents()
     dest_wheel = installed_wheel()
-    install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
+    kwargs = {"destdir": dest_wheel.destdir}
+    if strip_dist_info is not None:
+        kwargs["strip_dist_info"] = strip_dist_info
+
+    install_wheel(wheel(contents=contents), **kwargs)
 
     assert not (dest_wheel.distinfo / "RECORD").exists()
 
@@ -506,16 +518,48 @@ def test_data_removed(wheel_contents, wheel, installed_wheel):
     assert not dest_wheel.data.exists()
 
 
-def test_installation_filelist(wheel_contents, wheel, installed_wheel):
+@pytest.mark.parametrize(
+    "strip_dist_info", (None, True, False), ids=("default", "strip", "no_strip")
+)
+def test_installation_filelist(
+    strip_dist_info, wheel_contents, wheel, installed_wheel
+):
     contents = wheel_contents()
+    contents[
+        "foo-1.0.dist-info/entry_points.txt"
+    ] = "[console_scripts]\nbar = foo:main\n"
+
     dest_wheel = installed_wheel()
-    install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
-    expected_filelist = {dest_wheel.sitedir / f for f in contents.keys()}
+    kwargs = {"destdir": dest_wheel.destdir}
+    if strip_dist_info is not None:
+        kwargs["strip_dist_info"] = strip_dist_info
+
+    install_wheel(wheel(contents=contents), **kwargs)
+
+    expected_filelist = set()
+    allowed_files = {
+        str(Path(contents.distinfo) / x) for x in ALLOW_DIST_INFO_LIST
+    }
+    deny_files = {str(Path(contents.distinfo) / x) for x in DENY_DIST_INFO_LIST}
+
+    for f in contents.keys():
+        if (
+            strip_dist_info is not False
+            and f.startswith(contents.distinfo)
+            and f not in allowed_files
+        ):
+            continue
+
+        # unconditionally stripped by installer
+        if f in deny_files:
+            continue
+
+        expected_filelist.add(dest_wheel.sitedir / f)
+
     # written by installer
     expected_filelist.add(dest_wheel.distinfo / "INSTALLER")
-    # removed by installer
-    expected_filelist.remove(dest_wheel.distinfo / "RECORD")
-
+    # console script
+    expected_filelist.add(dest_wheel.scripts / "bar")
     assert dest_wheel.filelist() == expected_filelist
 
 
@@ -534,6 +578,11 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
     install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
 
     expected_filelist = set()
+    allowed_files = {
+        str(Path(contents.distinfo) / x) for x in ALLOW_DIST_INFO_LIST
+    }
+    deny_files = {str(Path(contents.distinfo) / x) for x in DENY_DIST_INFO_LIST}
+
     for f in contents.keys():
         if f == data_name:
             expected_filelist.add(
@@ -545,9 +594,13 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
             )
             continue
 
-        # removed by installer
-        if f == contents.record_key:
+        if f.startswith(contents.distinfo) and f not in allowed_files:
             continue
+
+        # unconditionally stripped by installer
+        if f in deny_files:
+            continue
+
         expected_filelist.add(dest_wheel.sitedir / f)
 
     # written by installer
