@@ -37,7 +37,12 @@ def build(args):
 
 def install(args):
     wheel = default_built_wheel() if args.wheel is None else args.wheel
-    install_wheel(wheel, destdir=args.destdir, installer=args.installer)
+    install_wheel(
+        wheel,
+        destdir=args.destdir,
+        installer=args.installer,
+        strip_dist_info=args.strip_dist_info,
+    )
 
 
 def default_built_wheel():
@@ -168,6 +173,17 @@ def main_parser(prog):
         help=(
             "Name of installer to be recorded in dist-info/INSTALLER "
             "(default: pyproject_installer)"
+        ),
+    )
+    parser_install.add_argument(
+        "--no-strip-dist-info",
+        dest="strip_dist_info",
+        action="store_false",
+        help=(
+            "Don't strip dist-info. By default only METADATA and "
+            "entry_points.txt files are allowed in dist-info directory. "
+            "Note: RECORD is unconditionally filtered out. "
+            "(default: False)"
         ),
     )
     parser_install.set_defaults(main=install)

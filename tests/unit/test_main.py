@@ -294,7 +294,11 @@ def test_install_cli_default(mocker, mock_install_wheel, mock_read_tracker):
     wheel = Path.cwd() / "dist" / "foo.whl"
     wheel_tracker = wheel.parent / project_main.WHEEL_TRACKER
     i_args = (wheel,)
-    i_kwargs = {"destdir": destdir, "installer": "pyproject_installer"}
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": "pyproject_installer",
+        "strip_dist_info": True,
+    }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
@@ -309,7 +313,11 @@ def test_install_cli_destdir(mocker, mock_install_wheel, mock_read_tracker):
     wheel = Path.cwd() / "dist" / "foo.whl"
     wheel_tracker = wheel.parent / project_main.WHEEL_TRACKER
     i_args = (wheel,)
-    i_kwargs = {"destdir": destdir, "installer": "pyproject_installer"}
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": "pyproject_installer",
+        "strip_dist_info": True,
+    }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
@@ -323,7 +331,11 @@ def test_install_cli_wheel(mocker, mock_install_wheel, mock_read_tracker):
 
     destdir = Path("/")
     i_args = (wheel,)
-    i_kwargs = {"destdir": destdir, "installer": "pyproject_installer"}
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": "pyproject_installer",
+        "strip_dist_info": True,
+    }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
@@ -339,7 +351,11 @@ def test_install_cli_wheel_destdir(
     install_args = ["install", str(wheel), "--destdir", str(destdir)]
 
     i_args = (wheel,)
-    i_kwargs = {"destdir": destdir, "installer": "pyproject_installer"}
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": "pyproject_installer",
+        "strip_dist_info": True,
+    }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
@@ -354,12 +370,32 @@ def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
 
     destdir = Path("/")
     i_args = (wheel,)
-    i_kwargs = {"destdir": destdir, "installer": installer_tool}
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": installer_tool,
+        "strip_dist_info": True,
+    }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
     # check if wheel path was not read from tracker
     mock_read_tracker.assert_not_called()
+
+
+def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
+    install_args = ["install", "--no-strip-dist-info"]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": "pyproject_installer",
+        "strip_dist_info": False,
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
 
 
 def test_install_default_wheel_missing_tracker(mocker, mock_read_tracker):
