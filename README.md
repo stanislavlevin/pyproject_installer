@@ -6,7 +6,9 @@ This tool is intended to build wheel from Python source tree and install it.
 ## Description
 
 - Supported platform: Unix.<br>
-  Currently, the only platform-specific part is the pipe.
+  Currently, platform-specific parts:
+  - pipe is used for calling build backend hooks in subprocess
+  - script wrappers are generated only for Unix systems
 
 - OS environment of this project is a `network-isolated` environment, which
   implies that a local loopback interface is the only available network
