@@ -60,11 +60,17 @@ This tool is intended to build wheel from Python source tree and install it.
     fragile, and no RECORD file is better than one that does not correspond to
     reality.
 
-- INSTALLER is populated with `pyproject_installer` as installer by default.<br>
+- INSTALLER file is not installed by default(optional).<br>
   https://peps.python.org/pep-0627/#optional-installer-file:
   > The INSTALLER file is also made optional, and specified to be used for
     informational purposes only. It is still a single-line text file containing
     the name of the installer.
+
+  https://packaging.python.org/en/latest/specifications/recording-installed-packages/#the-installer-file:
+  > This value should be used for informational purposes only. For example, if a
+    tool is asked to uninstall a project but finds no RECORD file, it may
+    suggest that the tool named in INSTALLER may be able to do the
+    uninstallation.
 
 
 ## Usage
@@ -136,7 +142,7 @@ Install options:
 <pre>
 <em><strong>name</strong></em>: --installer INSTALLER
 <em><strong>description</strong></em>: Name of installer to be recorded in dist-info/INSTALLER
-<em><strong>default</strong></em>: pyproject_installer
+<em><strong>default</strong></em>: None, INSTALLER will be omitted
 <em><strong>example</strong></em>: python -m pyproject_installer install --installer custom_installer
 </pre>
 

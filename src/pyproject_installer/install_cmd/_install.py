@@ -511,7 +511,7 @@ def filter_dist_info(dist_info, members, strip_dist_info=True):
 def install_wheel(
     wheel_path,
     destdir,
-    installer="pyproject_installer",
+    installer=None,
     strip_dist_info=True,
 ):
     wheel_path = validate_wheel_path(wheel_path)
@@ -521,7 +521,6 @@ def install_wheel(
     logger.info("Wheel directory: %s", wheel_path.parent)
     logger.info("Wheel filename: %s", wheel_path.name)
     logger.info("Destination: %s", destdir)
-    logger.info("Installer: %s", installer)
 
     with WheelFile(wheel_path) as whl:
         dist_name = whl.dist_name
@@ -546,9 +545,10 @@ def install_wheel(
             dist_info_path, scheme=scheme, destdir=destdir
         )
 
-    # write installer of this distribution
-    installer_path = dist_info_path / "INSTALLER"
-    installer_path.write_text(f"{installer}\n", encoding="utf-8")
+    if installer is not None:
+        # write installer of this distribution if requested
+        installer_path = dist_info_path / "INSTALLER"
+        installer_path.write_text(f"{installer}\n", encoding="utf-8")
 
     data_path = rootdir / f"{dist_name}-{dist_version}.data"
     if data_path.exists():

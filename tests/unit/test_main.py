@@ -296,7 +296,7 @@ def test_install_cli_default(mocker, mock_install_wheel, mock_read_tracker):
     i_args = (wheel,)
     i_kwargs = {
         "destdir": destdir,
-        "installer": "pyproject_installer",
+        "installer": None,
         "strip_dist_info": True,
     }
 
@@ -315,7 +315,7 @@ def test_install_cli_destdir(mocker, mock_install_wheel, mock_read_tracker):
     i_args = (wheel,)
     i_kwargs = {
         "destdir": destdir,
-        "installer": "pyproject_installer",
+        "installer": None,
         "strip_dist_info": True,
     }
 
@@ -333,7 +333,7 @@ def test_install_cli_wheel(mocker, mock_install_wheel, mock_read_tracker):
     i_args = (wheel,)
     i_kwargs = {
         "destdir": destdir,
-        "installer": "pyproject_installer",
+        "installer": None,
         "strip_dist_info": True,
     }
 
@@ -353,7 +353,7 @@ def test_install_cli_wheel_destdir(
     i_args = (wheel,)
     i_kwargs = {
         "destdir": destdir,
-        "installer": "pyproject_installer",
+        "installer": None,
         "strip_dist_info": True,
     }
 
@@ -390,7 +390,7 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
     i_args = (wheel,)
     i_kwargs = {
         "destdir": destdir,
-        "installer": "pyproject_installer",
+        "installer": None,
         "strip_dist_info": False,
     }
 
