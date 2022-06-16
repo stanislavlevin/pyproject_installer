@@ -168,11 +168,10 @@ def main_parser(prog):
     )
     parser_install.add_argument(
         "--installer",
-        default="pyproject_installer",
         type=str,
         help=(
             "Name of installer to be recorded in dist-info/INSTALLER "
-            "(default: pyproject_installer)"
+            "(default: None, INSTALLER will be omitted)"
         ),
     )
     parser_install.add_argument(

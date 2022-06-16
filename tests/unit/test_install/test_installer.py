@@ -489,9 +489,7 @@ def test_installer_tool_default(wheel_contents, wheel, installed_wheel):
     dest_wheel = installed_wheel()
     install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
 
-    assert (
-        dest_wheel.distinfo / "INSTALLER"
-    ).read_text() == "pyproject_installer\n"
+    assert not (dest_wheel.distinfo / "INSTALLER").exists()
 
 
 def test_installer_tool_custom(wheel_contents, wheel, installed_wheel):
@@ -556,8 +554,6 @@ def test_installation_filelist(
 
         expected_filelist.add(dest_wheel.sitedir / f)
 
-    # written by installer
-    expected_filelist.add(dest_wheel.distinfo / "INSTALLER")
     # console script
     expected_filelist.add(dest_wheel.scripts / "bar")
     assert dest_wheel.filelist() == expected_filelist
@@ -603,8 +599,6 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
 
         expected_filelist.add(dest_wheel.sitedir / f)
 
-    # written by installer
-    expected_filelist.add(dest_wheel.distinfo / "INSTALLER")
     assert dest_wheel.filelist() == expected_filelist
 
 
