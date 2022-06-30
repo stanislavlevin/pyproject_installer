@@ -47,7 +47,9 @@ recursive = true
 ignore-paths = [
     ".*/_vendor/.*",
     '.*/\.git/.*',
+    '^.git/.*',  # dot escaping doesn't work, see pylint#5398
     '.*/\.tox/.*',
+    '^.tox/.*',  # dot escaping doesn't work, see pylint#5398
 ]
 suggestion-mode = "yes"
 persistent="no"
