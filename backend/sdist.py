@@ -102,20 +102,23 @@ class SdistBuilder:
                 raise ValueError(f"Path should be relative, given: {file}")
 
             file_path = self.cwd / file
-            if file_path.is_symlink():
-                raise ValueError(f"Symlinks are not supported: {file}")
+            if file_path.is_file() and not file_path.is_symlink():
+                logger.debug("Packaging: %s", file)
 
-            if not file_path.is_file():
-                raise ValueError(f"Only regular files are supported: {file}")
+                stat = file_path.stat()
+                with file_path.open("rb") as src:
+                    self.package_file(
+                        src,
+                        filename=file,
+                        size=stat.st_size,
+                        date_time=source_date_time(stat.st_mtime),
+                    )
 
-            stat = file_path.stat()
-            with file_path.open("rb") as src:
-                self.package_file(
-                    src,
-                    filename=file,
-                    size=stat.st_size,
-                    date_time=source_date_time(stat.st_mtime),
-                )
+    def package_license_files(self, patterns):
+        # supported license files from root directory only
+        self.package_files(
+            (f.name for ptrn in patterns for f in self.cwd.glob(ptrn))
+        )
 
     def package_file(self, src, filename, size, date_time):
         tarinfo = tarfile.TarInfo(str(self.root_dir / filename))
@@ -162,5 +165,6 @@ def build_sdist(sdist_directory, config_settings=None):
         required_files = {"pyproject.toml"}
         required_files.update(coremetadata.required_files)
         sdist.package_files(required_files)
+        sdist.package_license_files(backend_config["license_files"])
 
     return sdist.filename

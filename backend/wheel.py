@@ -128,6 +128,20 @@ class WheelBuilder:
                 source_date_time_zinfo(time.time()),
             )
 
+    def package_license_files(self, cwd, patterns):
+        # supported license files from root directory only
+        for pattern in patterns:
+            for file in cwd.glob(pattern):
+                if file.is_file() and not file.is_symlink():
+                    logger.debug("Packaging license: %s", file.name)
+                    stat = file.stat()
+                    with file.open("rb") as src:
+                        self.package_file(
+                            src,
+                            str(Path(self.dist_info) / file.name),
+                            source_date_time_zinfo(stat.st_mtime),
+                        )
+
     def package_file(self, src, filename, date_time):
         zinfo = ZipInfo(filename, date_time=date_time)
         zinfo.external_attr = 0o644 << 16
@@ -193,6 +207,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
         # package dist-info
         whl.package_wheel_metadata()
         whl.package_metadata(CoreMetadata(metadata_pep621).dump_as_bytes())
+        whl.package_license_files(cwd, backend_config["license_files"])
         whl.package_record()
 
     return whl.filename
