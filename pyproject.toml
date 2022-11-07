@@ -34,7 +34,7 @@ backend-path = ["."]
 [tool.pyproject_installer.backend]
 package_dir = "src"
 version_file = "src/pyproject_installer/version.py"
-include_dirs_sdist = ["backend"]
+include_dirs_sdist = ["backend", "tests"]
 
 [tool.black]
 line-length = 80
