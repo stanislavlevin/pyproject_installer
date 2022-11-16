@@ -11,6 +11,12 @@ import sys
 import sysconfig
 import csv
 
+from pyproject_installer.lib.entry_points import parse_entry_points
+from pyproject_installer.lib.scripts import (
+    build_shebang,
+    generate_entrypoints_scripts,
+)
+
 __all__ = [
     "install_wheel",
 ]
@@ -20,55 +26,10 @@ WHEEL_SPECIFICATION_VERSION = (1, 0)
 
 MAGIC_SHEBANG = b"#!python"
 
-SCRIPT_TEMPLATE = """\
-{shebang}
-
-import sys
-
-from {module} import {attr}
-
-
-if __name__ == "__main__":
-    sys.exit({main}())
-"""
-
 ALLOW_DIST_INFO_LIST = ("METADATA", "entry_points.txt")
 DENY_DIST_INFO_LIST = ("RECORD",)
 
 logger = logging.getLogger(__name__)
-
-
-def parse_entry_points(dist_info, group):
-    """
-    Compat only.
-    - module and attr attributes of ep are available since Python 3.9
-    - "selectable" entry points were introduced in Python 3.10
-    """
-    distr = PathDistribution(dist_info)
-    distr_eps = distr.entry_points
-    try:
-        # since Python3.10
-        distr_eps.select
-    except AttributeError:
-        eps = (ep for ep in distr_eps if ep.group == group)
-    else:
-        eps = distr_eps.select(group=group)
-
-    for ep in eps:
-        try:
-            # module is available since Python 3.9
-            ep_module = ep.module
-        except AttributeError:
-            ep_match = ep.pattern.match(ep.value)
-            ep_module = ep_match.group("module")
-
-        try:
-            # attr is available since Python 3.9
-            ep_attr = ep.attr
-        except AttributeError:
-            ep_attr = ep_match.group("attr")
-
-        yield (ep.name, ep.value, ep_module, ep_attr)
 
 
 def digest_for_record(name, data):
@@ -125,9 +86,10 @@ class WheelFile:
         function which will be called with no arguments when this command is
         run.
         """
+        distr = PathDistribution(self.dist_info)
         for ep_group in ("console_scripts", "gui_scripts"):
             for _, ep_value, ep_module, ep_attr in parse_entry_points(
-                self.dist_info, ep_group
+                distr, ep_group
             ):
                 if not ep_module or not ep_attr:
                     raise ValueError(
@@ -359,23 +321,6 @@ class WheelFile:
         self.close()
 
 
-def build_shebang():
-    """
-    man 2 execve
-    The kernel imposes a maximum length on the text that follows the "#!" char‐
-    acters  at  the  start of a script; characters beyond the limit are ignored.
-    Before Linux 5.1, the limit is 127 characters.  Since Linux 5.1,  the  limit
-    is 255 characters.
-    """
-    executable = sys.executable
-    if " " not in executable and len(executable) <= 127:
-        return f"#!{sys.executable}"
-
-    # originally taken from distlib.scripts; how it works:
-    # https://github.com/pradyunsg/installer/pull/4#issuecomment-623668717
-    return "#!/bin/sh\n'''exec' " + executable + ' "$0" "$@"\n' + "' '''"
-
-
 def get_installation_scheme(dist_name):
     scheme_dict = sysconfig.get_paths()
 
@@ -396,30 +341,6 @@ def get_installation_scheme(dist_name):
         )
 
     return scheme_dict
-
-
-def generate_entrypoints_scripts(dist_info, scheme, destdir):
-    """
-    Optional entry_points
-    https://packaging.python.org/en/latest/specifications/entry-points/
-    """
-    logger.info("Generating entrypoints scripts")
-    for ep_group in ("console_scripts", "gui_scripts"):
-        for ep_name, _, ep_module, ep_attr in parse_entry_points(
-            dist_info, ep_group
-        ):
-            script_text = SCRIPT_TEMPLATE.format(
-                shebang=build_shebang(),
-                module=ep_module,
-                attr=ep_attr.split(".", maxsplit=1)[0],
-                main=ep_attr,
-            )
-            scripts_path = Path(scheme["scripts"]).resolve()
-            rootdir = destdir / scripts_path.relative_to(scripts_path.root)
-            rootdir.mkdir(parents=True, exist_ok=True)
-            script_path = rootdir / ep_name
-            script_path.write_text(script_text, encoding="utf-8")
-            script_path.chmod(script_path.stat().st_mode | 0o555)
 
 
 def install_wheel_data(data_path, scheme, destdir):
@@ -452,7 +373,9 @@ def install_wheel_data(data_path, scheme, destdir):
                             script_path = rootdir / s.name
                             with script_path.open(mode="wb") as fsf:
                                 fsf.write(
-                                    (build_shebang() + "\n").encode("utf-8")
+                                    (
+                                        build_shebang(sys.executable) + "\n"
+                                    ).encode("utf-8")
                                 )
                                 shutil.copyfileobj(sf, fsf)
                             script_path.chmod(
@@ -541,8 +464,12 @@ def install_wheel(
     dist_info_path = rootdir / dist_info
 
     if (dist_info_path / "entry_points.txt").exists():
+        logger.info("Generating entrypoints scripts")
         generate_entrypoints_scripts(
-            dist_info_path, scheme=scheme, destdir=destdir
+            PathDistribution(dist_info_path),
+            python=sys.executable,
+            scriptsdir=Path(scheme["scripts"]).resolve(),
+            destdir=destdir,
         )
 
     if installer is not None:

@@ -16,10 +16,10 @@ from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.install_cmd._install import (
     digest_for_record,
     get_installation_scheme,
-    SCRIPT_TEMPLATE,
     ALLOW_DIST_INFO_LIST,
     DENY_DIST_INFO_LIST,
 )
+from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
 
 
 class WheelContents(MutableMapping):
