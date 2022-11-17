@@ -1,6 +1,7 @@
 # pyproject-installer
 
-This tool is intended to build wheel from Python source tree and install it.
+This tool is intended for build and install of Python project from source
+tree in network-isolated environments.
 
 
 ## Description
@@ -78,6 +79,8 @@ This tool is intended to build wheel from Python source tree and install it.
 ## Usage
 
 ### Build
+Build project from source tree in current Python environment according to
+PEP517. This doesn't trigger installation of project's build dependencies.
 ```
 python -m pyproject_installer build
 ```
@@ -124,6 +127,8 @@ python -m pyproject_installer build --backend-config-settings='{"--python-tag": 
 </pre>
 
 ### Install
+Install project built in wheel format. This doesn't trigger installation of
+project's runtime dependencies.
 ```
 python -m pyproject_installer install
 ```
