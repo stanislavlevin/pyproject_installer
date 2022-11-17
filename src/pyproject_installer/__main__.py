@@ -87,7 +87,10 @@ def convert_config_settings(value):
 
 def main_parser(prog):
     parser = argparse.ArgumentParser(
-        description="Build and install Python project from source tree",
+        description=(
+            "Build and install Python project from source tree in "
+            "network-isolated environments"
+        ),
         prog=prog,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -105,13 +108,19 @@ def main_parser(prog):
 
     subparsers = parser.add_subparsers(
         title="subcommands",
-        description="valid subcommands",
         help="--help for additional help",
         required=True,
     )
 
     # build subcli
-    parser_build = subparsers.add_parser("build")
+    parser_build = subparsers.add_parser(
+        "build",
+        description=(
+            "Build project from source tree in current Python environment "
+            "according to PEP517. This doesn't trigger installation of "
+            "project's build dependencies."
+        ),
+    )
     parser_build.add_argument(
         "srcdir",
         type=Path,
@@ -144,7 +153,14 @@ def main_parser(prog):
     parser_build.set_defaults(main=build)
 
     # install subcli
-    parser_install = subparsers.add_parser("install")
+    parser_install = subparsers.add_parser(
+        "install",
+        description=(
+            "Install project built in wheel format. "
+            "This doesn't trigger installation of project's runtime "
+            "dependencies."
+        ),
+    )
     parser_install.add_argument(
         "wheel",
         type=Path,
