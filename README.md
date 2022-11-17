@@ -113,7 +113,10 @@ one(wheel).
 <em><strong>description</strong></em>: ad-hoc configuration for build backend as dumped JSON dictionary
 <em><strong>default</strong></em>: None
 
-Example of passing <em><strong>config_settings</strong></em> for setuptools backend:
+Example of passing <em><strong>config_settings</strong></em> for setuptools>=64.0.0:
+python -m pyproject_installer build --backend-config-settings='{"--build-option": ["--python-tag=sometag", "--build-number=123"]}'
+
+Example of passing <em><strong>config_settings</strong></em> for setuptools<64.0.0:
 python -m pyproject_installer build --backend-config-settings='{"--global-option": ["--python-tag=sometag", "--build-number=123"]}'
 
 Example of passing <em><strong>config_settings</strong></em> for pdm backend:
