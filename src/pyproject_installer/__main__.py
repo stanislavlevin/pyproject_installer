@@ -19,10 +19,16 @@ import sys
 
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
+from .codes import ExitCodes
+from .errors import RunCommandError, RunCommandEnvError
 from .install_cmd import install_wheel
+from .run_cmd import run_command
 
 
-def build(args):
+logger = logging.getLogger(Path(__file__).parent.name)
+
+
+def build(args, parser):
     outdir = args.srcdir / "dist" if args.outdir is None else args.outdir
     config_settings = convert_config_settings(args.backend_config_settings)
 
@@ -35,7 +41,7 @@ def build(args):
     )
 
 
-def install(args):
+def install(args, parser):
     wheel = default_built_wheel() if args.wheel is None else args.wheel
     install_wheel(
         wheel,
@@ -43,6 +49,75 @@ def install(args):
         installer=args.installer,
         strip_dist_info=args.strip_dist_info,
     )
+
+
+class RunnerResult:
+    def __init__(
+        self, status, message, log, exception=None, print_traceback=False
+    ):
+        self.status = status
+        self.message = message
+        self.log = log
+        self.exception = exception
+        self.print_traceback = print_traceback
+
+    def report(self):
+        status_msg = "Command's result: %(status)s"
+        if self.message is not None:
+            status_msg += " (%(message)s)"
+        self.log(
+            status_msg, {"status": self.status.name, "message": self.message}
+        )
+
+        if self.exception is not None:
+            error_msg = "Command's error:"
+            if self.print_traceback:
+                self.log(error_msg, exc_info=self.exception)
+            else:
+                self.log(f"{error_msg} %s", str(self.exception))
+
+
+def run(args, parser):
+    try:
+        wheel = default_built_wheel() if args.wheel is None else args.wheel
+    except ValueError as e:
+        parser.error(str(e))
+
+    try:
+        run_command(wheel, command=args.command)
+    except RunCommandEnvError as e:
+        result = RunnerResult(
+            status=ExitCodes.FAILURE,
+            message="virtual env setup failed",
+            log=logger.info,
+            exception=e,
+            print_traceback=True,
+        )
+    except RunCommandError as e:
+        result = RunnerResult(
+            status=ExitCodes.FAILURE,
+            message=None,
+            log=logger.info,
+            exception=e,
+            print_traceback=False,
+        )
+    except BaseException as e:
+        result = RunnerResult(
+            status=ExitCodes.INTERNAL_ERROR,
+            message="internal error happened",
+            log=logger.error,
+            exception=e,
+            print_traceback=True,
+        )
+    else:
+        result = RunnerResult(
+            status=ExitCodes.OK,
+            message=None,
+            log=logger.info,
+        )
+
+    result.report()
+    sys.exit(result.status)
 
 
 def default_built_wheel():
@@ -59,8 +134,7 @@ def default_built_wheel():
         )
     except FileNotFoundError:
         raise ValueError(
-            "Missing wheel tracker, re-run build steps or specify wheel to "
-            "install"
+            "Missing wheel tracker, re-run build steps or specify wheel"
         ) from None
 
     return default_wheel_dir / wheel_filename
@@ -85,10 +159,20 @@ def convert_config_settings(value):
     return config_settings
 
 
+class MainArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        """Overrides default exit code(2) with our"""
+        try:
+            super().error(message)
+        except SystemExit as e:
+            e.code = ExitCodes.WRONG_USAGE
+            raise
+
+
 def main_parser(prog):
-    parser = argparse.ArgumentParser(
+    parser = MainArgumentParser(
         description=(
-            "Build and install Python project from source tree in "
+            "Build, check and install Python project from source tree in "
             "network-isolated environments"
         ),
         prog=prog,
@@ -203,6 +287,35 @@ def main_parser(prog):
     )
     parser_install.set_defaults(main=install)
 
+    # run subcli
+    parser_run = subparsers.add_parser(
+        "run",
+        description=(
+            "Run command within Python virtual environment that has access to "
+            "system and user site packages, their console scripts and installed"
+            " built package)."
+        ),
+    )
+    parser_run.add_argument(
+        "--wheel",
+        type=Path,
+        default=None,
+        help=(
+            "wheel file to install "
+            "(default: contructed as directory {cwd}/dist and wheel filename "
+            f"read from {{cwd}}/dist/{WHEEL_TRACKER})"
+        ),
+    )
+    parser_run.add_argument(
+        "command",
+        nargs="+",
+        help=(
+            "Command to run. "
+            "For example, python -m pyproject_installer run -- pytest -vra"
+        ),
+    )
+    parser_run.set_defaults(main=run)
+
     return parser
 
 
@@ -239,7 +352,7 @@ def main(cli_args, prog=f"python -m {__package__}"):
     args = parser.parse_args(cli_args)
     setup_logging(args.verbose)
 
-    args.main(args)
+    args.main(args, parser)
 
 
 if __name__ == "__main__":
