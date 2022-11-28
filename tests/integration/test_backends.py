@@ -81,12 +81,12 @@ def normalized_name(request):
         ),
         pytest.param(
             (
-                "pdm-pep517",
-                "https://github.com/pdm-project/pdm-pep517",
+                "pdm-backend",
+                "https://github.com/pdm-project/pdm-backend",
                 None,
             ),
-            "pdm-pep517",
-            id="pdm-pep517",
+            "pdm-backend",
+            id="pdm-backend",
         ),
         pytest.param(
             (
