@@ -13,6 +13,8 @@ except ModuleNotFoundError:
 
 import pytest
 
+from pyproject_installer import __version__ as installer_version
+from pyproject_installer.build_cmd import WHEEL_TRACKER
 from pyproject_installer.build_cmd._build import call_hook
 
 
@@ -34,7 +36,6 @@ class ContextVenv(EnvBuilder):
 @pytest.fixture(scope="session")
 def pyproject_installer_whl():
     """Build pyproject_installer as wheel"""
-    assert Path.cwd().name == "pyproject_installer"
     with tempfile.TemporaryDirectory() as d:
         wheels = Path(d) / "wheels"
         wheels.mkdir()
@@ -47,7 +48,14 @@ def pyproject_installer_whl():
             wheels,
         ]
         subprocess.check_call(build_args)
-        yield wheels / (wheels / ".wheeltracker").read_text().rstrip()
+        built_files = {f.name for f in wheels.iterdir()}
+        # make sure that pyproject_installer was built
+        expected_files = {
+            WHEEL_TRACKER,
+            f"pyproject_installer-{installer_version}-py3-none-any.whl",
+        }
+        assert built_files == expected_files
+        yield wheels / (wheels / WHEEL_TRACKER).read_text().rstrip()
 
 
 @pytest.fixture
