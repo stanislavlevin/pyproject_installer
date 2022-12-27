@@ -8,16 +8,29 @@ import subprocess
 from pyproject_installer import __version__ as installer_version
 
 
-def install_pkg(creator, pkg):
+def install_pkg(context, pkg, ignore_installed=True):
     install_args = [
-        str(creator.exe),
+        context.env_exec_cmd,
         "-Im",
         "pip",
         "install",
-        "--ignore-installed",
+    ]
+    if ignore_installed:
+        install_args.append("--ignore-installed")
+    install_args.append(pkg)
+    subprocess.check_call(install_args, cwd=context.env_dir)
+
+
+def upgrade_pkg(context, pkg):
+    install_args = [
+        context.env_exec_cmd,
+        "-Im",
+        "pip",
+        "install",
+        "--upgrade",
         pkg,
     ]
-    subprocess.check_call(install_args, cwd=creator.dest)
+    subprocess.check_call(install_args, cwd=context.env_dir)
 
 
 def test_build_with_build(virt_env, wheeldir):
@@ -26,7 +39,7 @@ def test_build_with_build(virt_env, wheeldir):
     assert cwd.name == "pyproject_installer"
 
     build_args = [
-        str(virt_env.exe),
+        virt_env.env_exec_cmd,
         "-Im",
         "build",
         ".",
@@ -43,12 +56,12 @@ def test_build_with_build(virt_env, wheeldir):
 
 
 def test_build_with_pip(virt_env, wheeldir):
-    install_pkg(virt_env, "pip")
+    upgrade_pkg(virt_env, "pip")
     cwd = Path.cwd()
     assert cwd.name == "pyproject_installer"
 
     build_args = [
-        str(virt_env.exe),
+        virt_env.env_exec_cmd,
         "-Im",
         "pip",
         "wheel",

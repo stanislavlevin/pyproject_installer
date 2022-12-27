@@ -1,4 +1,5 @@
 from pathlib import Path
+from venv import EnvBuilder
 import subprocess
 import sys
 import tempfile
@@ -11,9 +12,23 @@ except ModuleNotFoundError:
     import pyproject_installer.build_cmd._vendor.tomli as tomllib
 
 import pytest
-import virtualenv
 
 from pyproject_installer.build_cmd._build import call_hook
+
+
+class ContextVenv(EnvBuilder):
+    def __init__(self, *args, **kwargs):
+        self.context = None
+        super().__init__(*args, **kwargs)
+
+    def ensure_directories(self, *args, **kwargs):
+        # save context for reusage
+        self.context = super().ensure_directories(*args, **kwargs)
+        # env_exec_cmd requires Python3.9+ (https://bugs.python.org/issue45337),
+        # for non-windows systems: context.env_exec_cmd = context.env_exe
+        if not hasattr(self.context, "env_exec_cmd"):
+            self.context.env_exec_cmd = self.context.env_exe
+        return self.context
 
 
 @pytest.fixture(scope="session")
@@ -37,26 +52,29 @@ def pyproject_installer_whl():
 
 @pytest.fixture
 def virt_env(tmpdir):
-    """Create virtualenv"""
-    venv = tmpdir / "venv"
-    cmd = [str(venv), "--no-setuptools", "--no-wheel", "--activators", ""]
-    result = virtualenv.cli_run(cmd, setup_logging=False)
-    return result.creator
+    """Create virtual environment and returns its context
+
+    https://docs.python.org/3/library/venv.html#venv.EnvBuilder.ensure_directories
+    """
+    venv_path = tmpdir / "venv"
+    venv = ContextVenv(with_pip=True)
+    venv.create(venv_path)
+    return venv.context
 
 
 @pytest.fixture
 def virt_env_installer(virt_env, pyproject_installer_whl):
     """Install pyproject_installer with pip into virtual env"""
-    virtualenv_python = str(virt_env.exe)
+    python = virt_env.env_exec_cmd
 
     install_args = [
-        virtualenv_python,
+        python,
         "-Im",
         "pip",
         "install",
         str(pyproject_installer_whl),
     ]
-    subprocess.check_call(install_args, cwd=virt_env.dest)
+    subprocess.check_call(install_args, cwd=virt_env.env_dir)
     return virt_env
 
 
