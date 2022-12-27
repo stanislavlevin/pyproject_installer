@@ -1,7 +1,6 @@
 """
 Check if pyproject_installer is buildable by other tools like `build` or `pip`
 """
-from pathlib import Path
 import subprocess
 
 
@@ -35,8 +34,6 @@ def upgrade_pkg(context, pkg):
 
 def test_build_with_build(virt_env, wheeldir):
     install_pkg(virt_env, "build")
-    cwd = Path.cwd()
-    assert cwd.name == "pyproject_installer"
 
     build_args = [
         virt_env.env_exec_cmd,
@@ -46,7 +43,7 @@ def test_build_with_build(virt_env, wheeldir):
         "--outdir",
         str(wheeldir),
     ]
-    subprocess.check_call(build_args, cwd=cwd)
+    subprocess.check_call(build_args)
     built_files = {f.name for f in wheeldir.iterdir()}
     expected_files = {
         f"pyproject_installer-{installer_version}-py3-none-any.whl",
@@ -57,8 +54,6 @@ def test_build_with_build(virt_env, wheeldir):
 
 def test_build_with_pip(virt_env, wheeldir):
     upgrade_pkg(virt_env, "pip")
-    cwd = Path.cwd()
-    assert cwd.name == "pyproject_installer"
 
     build_args = [
         virt_env.env_exec_cmd,
@@ -69,7 +64,7 @@ def test_build_with_pip(virt_env, wheeldir):
         "-w",
         str(wheeldir),
     ]
-    subprocess.check_call(build_args, cwd=cwd)
+    subprocess.check_call(build_args)
     built_files = {f.name for f in wheeldir.iterdir()}
     expected_files = {
         f"pyproject_installer-{installer_version}-py3-none-any.whl",
