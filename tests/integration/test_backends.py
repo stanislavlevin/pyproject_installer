@@ -107,7 +107,7 @@ def normalized_name(request):
 def test_build_and_install_in_tree_backends(
     virt_env_installer, git_tree, install_build_deps, destdir, normalized_name
 ):
-    python = str(virt_env_installer.exe)
+    python = virt_env_installer.env_exec_cmd
     install_build_deps(python, srcdir=git_tree)
     build_args = [python, "-m", "pyproject_installer", "build"]
     subprocess.check_call(build_args, cwd=git_tree)
