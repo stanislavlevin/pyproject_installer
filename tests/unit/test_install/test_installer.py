@@ -278,7 +278,7 @@ def test_incompatible_wheel_version(wheel_contents, wheel, installed_wheel):
 def test_greater_wheel_version(wheel_contents, wheel, installed_wheel, caplog):
     contents = wheel_contents()
     contents["foo-1.0.dist-info/WHEEL"] = "Wheel-Version: 1.1"
-    logger = "pyproject_installer.install_cmd._install"
+    logger = "pyproject_installer.lib.wheel"
     caplog.set_level(logging.WARNING, logger=logger)
 
     install_wheel(wheel(contents=contents), destdir=installed_wheel().destdir)
