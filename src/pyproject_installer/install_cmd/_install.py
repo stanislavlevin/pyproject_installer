@@ -56,7 +56,7 @@ def install_wheel_data(data_path, scheme, destdir):
     logger.info("Installing .data")
     # keys of .data dir were prechecked in `validate`
     for f in data_path.iterdir():
-        path = Path(scheme[f.name]).resolve()
+        path = Path(scheme[f.name]).absolute()
         rootdir = destdir / path.relative_to(path.root)
         shutil.copytree(data_path / f, rootdir, dirs_exist_ok=True)
 
@@ -170,7 +170,7 @@ def install_wheel(
         generate_entrypoints_scripts(
             PathDistribution(dist_info_path),
             python=sys.executable,
-            scriptsdir=Path(scheme["scripts"]).resolve(),
+            scriptsdir=Path(scheme["scripts"]).absolute(),
             destdir=destdir,
         )
 

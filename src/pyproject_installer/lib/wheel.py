@@ -225,7 +225,7 @@ class WheelFile:
             sitedir = "purelib"
         else:
             sitedir = "platlib"
-        return Path(scheme[sitedir]).resolve()
+        return Path(scheme[sitedir]).absolute()
 
     def validate_wheel_spec_version(self):
         """
