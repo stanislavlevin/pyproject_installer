@@ -17,16 +17,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Install host dependencies
+    - name: Install dependencies
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install --user --force \
-            tox
+        python -m pip install validate-pyproject[all]
 
     - name: Validate pyproject.toml
       run: |
-        python -m tox -e validate_pyproject -vv
+        python -m validate_pyproject -vv pyproject.toml
 
   lint:
     name: Lint code base
@@ -41,19 +40,21 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install host dependencies
+    - name: Install dependencies
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install --user --force \
-            tox
+        python -m pip install \
+          pylint \
+          black \
+          pytest \
 
     - name: Pylint
       run: |
-        python -m tox -e pylint -vv
+        python -m pylint -v --rcfile=pyproject.toml .
     - name: Black
       run: |
-        python -m tox -e blackcheck -vv
+        python -m black -v --check --diff .
 
   unit_tests:
     name: Run unit tests
@@ -68,17 +69,49 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install host dependencies
+    - name: Install dependencies and project
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install --user --force \
-            tox
+        python -m pip install \
+          pytest \
+          pytest-mock \
+          pytest-cov \
 
-    - name: unit tests with coverage
+        python -m pip install .
+
+    - name: Unit tests with coverage
+      run: |
+        export COVERAGE_PROCESS_START="$(pwd)/pyproject.toml"
+        pytest -vra --cov --cov-config=pyproject.toml tests/unit
+
+  unit_tests_self_run:
+    name: Run unit tests via pyproject_installer
+    needs: [lint]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies and project
       run: |
         python --version
-        python -m tox -e py3-coverage -vv
+        python -m pip install --upgrade pip
+        python -m pip install \
+          pytest \
+          pytest-mock \
+
+        python -m pip install .
+
+    - name: Unit tests with self run
+      run: |
+        python -m pyproject_installer -v build
+        python -m pyproject_installer -v run -- pytest -vra tests/unit
 
   integration_tests:
     name: Run integration tests
@@ -92,14 +125,13 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install host dependencies
+    - name: Install dependencies and project
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install --user --force \
-            tox
+        python -m pip install pytest
+        python -m pip install .
 
     - name: integration tests
       run: |
-        python --version
-        python -m tox -e integration -vv
+        pytest -vra tests/integration
