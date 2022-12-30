@@ -8,6 +8,7 @@ import pytest
 
 from pyproject_installer import __version__ as project_version
 from pyproject_installer import __main__ as project_main
+from pyproject_installer.codes import ExitCodes
 
 
 @pytest.fixture
@@ -274,17 +275,20 @@ def test_build_cli_backend_settings_empty(mock_build_wheel):
     "config",
     ("key", '["val1", "val2"]'),
 )
-def test_build_cli_invalid_backend_settings(config, mock_build_wheel):
+def test_build_cli_invalid_backend_settings(config, mock_build_wheel, capsys):
     build_args = ["build", "--backend-config-settings", config]
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SystemExit) as exc:
         project_main.main(build_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
 
     expected_err_msg = (
         f"Invalid value of --backend-config-settings: {config!r}, "
         "should be a dumped JSON dictionary"
     )
-    assert str(exc.value) == expected_err_msg
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert expected_err_msg in captured.err
 
 
 def test_install_cli_default(mocker, mock_install_wheel, mock_read_tracker):
@@ -398,7 +402,9 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
 
 
-def test_install_default_wheel_missing_tracker(mocker, mock_read_tracker):
+def test_install_default_wheel_missing_tracker(
+    mocker, mock_read_tracker, capsys
+):
     """Check error if wheeltracker is missing and wheel is default"""
 
     def _mock_read_text(*args, **kwargs):
@@ -406,5 +412,10 @@ def test_install_default_wheel_missing_tracker(mocker, mock_read_tracker):
 
     mock_read_tracker.side_effect = _mock_read_text
     install_args = ["install"]
-    with pytest.raises(ValueError, match="Missing wheel tracker"):
+    with pytest.raises(SystemExit) as exc:
         project_main.main(install_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "Missing wheel tracker, re-run build steps or specify wheel"
+    assert expected_msg in captured.err

@@ -30,7 +30,10 @@ logger = logging.getLogger(Path(__file__).parent.name)
 
 def build(args, parser):
     outdir = args.srcdir / "dist" if args.outdir is None else args.outdir
-    config_settings = convert_config_settings(args.backend_config_settings)
+    try:
+        config_settings = convert_config_settings(args.backend_config_settings)
+    except ValueError as e:
+        parser.error(str(e))
 
     build_func = build_sdist if args.sdist else build_wheel
     build_func(
@@ -42,7 +45,11 @@ def build(args, parser):
 
 
 def install(args, parser):
-    wheel = default_built_wheel() if args.wheel is None else args.wheel
+    try:
+        wheel = default_built_wheel() if args.wheel is None else args.wheel
+    except ValueError as e:
+        parser.error(str(e))
+
     install_wheel(
         wheel,
         destdir=args.destdir,
