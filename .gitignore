@@ -23,6 +23,7 @@ htmlcov/
 .*.sw?
 .env/
 .venv/
+.run_venv/
 
 # win files
 *.exe
