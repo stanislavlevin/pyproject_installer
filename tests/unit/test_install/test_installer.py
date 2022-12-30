@@ -1,116 +1,19 @@
-from collections.abc import MutableMapping
-from zipfile import ZipFile
 from pathlib import Path
-from io import StringIO
-import csv
 import os
 import logging
 import sys
 import subprocess
 import sysconfig
-import textwrap
 
 import pytest
 
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.install_cmd._install import (
-    digest_for_record,
     get_installation_scheme,
     ALLOW_DIST_INFO_LIST,
     DENY_DIST_INFO_LIST,
 )
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
-
-
-class WheelContents(MutableMapping):
-    def __init__(self, distr="foo", version="1.0", purelib=True):
-        self.distinfo = f"{distr}-{version}.dist-info"
-        self.record_key = f"{self.distinfo}/RECORD"
-        self._contents = {
-            f"{distr}/__init__.py": textwrap.dedent(
-                """\
-                    def main():
-                        print("Hello, World!")
-                """
-            ),
-            f"{self.distinfo}/METADATA": textwrap.dedent(
-                f"""\
-                    Metadata-Version: 2.1
-                    Name: Test project
-                    Version: {version}
-                    Platform: linux
-                    Summary: Test project
-                    Author-email: somebody@example.com
-                    Classifier: License :: OSI Approved :: MIT License
-                """
-            ),
-            f"{self.distinfo}/WHEEL": textwrap.dedent(
-                f"""\
-                    Wheel-Version: 1.0
-                    Generator: bdist_wheel
-                    Root-Is-Purelib: {str(purelib).lower()}
-                    Tag: py3-none-any
-                """
-            ),
-        }
-        self.update_record()
-
-    @property
-    def record(self):
-        return self._contents[self.record_key]
-
-    @record.setter
-    def record(self, value):
-        self._contents[self.record_key] = value
-
-    def update_record(self):
-        with StringIO(newline="") as ws:
-            writer = csv.writer(ws, lineterminator="\n")
-            records = [
-                (
-                    f,
-                    "sha256={}".format(
-                        digest_for_record("sha256", v.encode("utf8"))
-                    ),
-                    0,
-                )
-                for f, v in self._contents.items()
-                if f != self.record_key
-            ]
-            records.append((self.record_key, "", 0))
-            writer.writerows(records)
-            self.record = ws.getvalue()
-
-    def drop_from_record(self, file):
-        with StringIO(self.record, newline="") as rs, StringIO(
-            newline=""
-        ) as ws:
-            reader = csv.reader(rs)
-            writer = csv.writer(ws, lineterminator="\n")
-            for row in reader:
-                if row[0] != file:
-                    writer.writerow(row)
-
-            self.record = ws.getvalue()
-
-    def __getitem__(self, key):
-        return self._contents[key]
-
-    def __setitem__(self, key, value):
-        self._contents[key] = value
-        if key != self.record_key:
-            self.update_record()
-
-    def __delitem__(self, key):
-        del self._contents[key]
-        if key != self.record_key:
-            self.update_record()
-
-    def __iter__(self):
-        return iter(self._contents)
-
-    def __len__(self):
-        return len(self._contents)
 
 
 class InstalledWheel:
@@ -139,14 +42,6 @@ class InstalledWheel:
 
 
 @pytest.fixture
-def wheel_contents():
-    def _wheel_contents(*args, **kwargs):
-        return WheelContents(*args, **kwargs)
-
-    return _wheel_contents
-
-
-@pytest.fixture
 def installed_wheel(tmpdir):
     def _installed_wheel(*args, **kwargs):
         destdir = tmpdir / "destdir"
@@ -154,24 +49,6 @@ def installed_wheel(tmpdir):
         return InstalledWheel(destdir, *args, **kwargs)
 
     return _installed_wheel
-
-
-@pytest.fixture
-def wheel(tmpdir):
-    """Prepares wheel file"""
-
-    def _wheel(name="foo-1.0-py3-none-any.whl", contents={}):
-        wheeldir = tmpdir / "wheeldir"
-        wheeldir.mkdir()
-        wheel = wheeldir / name
-
-        with ZipFile(wheel, "w") as z:
-            for file, content in contents.items():
-                z.writestr(file, content)
-
-        return wheel
-
-    return _wheel
 
 
 @pytest.fixture
