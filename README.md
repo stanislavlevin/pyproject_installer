@@ -1,6 +1,6 @@
 # pyproject-installer
 
-This tool is intended for build and install of Python project from source
+This tool is intended for build, install and run of Python project from source
 tree in network-isolated environments.
 
 
@@ -74,6 +74,9 @@ tree in network-isolated environments.
     tool is asked to uninstall a project but finds no RECORD file, it may
     suggest that the tool named in INSTALLER may be able to do the
     uninstallation.
+
+- Built distribution can be checked within Python virtual environment with the
+  help of `run` command.
 
 
 ## Usage
@@ -165,6 +168,39 @@ and <em><strong>entry_points.txt</strong></em> files are allowed in <em>dist-inf
 <em><strong>example</strong></em>: python -m pyproject_installer install --no-strip-dist-info
 </pre>
 
+### Run
+Run command within Python virtual environment that has access to system and user
+site packages, their console scripts and installed built package.
+```
+python -m pyproject_installer run
+```
+
+Run positional arguments:
+<pre>
+<em><strong>description</strong></em>: command to run within virtual environment
+<em><strong>example</strong></em>: python -m pyproject_installer run pytest
+</pre>
+
+Dash note:
+> https://docs.python.org/3/library/argparse.html#arguments-containing
+If you have positional arguments that must begin with - and don't look like
+negative numbers, you can insert the pseudo-argument '--' which tells
+`parse_args()` that everything after that is a positional argument:
+```
+python -m pyproject_installer run -- pytest -vra
+```
+
+Run options:
+<pre>
+<em><strong>name</strong></em>: --wheel WHEEL
+<em><strong>description</strong></em>: wheel file to install into virtual environment
+<em><strong>default</strong></em>: contructed as directory {cwd}/dist and wheel filename read from
+{cwd}/dist/.wheeltracker
+<em><strong>example</strong></em>: python -m pyproject_installer run --wheel wheel.whl pytest
+</pre>
+
+Note: venv's directory name is `.run_venv`.
+
 ## Comparison with other tools
 
 `pyproject-installer` consists of builder and installer, both provide
@@ -199,6 +235,15 @@ python -m pyproject_installer build
 python -m pyproject_installer install --destdir=/rootdir
 ```
 
+## Tests
+- unit tests can be run as:
+  ```
+  pytest tests/unit
+  ```
+- integration tests (require internet connection and `git` tool) can be run as:
+  ```
+  pytest tests/integration
+  ```
 
 ## License
 
