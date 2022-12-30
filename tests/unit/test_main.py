@@ -9,6 +9,7 @@ import pytest
 from pyproject_installer import __version__ as project_version
 from pyproject_installer import __main__ as project_main
 from pyproject_installer.codes import ExitCodes
+from pyproject_installer.errors import RunCommandError, RunCommandEnvError
 
 
 @pytest.fixture
@@ -24,6 +25,11 @@ def mock_build_sdist(mocker):
 @pytest.fixture
 def mock_install_wheel(mocker):
     return mocker.patch.object(project_main, "install_wheel")
+
+
+@pytest.fixture
+def mock_run_command(mocker):
+    return mocker.patch.object(project_main, "run_command")
 
 
 @pytest.fixture
@@ -419,3 +425,156 @@ def test_install_default_wheel_missing_tracker(
     assert not captured.out
     expected_msg = "Missing wheel tracker, re-run build steps or specify wheel"
     assert expected_msg in captured.err
+
+
+def test_run_cli_default(mock_run_command, mock_read_tracker, caplog):
+    """Run run without options
+
+    - mock run_command and wheel tracker
+    - check default wheel was used
+    - check exit code
+    - check outputs
+    """
+    run_args = ["run", "foo"]
+
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    wheel_tracker = wheel.parent / project_main.WHEEL_TRACKER
+    r_args = (wheel,)
+    r_kwargs = {
+        "command": ["foo"],
+    }
+
+    caplog.set_level(logging.INFO)
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.OK
+
+    assert "Command's result: OK" in caplog.text
+    mock_run_command.assert_called_once_with(*r_args, **r_kwargs)
+    # check if wheel path was read from tracker
+    mock_read_tracker.assert_called_once_with(wheel_tracker, encoding="utf-8")
+
+
+def test_run_cli_wheel(mock_run_command, mock_read_tracker, caplog):
+    """Run run with `--wheel`
+
+    - mock run_command and wheel tracker
+    - check given wheel was used
+    - check exit code
+    - check outputs
+    """
+    wheel = Path("/wheel.whl")
+    run_args = ["run", "--wheel", str(wheel), "foo"]
+
+    r_args = (wheel,)
+    r_kwargs = {
+        "command": ["foo"],
+    }
+
+    caplog.set_level(logging.INFO)
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.OK
+
+    assert "Command's result: OK" in caplog.text
+    mock_run_command.assert_called_once_with(*r_args, **r_kwargs)
+    # check if wheel path was not read from tracker
+    mock_read_tracker.assert_not_called()
+
+
+def test_run_cli_default_wheel_missing_tracker(mock_read_tracker, capsys):
+    """Check error if wheeltracker is missing and wheel is default
+
+    - mock wheel tracker
+    - emulate missing wheel tracker
+    - check exit code
+    - check outputs
+    """
+
+    def _mock_read_text(*args, **kwargs):
+        raise FileNotFoundError()
+
+    mock_read_tracker.side_effect = _mock_read_text
+    run_args = ["run", "foo"]
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "Missing wheel tracker, re-run build steps or specify wheel"
+    assert expected_msg in captured.err
+
+
+def test_run_cli_failed_result(mock_run_command, mock_read_tracker, caplog):
+    """Check error if command was failed
+
+    - mock run command and wheel tracker
+    - emulate missing command
+    - check exit code
+    - check outputs
+    """
+    exc_msg = "nonexistent command"
+
+    def _mock_result(*args, **kwargs):
+        raise RunCommandError(exc_msg)
+
+    mock_run_command.side_effect = _mock_result
+    run_args = ["run", "nonexistent command"]
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.FAILURE
+    assert "Command's result: FAILURE" in caplog.text
+    assert f"Command's error: {exc_msg}" in caplog.text
+
+
+def test_run_cli_venv_error(mock_run_command, mock_read_tracker, caplog):
+    """Check error if command was failed
+
+    - mock run command and wheel tracker
+    - emulate venv usage error
+    - check exit code
+    - check outputs
+    """
+    exc_msg = "venv error"
+
+    def _mock_result(*args, **kwargs):
+        raise RunCommandEnvError(exc_msg)
+
+    mock_run_command.side_effect = _mock_result
+    run_args = ["run", "nonexistent command"]
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.FAILURE
+    assert "Command's result: FAILURE (virtual env setup failed)" in caplog.text
+    assert "Command's error:" in caplog.text
+    assert exc_msg in caplog.text
+
+
+def test_run_cli_internal_error(mock_run_command, mock_read_tracker, caplog):
+    """Check error if internal error happened
+
+    - mock run command and wheel tracker
+    - emulate internal error
+    - check exit code
+    - check outputs
+    """
+    exc_msg = "something went wrong"
+
+    def _mock_result(*args, **kwargs):
+        raise Exception(exc_msg)
+
+    mock_run_command.side_effect = _mock_result
+    run_args = ["run", "nonexistent command"]
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.INTERNAL_ERROR
+    assert (
+        "Command's result: INTERNAL_ERROR (internal error happened)"
+    ) in caplog.text
+    assert "Command's error:" in caplog.text
+    assert exc_msg in caplog.text
