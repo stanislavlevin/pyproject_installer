@@ -2,13 +2,14 @@ from email.parser import Parser
 from importlib.metadata import PathDistribution
 from io import TextIOWrapper
 from pathlib import Path
-from zipfile import ZipFile, Path as ZipPath
+from zipfile import ZipFile, Path as ZipPath, BadZipFile
 import base64
 import csv
 import hashlib
 import logging
 import sys
 
+from ..errors import WheelFileError
 from .entry_points import parse_entry_points
 
 
@@ -53,7 +54,13 @@ def parse_name(name):
 
 class WheelFile:
     def __init__(self, wheel_path):
-        self._zipfile = ZipFile(wheel_path)
+        self._zipfile = None
+        try:
+            self._zipfile = ZipFile(wheel_path)
+        except BadZipFile as e:
+            raise WheelFileError(
+                f"Error reading wheel {wheel_path}: {e}"
+            ) from None
         self.name = Path(wheel_path).name
         self.dist_name, self.dist_version = self.parse_name()
 
@@ -306,7 +313,8 @@ class WheelFile:
         self.close()
 
     def close(self):
-        self._zipfile.close()
+        if self._zipfile is not None:
+            self._zipfile.close()
 
     def __del__(self):
         self.close()

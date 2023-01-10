@@ -7,6 +7,7 @@ import sysconfig
 
 import pytest
 
+from pyproject_installer.errors import WheelFileError
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.install_cmd._install import (
     get_installation_scheme,
@@ -67,6 +68,15 @@ def test_nonexistent_wheel(installed_wheel):
         install_wheel(
             Path("/nonexistent/wheel.file"), destdir=installed_wheel().destdir
         )
+
+
+def test_bad_wheel(tmpdir, destdir):
+    bad_whl = tmpdir / "wheel.whl"
+    bad_whl.touch(exist_ok=False)
+    with pytest.raises(
+        WheelFileError, match=f"Error reading wheel {bad_whl}: "
+    ):
+        install_wheel(bad_whl, destdir=destdir)
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="Requires unprivileged user")
