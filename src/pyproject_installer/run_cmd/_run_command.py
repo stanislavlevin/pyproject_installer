@@ -9,6 +9,8 @@ def run_command(wheel, *args, venv_name=".run_venv", **kwargs):
     try:
         run_env = PyprojectVenv(wheel)
         run_env.create(venv_name)
+    except RunCommandEnvError:
+        raise
     except Exception as e:
         raise RunCommandEnvError(str(e)) from e
     return run_env.run(*args, **kwargs)
