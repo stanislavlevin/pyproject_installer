@@ -1,7 +1,7 @@
 # pyproject-installer
 
-This tool is intended for build, install and run of Python project from source
-tree in network-isolated environments.
+This tool is intended for build, install, run or management of dependencies
+sources of Python project in source tree within network-isolated environments.
 
 
 ## Description
@@ -78,6 +78,8 @@ tree in network-isolated environments.
 - Built distribution can be checked within Python virtual environment with the
   help of `run` command.
 
+- Project's dependencies sources can be managed (i.e. stored, synced, verified
+  or evaluated) with the help of `deps` command.
 
 ## Usage
 
@@ -200,6 +202,165 @@ Run options:
 </pre>
 
 Note: venv's directory name is `.run_venv`.
+
+
+### Management of dependencies' sources
+
+Collect PEP508 requirements from different sources, store and evaluate
+them in Python environment.
+
+```
+python -m pyproject_installer deps --help
+```
+
+Common deps options:
+<pre>
+<em><strong>name</strong></em>: --depsconfig
+<em><strong>description</strong></em>: configuration file to use
+<em><strong>default</strong></em>: {cwd}/pyproject_deps.json
+<em><strong>example</strong></em>: python -m pyproject_installer deps --depsconfig foo.json
+</pre>
+
+#### deps subcommands
+
+<pre>
+<em><strong>name</strong></em>: show
+<em><strong>description</strong></em>: show configuration and data of dependencies's sources
+<em><strong>example</strong></em>: python -m pyproject_installer deps show --help
+</pre>
+
+Positional arguments:
+<pre>
+<em><strong>description</strong></em>: source names
+<em><strong>default</strong></em>: all
+<em><strong>example</strong></em>: python -m pyproject_installer deps show build
+</pre>
+
+---
+
+<pre>
+<em><strong>name</strong></em>: add
+<em><strong>description</strong></em>: configure source of Python dependencies. Supported sources: standardized formats like PEP517, PEP518 or core metadata are fully supported, while tool-specific formats like pip, tox or poetry have limited support.
+<em><strong>example</strong></em>: python -m pyproject_installer deps add --help
+</pre>
+
+Positional arguments:
+<pre>
+<em><strong>description</strong></em>: source name
+</pre>
+
+<pre>
+<em><strong>description</strong></em>: source type
+<em><strong>choice</strong></em>: pep517, pep518, metadata, pip_reqfile, poetry, tox
+</pre>
+
+<pre>
+<em><strong>description</strong></em>: specific configuration options for source
+<em><strong>default</strong></em>: []
+</pre>
+
+<pre>
+<em><strong>examples</strong></em>:
+Configuration of source of <strong>PEP518</strong> dependencies:
+python -m pyproject_installer deps add build_pep518 pep518
+
+Configuration of source of <strong>PEP517</strong> dependencies:
+python -m pyproject_installer deps add build_pep517 pep517
+
+Configuration of source of <strong>metadata</strong> dependencies:
+python -m pyproject_installer deps add runtime metadata
+
+Configuration of source of <strong>pip</strong> requirements:
+python -m pyproject_installer deps add check pip_reqfile requirements.txt
+
+Configuration of source of <strong>tox</strong> requirements:
+python -m pyproject_installer deps add check tox tox.ini testenv
+
+Configuration of source of <strong>poetry</strong> requirements:
+python -m pyproject_installer deps add check poetry dev
+</pre>
+
+---
+
+<pre>
+<em><strong>name</strong></em>: sync
+<em><strong>description</strong></em>: sync stored requirements to configured sources
+<em><strong>example</strong></em>: python -m pyproject_installer deps sync --help
+</pre>
+
+Positional arguments:
+<pre>
+<em><strong>description</strong></em>: source names
+<em><strong>default</strong></em>: all
+<em><strong>example</strong></em>: python -m pyproject_installer deps sync build
+</pre>
+
+Options:
+<pre>
+<em><strong>name</strong></em>: --verify
+<em><strong>description</strong></em>: Sync sources, but print diff and exits with code 4 if the sources were unsynced
+<em><strong>default</strong></em>: only sync
+<em><strong>example</strong></em>: python -m pyproject_installer deps sync --verify build
+</pre>
+
+---
+
+<pre>
+<em><strong>name</strong></em>: eval
+<em><strong>description</strong></em>: evaluate stored requirements according to PEP508 in current Python environment and print them to stdout in PEP508 format (by default) or specified one
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval --help
+</pre>
+
+Positional arguments:
+<pre>
+<em><strong>description</strong></em>: source names
+<em><strong>default</strong></em>: all
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval build
+</pre>
+
+Options:
+<pre>
+<em><strong>name</strong></em>: --depformat
+<em><strong>description</strong></em>: format of dependency to print. Supported substitutions: $name - project's name, $nname - PEP503 normalized project's name, $fextra - project's extras (expanded first with --depformatextra)
+<em><strong>default</strong></em>: PEP508 format
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval build --depformat='python3-$nn'
+</pre>
+
+<pre>
+<em><strong>name</strong></em>: --depformatextra
+<em><strong>description</strong></em>: format of extras to print (one extra of dependencies per line). Result is expanded in format specified by --depformat as $fextra. Supported substitutions: $extra
+<em><strong>default</strong></em>: ''
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval build --depformat='python3-$nn$fextra' --depformatextra='+$extra'
+</pre>
+
+<pre>
+<em><strong>name</strong></em>: --extra
+<em><strong>description</strong></em>: PEP508 'extra' marker to evaluate with
+<em><strong>default</strong></em>: None
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval build --extra tests
+</pre>
+
+<pre>
+<em><strong>name</strong></em>: --exclude
+<em><strong>description</strong></em>: regexes patterns, exclude requirement having PEP503-normalized name that matches one of these patterns
+<em><strong>default</strong></em>: []
+<em><strong>example</strong></em>: python -m pyproject_installer deps eval build --exclude types- pytest-cov
+</pre>
+
+---
+
+<pre>
+<em><strong>name</strong></em>: delete
+<em><strong>description</strong></em>: deconfigure source of Python dependencies
+<em><strong>example</strong></em>: python -m pyproject_installer deps delete --help
+</pre>
+
+Positional arguments:
+<pre>
+<em><strong>description</strong></em>: source name
+<em><strong>example</strong></em>: python -m pyproject_installer deps delete build
+</pre>
+
 
 ## Comparison with other tools
 

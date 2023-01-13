@@ -33,6 +33,11 @@ def mock_run_command(mocker):
 
 
 @pytest.fixture
+def mock_deps_command(mocker):
+    return mocker.patch.object(project_main, "deps_command")
+
+
+@pytest.fixture
 def mock_read_tracker(mocker):
     return mocker.patch.object(
         project_main.Path,
@@ -563,3 +568,587 @@ def test_run_cli_internal_error(mock_run_command, mock_read_tracker, caplog):
     ) in caplog.text
     assert "Command's error:" in caplog.text
     assert exc_msg in caplog.text
+
+
+def test_deps_cli_help(capsys):
+    """Run deps --help
+
+    - check msg and exit code
+    """
+    deps_args = ["deps", "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = "usage: python -m pyproject_installer deps "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_show_help(capsys):
+    """Run deps show --help
+
+    - check msg and exit code
+    """
+    action = "show"
+    deps_args = ["deps", action, "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = f"usage: python -m pyproject_installer deps {action} "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_show_default(mock_deps_command):
+    """Run deps show
+
+    - mock deps_command
+    - check default depsconfig path
+    - check args
+    """
+    action = "show"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": []}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_show_depsconfig(mock_deps_command):
+    """Run deps show with specified depsconfig path
+
+    - mock deps_command
+    - check args
+    """
+    action = "show"
+    depsconfig = "foo.json"
+    deps_args = ["deps", "--depsconfig", depsconfig, action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": []}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize("srcnames", (["foo"], ["foo", "bar"]))
+def test_deps_cli_show_selected(mock_deps_command, srcnames):
+    """Run deps show with specified source names
+
+    - mock deps_command
+    - check args
+    """
+    action = "show"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+    deps_args.extend(srcnames)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": srcnames}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_help(capsys):
+    """Run deps sync --help
+
+    - check msg and exit code
+    """
+    action = "sync"
+    deps_args = ["deps", action, "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = f"usage: python -m pyproject_installer deps {action} "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_sync_default(mock_deps_command):
+    """Run deps sync
+
+    - mock deps_command
+    - check default depsconfig path
+    - check args
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": [], "verify": False}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_depsconfig(mock_deps_command):
+    """Run deps sync with specified depsconfig path
+
+    - mock deps_command
+    - check args
+    """
+    action = "sync"
+    depsconfig = "foo.json"
+    deps_args = ["deps", "--depsconfig", depsconfig, action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": [], "verify": False}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize("srcnames", (["foo"], ["foo", "bar"]))
+def test_deps_cli_sync_selected(mock_deps_command, srcnames):
+    """Run deps sync with specified source names
+
+    - mock deps_command
+    - check args
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+    deps_args.extend(srcnames)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": srcnames, "verify": False}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_verify(mock_deps_command):
+    """Run deps sync with verify
+
+    - mock deps_command
+    - check args
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--verify"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": [], "verify": True}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_verify_fail(mock_deps_command):
+    """Run deps sync with failed verify
+
+    - mock deps_command
+    - raise DepsUnsyncedError
+    - check exit code
+    """
+    action = "sync"
+    mock_deps_command.side_effect = project_main.DepsUnsyncedError
+    deps_args = ["deps", action, "--verify"]
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.SYNC_VERIFY_ERROR
+
+
+def test_deps_cli_eval_help(capsys):
+    """Run deps eval --help
+
+    - check msg and exit code
+    """
+    action = "eval"
+    deps_args = ["deps", action, "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = f"usage: python -m pyproject_installer deps {action} "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_eval_default(mock_deps_command):
+    """Run deps eval
+
+    - mock deps_command
+    - check default depsconfig path
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_depsconfig(mock_deps_command):
+    """Run deps eval with specified depsconfig path
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = "foo.json"
+    deps_args = ["deps", "--depsconfig", depsconfig, action]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize("srcnames", (["foo"], ["foo", "bar"]))
+def test_deps_cli_eval_selected(mock_deps_command, srcnames):
+    """Run deps eval with specified source names
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action]
+    deps_args.extend(srcnames)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": srcnames,
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_depformat(mock_deps_command):
+    """Run deps eval with depformat
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--depformat", "$name"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": "$name",
+        "depformatextra": None,
+        "extra": None,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_depformat_depformatextra(mock_deps_command):
+    """Run deps eval with depformat and depformatextra
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--depformat",
+        "$name$fextra",
+        "--depformatextra",
+        "+$extra",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": "$name$fextra",
+        "depformatextra": "+$extra",
+        "extra": None,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_depformatextra_without_depformat(
+    mock_deps_command, capsys
+):
+    """Run deps eval with depformatextra and without depformat
+
+    - mock deps_command
+    - check error
+    """
+    action = "eval"
+    deps_args = ["deps", action, "--depformatextra", "+$extra"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "depformatextra option must be used with depformat"
+    assert expected_msg in captured.err
+
+
+def test_deps_cli_eval_extra(mock_deps_command):
+    """Run deps eval with extra marker
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    extra = "foo"
+    deps_args = ["deps", action, "--extra", extra]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": extra,
+        "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize("excludes", (["foo"], ["foo", "bar"]))
+def test_deps_cli_eval_exclude(excludes, mock_deps_command):
+    """Run deps eval with exclude
+
+    - mock deps_command
+    - check args
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--exclude"]
+    deps_args.extend(excludes)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": excludes,
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_help(capsys):
+    """Run deps add --help
+
+    - check msg and exit code
+    """
+    action = "add"
+    deps_args = ["deps", action, "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = f"usage: python -m pyproject_installer deps {action} "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_add_default(mock_deps_command):
+    """Run deps add
+
+    - mock deps_command
+    - check default depsconfig path
+    - check args
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", action, srcname, srctype]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcname": srcname,
+        "srctype": srctype,
+        "srcargs": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_depsconfig(mock_deps_command):
+    """Run deps add with specified depsconfig path
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    depsconfig = "foo.json"
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", "--depsconfig", depsconfig, action, srcname, srctype]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcname": srcname,
+        "srctype": srctype,
+        "srcargs": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_wrong_srctype(mock_deps_command, capsys):
+    """Run deps add with wrong srctype
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    srcname = "foo"
+    srctype = "bar"
+    deps_args = ["deps", action, srcname, srctype]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    supported_types_msg = ", ".join(
+        f"'{x}'" for x in project_main.SUPPORTED_COLLECTORS
+    )
+    expected_err_msg = (
+        f"invalid choice: '{srctype}' (choose from {supported_types_msg})"
+    )
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert expected_err_msg in captured.err
+
+
+@pytest.mark.parametrize("srcargs", (["foo"], ["foo", "bar"]))
+def test_deps_cli_add_sourceargs(srcargs, mock_deps_command):
+    """Run deps add with specific source args
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", action, srcname, srctype]
+    deps_args.extend(srcargs)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcname": srcname,
+        "srctype": srctype,
+        "srcargs": srcargs,
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_delete_help(capsys):
+    """Run deps delete --help
+
+    - check msg and exit code
+    """
+    action = "delete"
+    deps_args = ["deps", action, "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = f"usage: python -m pyproject_installer deps {action} "
+    assert expected_msg in captured.out
+
+
+def test_deps_cli_delete_default(mock_deps_command):
+    """Run deps delete
+
+    - mock deps_command
+    - check default depsconfig path
+    - check args
+    """
+    action = "delete"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    deps_args = ["deps", action, srcname]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcname": srcname}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_delete_depsconfig(mock_deps_command):
+    """Run deps delete with specified depsconfig path
+
+    - mock deps_command
+    - check args
+    """
+    action = "delete"
+    depsconfig = "foo.json"
+    srcname = "foo"
+    deps_args = ["deps", "--depsconfig", depsconfig, action, srcname]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcname": srcname}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
