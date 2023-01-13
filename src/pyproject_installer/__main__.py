@@ -23,9 +23,38 @@ from .codes import ExitCodes
 from .errors import RunCommandError, RunCommandEnvError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
-
+from .deps_cmd import deps_command
 
 logger = logging.getLogger(Path(__file__).parent.name)
+
+
+def wheel_build_deps(srcdir):
+    return call_hook(
+        python=sys.executable,
+        srcdir=srcdir,
+        verbose=False,
+        hook="get_requires_for_build_wheel",
+    )["result"]
+
+
+def build_deps(args, parser):
+    cwd = Path.cwd()
+    srcdir = validate_source_dir(cwd)
+    pyproject_file = srcdir / "pyproject.toml"
+    if args.wheel:
+        # logger.info("wheel deps: %s", wheel_build_deps(srcdir))
+        for dep in wheel_build_deps(srcdir):
+            print(dep)
+    else:
+        # logger.info("bootstrap deps: %s", bootstrap_build_deps(pyproject_file))
+        for dep in bootstrap_build_deps(pyproject_file):
+            print(dep)
+
+
+def deps(args, parser):
+    # for group in args.groups:
+    # breakpoint()
+    deps_command(args.group, file=args.file)
 
 
 def build(args, parser):
@@ -322,6 +351,26 @@ def main_parser(prog):
         ),
     )
     parser_run.set_defaults(main=run)
+
+    # deps subcli
+    parser_deps = subparsers.add_parser(
+        "deps",
+        description=("TODO"),
+    )
+    parser_deps.add_argument(
+        "--group",
+        action="append",
+        nargs="+",
+        help=("TODO"),
+        metavar=("name", "context"),
+        required=True,
+    )
+    parser_deps.add_argument(
+        "--file",
+        type=Path,
+        help=("TODO"),
+    )
+    parser_deps.set_defaults(main=deps)
 
     return parser
 
