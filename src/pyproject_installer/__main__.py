@@ -20,10 +20,10 @@ import sys
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
-from .errors import RunCommandError, RunCommandEnvError
+from .errors import RunCommandError, RunCommandEnvError, DepsUnsyncedError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
-
+from .deps_cmd import deps_command, SUPPORTED_COLLECTORS, DEFAULT_CONFIG_NAME
 
 logger = logging.getLogger(Path(__file__).parent.name)
 
@@ -56,6 +56,24 @@ def install(args, parser):
         installer=args.installer,
         strip_dist_info=args.strip_dist_info,
     )
+
+
+def deps(action_name):
+    def wrapped(args, parser):
+        if (
+            hasattr(args, "depformatextra")
+            and args.depformatextra is not None
+            and args.depformat is None
+        ):
+            parser.error("depformatextra option must be used with depformat")
+        kwargs = {x: getattr(args, x) for x in args.main_args}
+        try:
+            deps_command(action_name, args.depsconfig, **kwargs)
+        except DepsUnsyncedError:
+            # sync --verify error
+            sys.exit(ExitCodes.SYNC_VERIFY_ERROR)
+
+    return wrapped
 
 
 class RunnerResult:
@@ -174,6 +192,190 @@ class MainArgumentParser(argparse.ArgumentParser):
         except SystemExit as e:
             e.code = ExitCodes.WRONG_USAGE
             raise
+
+
+def deps_subparsers(parser):
+    subparsers = parser.add_subparsers(
+        title="deps subcommands",
+        help="--help for additional help",
+        required=True,
+    )
+
+    def add_deps_argument(parser, destname, *args, **kwargs):
+        parser.add_argument(*args, **kwargs)
+        destnames = parser.get_default("main_args") or []
+        destnames.append(destname)
+        parser.set_defaults(main_args=destnames)
+
+    def add_deps_parser(parsers, name, *args, **kwargs):
+        parser = parsers.add_parser(name, *args, **kwargs)
+        parser.set_defaults(main=deps(name))
+        return parser
+
+    # show
+    subparser_show = add_deps_parser(
+        subparsers,
+        "show",
+        description="Show configuration and data of dependencies's sources.",
+    )
+
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_show,
+        destname,
+        destname,
+        help="source names (default: all)",
+        nargs="*",
+    )
+
+    # sync
+    subparser_sync = add_deps_parser(
+        subparsers,
+        "sync",
+        description="Sync stored requirements to configured sources.",
+    )
+
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        destname,
+        help="source names (default: all)",
+        nargs="*",
+    )
+
+    destname = "verify"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        f"--{destname}",
+        help=(
+            "Sync sources, but print diff and exits with code "
+            f"{ExitCodes.SYNC_VERIFY_ERROR} if the sources were unsynced"
+        ),
+        action="store_true",
+    )
+
+    # eval
+    subparser_eval = add_deps_parser(
+        subparsers,
+        "eval",
+        description=(
+            "Evaluate stored requirements according to PEP508 in current Python"
+            " environment and print them to stdout in PEP508 format "
+            "(by default) or specified one."
+        ),
+    )
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        destname,
+        help="source names (default: all)",
+        nargs="*",
+    )
+
+    destname = "depformat"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        f"--{destname}",
+        help=(
+            "format of dependency to print (default: PEP508 format). "
+            "Supported substitutions: "
+            "$name - project's name, "
+            "$nname - PEP503 normalized project's name, "
+            "$fextra - project's extras (expanded first with --depformatextra)."
+        ),
+    )
+    destname = "depformatextra"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        f"--{destname}",
+        help=(
+            "format of extras to print (one extra of dependencies per line). "
+            "Result is expanded in format specified by --depformat as $fextra "
+            "(default: ''). Supported substitutions: $extra."
+        ),
+    )
+
+    destname = "extra"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        f"--{destname}",
+        dest=destname,
+        help="PEP508 'extra' marker to evaluate with (default: None)",
+    )
+
+    destname = "excludes"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        "--exclude",
+        dest=destname,
+        nargs="+",
+        default=[],
+        help=(
+            "regexes patterns, exclude requirement having PEP503-normalized "
+            "name that matches one of these patterns (default: [])"
+        ),
+    )
+
+    # add
+    subparser_add = add_deps_parser(
+        subparsers,
+        "add",
+        description=(
+            "Configure source of Python dependencies "
+            "(note: this doesn't sync the source). "
+            "Supported sources: standardized formats like PEP517, PEP518 or "
+            "core metadata are fully supported, while tool-specific formats "
+            "like pip, tox or poetry have limited support."
+        ),
+    )
+
+    destname = "srcname"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
+        help="source name",
+    )
+
+    destname = "srctype"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
+        choices=SUPPORTED_COLLECTORS,
+        help="source type",
+    )
+
+    destname = "srcargs"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
+        nargs="*",
+        help="specific configuration options for source (default: [])",
+    )
+
+    # delete
+    subparser_delete = add_deps_parser(
+        subparsers,
+        "delete",
+        description="Deconfigure source of Python dependencies",
+    )
+
+    destname = "srcname"
+    add_deps_argument(
+        subparser_delete,
+        destname,
+        destname,
+        help="source name",
+    )
 
 
 def main_parser(prog):
@@ -323,6 +525,25 @@ def main_parser(prog):
     )
     parser_run.set_defaults(main=run)
 
+    # deps subcli
+    parser_deps = subparsers.add_parser(
+        "deps",
+        description=(
+            "Collect PEP508 requirements from different sources, store and "
+            "evaluate them in Python environment."
+        ),
+    )
+    parser_deps.add_argument(
+        "--depsconfig",
+        type=Path,
+        default=Path.cwd() / DEFAULT_CONFIG_NAME,
+        help=(
+            "configuration file to use "
+            f"(default: {{cwd}}/{DEFAULT_CONFIG_NAME})"
+        ),
+    )
+
+    deps_subparsers(parser_deps)
     return parser
 
 

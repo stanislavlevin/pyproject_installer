@@ -10,3 +10,5 @@ class ExitCodes(IntEnum):
     WRONG_USAGE = 2
     # internal error
     INTERNAL_ERROR = 3
+    # sync --verify
+    SYNC_VERIFY_ERROR = 4
