@@ -126,8 +126,7 @@ class PyprojectVenv(EnvBuilder):
         try:
             self.run(install_args, capture_output=True)
         except RunCommandError as e:
-            err_msg = f"Installation of package failed:\n{str(e)}"
-            raise RunCommandEnvError(err_msg) from None
+            raise RunCommandEnvError("Installation of package failed") from e
 
     def create(self, *args, **kwargs):
         """Calls `post_create` hook after `venv` creation
@@ -181,5 +180,5 @@ class PyprojectVenv(EnvBuilder):
                     err_msg += f"\n\nCommand's {out_src}:\n{out_text}"
             raise RunCommandError(err_msg) from None
         except Exception as e:
-            raise RunCommandError(str(e)) from None
+            raise RunCommandError(str(e)) from e
         return result
