@@ -12,7 +12,7 @@ import pytest
 
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.errors import RunCommandError, RunCommandEnvError
-from pyproject_installer.run_cmd import run_command, _run_env
+from pyproject_installer.run_cmd import run_command, _run_env, _run_command
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE, build_shebang
 
 
@@ -292,6 +292,28 @@ def test_env_installation_failed(project):
             capture_output=True,
         )
     assert "Installation of package failed" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "error",
+    (RunCommandEnvError, RunCommandError, Exception),
+)
+def test_env_venv_creation_error(error, project, wheel_no_csript, mocker):
+    """Check the error on failed creation of venv"""
+    err_msg = "some error"
+    mocker.patch.object(
+        _run_command.PyprojectVenv,
+        "create",
+        autospec=True,
+        side_effect=error(err_msg),
+    )
+    command = ["any_command"]
+    with pytest.raises(RunCommandEnvError, match=err_msg):
+        run_command(
+            wheel_no_csript(),
+            command=command,
+            capture_output=True,
+        )
 
 
 def test_env_command_nonexistent(project, wheel_no_csript, monkeypatch):
