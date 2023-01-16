@@ -155,7 +155,12 @@ class PyprojectVenv(EnvBuilder):
     def venv_environ(self):
         """Prepare environ for venv"""
         env = os.environ.copy()
-        env["PATH"] = os.pathsep.join([self.context.bin_path, env["PATH"]])
+        try:
+            current_path = env["PATH"]
+        except KeyError:
+            env["PATH"] = self.context.bin_path
+        else:
+            env["PATH"] = os.pathsep.join([self.context.bin_path, current_path])
         env["VIRTUAL_ENV"] = self.context.env_dir
         return env
 

@@ -206,7 +206,8 @@ def test_env_venv_name(project, wheel_no_csript):
     assert res.stdout.strip().decode("utf-8") == expected_name
 
 
-def test_env_environ_path(project, wheel_no_csript):
+@pytest.mark.parametrize("env_path", ("path1", "path1:path2"))
+def test_env_environ_path(env_path, project, wheel_no_csript, monkeypatch):
     """Check venv's PATH environ variable"""
     code = textwrap.dedent(
         """\
@@ -225,9 +226,36 @@ def test_env_environ_path(project, wheel_no_csript):
         """
     )
     cmd = ["python", "-c", code]
+    monkeypatch.setenv("PATH", env_path)
     res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
     json_data = json.loads(res.stdout.decode("utf-8"))
-    assert json_data["env_path"].startswith(json_data["bin_dir"] + os.pathsep)
+    expected_path = os.pathsep.join([json_data["bin_dir"], env_path])
+    assert json_data["env_path"] == expected_path
+
+
+def test_env_environ_path_missing(project, wheel_no_csript, monkeypatch):
+    """Check venv's PATH environ variable if global's one is missing"""
+    code = textwrap.dedent(
+        """\
+        import os
+        import json
+        import sysconfig
+
+        print(
+            json.dumps(
+                {
+                    "env_path": os.environ["PATH"],
+                    "bin_dir": sysconfig.get_path("scripts"),
+                }
+            )
+        )
+        """
+    )
+    cmd = ["python", "-c", code]
+    monkeypatch.delenv("PATH")
+    res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
+    json_data = json.loads(res.stdout.decode("utf-8"))
+    assert json_data["env_path"] == json_data["bin_dir"]
 
 
 def test_env_environ_virtual_env(project, wheel_no_csript):
