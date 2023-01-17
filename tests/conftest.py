@@ -106,6 +106,8 @@ class WheelContents(MutableMapping):
 @pytest.fixture
 def tmpdir(tmp_path):
     yield tmp_path
+    # Solaris: rmtree can't remove current working directory
+    assert Path.cwd() != tmp_path
     shutil.rmtree(tmp_path)
 
 
