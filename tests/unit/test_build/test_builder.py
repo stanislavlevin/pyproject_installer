@@ -121,7 +121,7 @@ def test_verbosity(mock_build, pyproject, build_args):
     mock_build.assert_called_once_with(**b_kwargs)
 
 
-def test_paths_resolved(monkeypatch, mock_build, pyproject):
+def test_paths_resolved(mock_build, pyproject, monkeypatch):
     """Check if srcdir and wheeldir are resolved for backend"""
     pyproject_path = pyproject()
     cwd = pyproject_path.parent
