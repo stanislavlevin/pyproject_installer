@@ -413,10 +413,7 @@ def test_install_default_wheel_missing_tracker(
 ):
     """Check error if wheeltracker is missing and wheel is default"""
 
-    def _mock_read_text(*args, **kwargs):
-        raise FileNotFoundError()
-
-    mock_read_tracker.side_effect = _mock_read_text
+    mock_read_tracker.side_effect = FileNotFoundError
     install_args = ["install"]
     with pytest.raises(SystemExit) as exc:
         project_main.main(install_args)
@@ -493,10 +490,7 @@ def test_run_cli_default_wheel_missing_tracker(mock_read_tracker, capsys):
     - check outputs
     """
 
-    def _mock_read_text(*args, **kwargs):
-        raise FileNotFoundError()
-
-    mock_read_tracker.side_effect = _mock_read_text
+    mock_read_tracker.side_effect = FileNotFoundError
     run_args = ["run", "foo"]
     with pytest.raises(SystemExit) as exc:
         project_main.main(run_args)
@@ -517,10 +511,7 @@ def test_run_cli_failed_result(mock_run_command, mock_read_tracker, caplog):
     """
     exc_msg = "nonexistent command"
 
-    def _mock_result(*args, **kwargs):
-        raise RunCommandError(exc_msg)
-
-    mock_run_command.side_effect = _mock_result
+    mock_run_command.side_effect = RunCommandError(exc_msg)
     run_args = ["run", "nonexistent command"]
     caplog.set_level(logging.INFO)
     with pytest.raises(SystemExit) as exc:
@@ -540,10 +531,7 @@ def test_run_cli_venv_error(mock_run_command, mock_read_tracker, caplog):
     """
     exc_msg = "venv error"
 
-    def _mock_result(*args, **kwargs):
-        raise RunCommandEnvError(exc_msg)
-
-    mock_run_command.side_effect = _mock_result
+    mock_run_command.side_effect = RunCommandEnvError(exc_msg)
     run_args = ["run", "nonexistent command"]
     caplog.set_level(logging.INFO)
     with pytest.raises(SystemExit) as exc:
@@ -564,10 +552,7 @@ def test_run_cli_internal_error(mock_run_command, mock_read_tracker, caplog):
     """
     exc_msg = "something went wrong"
 
-    def _mock_result(*args, **kwargs):
-        raise Exception(exc_msg)
-
-    mock_run_command.side_effect = _mock_result
+    mock_run_command.side_effect = Exception(exc_msg)
     run_args = ["run", "nonexistent command"]
     caplog.set_level(logging.INFO)
     with pytest.raises(SystemExit) as exc:

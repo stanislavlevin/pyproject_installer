@@ -81,13 +81,11 @@ def test_verbosity(mock_build, pyproject, build_args):
     capture = not verbose
 
     # emulate build error to see captured out/err
-    def _raise_process_error(*args, **kwargs):
-        stdout, stderr = (b"stdout", b"stderr") if capture else (None, None)
-        raise CalledProcessError(
-            1, ["command args"], output=stdout, stderr=stderr
-        )
+    stdout, stderr = (b"stdout", b"stderr") if capture else (None, None)
 
-    mock_build.side_effect = _raise_process_error
+    mock_build.side_effect = CalledProcessError(
+        1, ["command args"], output=stdout, stderr=stderr
+    )
 
     expected_err_msg = "build_wheel failed"
     if not verbose:
@@ -293,10 +291,7 @@ def test_raisable_thread(mock_build, pyproject, mocker):
     mock_os_read = mocker.patch("pyproject_installer.build_cmd._build.os.read")
 
     # emulate os.read error to raise thread
-    def _raise_os_read(*args, **kwargs):
-        raise OSError("oops")
-
-    mock_os_read.side_effect = _raise_os_read
+    mock_os_read.side_effect = OSError("oops")
 
     with pytest.raises(RuntimeError, match="oops"):
         build_wheel(pyproject_path, outdir=outdir)
