@@ -2,10 +2,10 @@ from pathlib import Path
 
 from packaging.requirements import Requirement, InvalidRequirement
 
-from .parser import Parser
+from .collector import Collector
 
 
-class PipReqFileParser(Parser):
+class PipReqFileCollector(Collector):
     """Parses pip's requirements file
 
     - format:
@@ -16,11 +16,11 @@ class PipReqFileParser(Parser):
     """
     name = "pip_reqfile"
 
-    def __init__(self, reqfile):
-        super().__init__()
+    def __init__(self, ignore, reqfile):
+        super().__init__(ignore=ignore)
         self.reqfile = Path(reqfile)
 
-    def parse(self):
+    def collect(self):
         parsed_reqs = []
         with self.reqfile.open(encoding="utf-8") as f:
             for line in f:

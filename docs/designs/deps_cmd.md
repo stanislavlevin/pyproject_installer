@@ -1,63 +1,80 @@
-pyproject_installer buildrequires
+Collect dependencies from different source types, store or evaluate them.
 
-- get static deps
-- evaluate env markers
-- get dynamic deps for build wheel
-- evaluate env markers
-- drop unsupported dep types
-  - url
+Use cases:
+As a downstream maintainer I have to sync distro dependencies to upstream.
 
-```
-deps \
-    --group build pep517 \
-    --group check listfile \
-    --group check listfile \
-    --group build pep518 \
+# Specification #
+deps [--depsfile]
 
-pprints json on stdout:
+    add [--ignore REGEX]
+        GROUP SRCNAME SOURCETYPE ARGS
+    
+    del [--srcname]
+        [GROUP, ...]
+    
+    sync
+    
+    show
+    
+    verify [GROUP, ...]
+    
+    eval [GROUP, ...]
+
+
+# Examples #
+
+## Example of deps.json
+```json
 {
-    "build": [
-        "pep517",
-        "pep518",
-    ],
-    "check": [
-        "listfile",
-        "listfile",
-    ],
+    groups: {
+        "build": {
+            "pep518": {
+                "srctype": "pep518",
+                "srcargs": [],
+                "deps": [],
+            },
+            "pep517_wheel": {
+                "srctype": "pep517",
+                "srcargs": ["build_wheel"],
+                "deps": [],
+            },
+        },
+        "check": {
+            "some_file": {
+                "srctype": "file",
+                "srcargs": [],
+                "deps": [],
+            },
+            "testing": {
+                "srctype": "file",
+                "srcargs": [],
+                "deps": [],
+            },
+        },
+    }
 }
-
---file dumps json into file
 ```
-===========
 
-deps --depsfile
+## CLI usage
 
-deps collect \
-    --group name sourcetype args \
-    --group name sourcetype args \
+# create configuration
+deps add build pep518 pep518
+# sync dependencies (parse according to configuration and dump deps to deps file)
+deps sync
 
-deps verify [NAME, ...]
-deps show [NAME, ...]
+# delete group of deps
+deps del build
+# delete source from group of deps
+deps del --srcname pep518 build
+# delete all groups of deps
+deps del --all
 
-===========
+# evaluate deps of build group
+deps eval build
 
-bootstrap dependencies:
-- PEP518:
-  - parse deps with:
-    deps collect build_pep518 pep518
-  - grab required deps from stdout and install them
-- install ...
-- call backend (PEP517)
-- install ...
-- build
+# RPM specfile
+BuildRequires: read, evaluate, map and print deps
 
-==========
-poetry.deps:
-example: poetry-core
-[tool.poetry.dev-dependencies]
-
-tox.ini
-example: poetry-core
-[testenv]
-deps =
-    pytest
+%pre
+# configuration is required
+deps sync

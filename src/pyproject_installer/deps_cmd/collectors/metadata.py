@@ -5,22 +5,22 @@ import sys
 from packaging.requirements import Requirement
 from packaging.markers import Marker, default_environment, _evaluate_markers
 
-from .parser import Parser
+from .collector import Collector
 from ...lib.wheel import WheelFile
 
 
-class MetadataParser(Parser):
+class MetadataCollector(Collector):
     """Parse METADATA of wheel
 
     - build a wheel in cwd if it was not specified
     """
     name = "metadata"
 
-    def __init__(self, wheel=None):
-        super().__init__()
+    def __init__(self, ignore, wheel=None):
+        super().__init__(ignore=ignore)
         self.wheel = wheel if wheel is None else Path(wheel)
 
-    def parse(self):
+    def collect(self):
         # TODO: support for build wheel
         if self.wheel is None:
             raise ValueError("Currently unsupported wheel option")
