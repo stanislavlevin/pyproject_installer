@@ -9,7 +9,7 @@ class Pep517Collector(Collector):
     """Calls get_requires_for_build_wheel in cwd according to PEP517"""
     name = "pep517"
 
-    def parse(self):
+    def collect(self):
         return call_hook(
             python=sys.executable,
             srcdir=Path.cwd(),

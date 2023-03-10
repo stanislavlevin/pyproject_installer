@@ -11,6 +11,8 @@ Install features:
     - RECORD is dropped (PEP627)
     - signature verification of signed wheel is not supported
 """
+from collections.abc import MutableMapping
+from collections import namedtuple
 from pathlib import Path
 import argparse
 import json
@@ -24,7 +26,7 @@ from packaging.requirements import Requirement
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
-from .errors import RunCommandError, RunCommandEnvError
+from .errors import RunCommandError, RunCommandEnvError, DepsVerifyError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
 # from .deps_cmd import deps_command
@@ -33,182 +35,214 @@ from .deps_cmd.collectors import SUPPORTED_COLLECTORS, get_collector
 logger = logging.getLogger(Path(__file__).parent.name)
 
 
-# def wheel_build_deps(srcdir):
-#     return call_hook(
-#         python=sys.executable,
-#         srcdir=srcdir,
-#         verbose=False,
-#         hook="get_requires_for_build_wheel",
-#     )["result"]
-# 
-# 
-# def build_deps(args, parser):
-#     cwd = Path.cwd()
-#     srcdir = validate_source_dir(cwd)
-#     pyproject_file = srcdir / "pyproject.toml"
-#     if args.wheel:
-#         # logger.info("wheel deps: %s", wheel_build_deps(srcdir))
-#         for dep in wheel_build_deps(srcdir):
-#             print(dep)
-#     else:
-#         # logger.info("bootstrap deps: %s", bootstrap_build_deps(pyproject_file))
-#         for dep in bootstrap_build_deps(pyproject_file):
-#             print(dep)
-class DepsSources:
-    def __init__(self, depsfile):
-        self.depsfile = depsfile
+SourceEntry = namedtuple(
+    "SourceEntry",
+    ["srcname", "srctype", "srcargs", "ignore", "deps"],
+)
+
+
+class DepsSourcesConfig:
+    def __init__(self, file):
+        self.file = Path(file)
+        self.read()
+
+    def set_default(self):
         # default config
-        self.config = self.default_config()
-        try:
-            with self.depsfile.open(encoding="utf-8") as f:
-                try:
-                    self.config = json.load(f)
-                except json.JSONDecodeError:
-                    raise ValueError(
-                        f"Invalid dependencies file: {f}"
-                    ) from None
-        except FileNotFoundError:
+        self.config = {}
+        self._groups = {}
+
+    def read(self):
+        if not self.file.is_file():
             # new file
-            pass
+            self.set_default()
+            return
 
-    def default_config(self):
-        return {"groups": {}}
-
-    def add(self, group, srcname, srctype, srcargs, ignore):
-        src_dict = {
-            srcname: {
-                "srctype": srctype,
-                "srcargs": srcargs,
-                "deps": [],
-                "ignore": ignore,
-            }
-        }
-        config_groups = self.config["groups"]
-        if group not in config_groups:
-            config_groups[group] = src_dict
-        else:
-            if srcname in config_groups[group]:
+        with self.file.open(encoding="utf-8") as f:
+            try:
+                self.config = json.load(f)
+            except json.JSONDecodeError:
                 raise ValueError(
-                    f"'{srcname}' source already exists in '{group}' group"
-                )
-            config_groups[group].update(src_dict)
-        with self.depsfile.open("w", encoding="utf-8") as f:
-            json.dump(self.config, f, indent=2)
+                    f"Invalid dependencies file: {f}"
+                ) from None
 
-    def delete(self, groups, srcname=None):
-        # remove all groups by default
-        if not groups and srcname is None:
-            self.config = self.default_config()
-        else:
-            config_groups = self.config["groups"]
-            missing_groups = set(groups) - config_groups.keys()
-            if missing_groups:
-                raise ValueError(
-                    "Non existent groups: {}".format(', '.join(missing_groups))
-                )
-            selected_groups = config_groups.keys()
-            if groups:
-                selected_groups = selected_groups & set(groups)
+    def save(self):
+        # first parse the whole config
+        json_config = json.dumps(self.config, indent=2)
+        self.file.write_text(json_config, encoding="utf-8")
 
-            for group in selected_groups:
-                if srcname is None:
-                    del config_groups[group]
-                else:
-                    if srcname not in config_groups[group]:
-                        raise ValueError(
-                            f"Non existent srcname: {srcname} (group: {group})"
-                        )
-                    del config_groups[group][srcname]
-
-        with self.depsfile.open("w", encoding="utf-8") as f:
-            json.dump(self.config, f, indent=2)
-
-
-    def show(self):
-        out = json.dumps(self.config, indent=2) + "\n"
-        sys.stdout.write(out)
-
-    def sync(self):
-        for group_name, group in self.config["groups"].items():
-            for src_name, src in group.items():
-                src["deps"] = []
-                srctype = src["srctype"]
-                collector_cls = get_collector(srctype)
-                if collector_cls is None:
-                    raise ValueError(
-                        f"Unsupported collector type: {srctype} "
-                        f"(group: {group_name}, src: {src_name})"
-                    )
-                regexes = [re.compile(x) for x in src["ignore"]]
-                collector = collector_cls(*src["srcargs"])
-                for req in collector.collect():
-                    name = Requirement(req).name
-                    if any(regex.match(name) for regex in regexes):
-                        continue
-                    src["deps"].append(req)
-        with self.depsfile.open("w", encoding="utf-8") as f:
-            json.dump(self.config, f, indent=2)
-
-    def eval(self, groups=[], namesonly=True):
-        config_groups = self.config["groups"]
-        missing_groups = set(groups) - config_groups.keys()
+    def find_groups(self, groups):
+        config_groups = set(self.group_names)
+        missing_groups = set(groups) - config_groups
         if missing_groups:
             raise ValueError(
                 "Non existent groups: {}".format(', '.join(missing_groups))
             )
-        selected_groups = config_groups.keys()
         if groups:
-            selected_groups = selected_groups & set(groups)
-        deps = []
-        for group in selected_groups:
-            for src in config_groups[group].values():
-                for req in src["deps"]:
-                    parsed_req = Requirement(req)
-                    marker = parsed_req.marker
-                    if marker is not None:
-                        marker_res = marker.evaluate()
-                        if not marker_res:
-                            continue
-                    if namesonly:
-                        deps.append(parsed_req.name)
-                    else:
-                        deps.append(req)
+            found_groups = config_groups & set(groups)
+        else:
+            found_groups = config_groups
+
+        yield from found_groups
+
+    @property
+    def _groups(self):
+        return self.config["groups"]
+
+    @_groups.setter
+    def _groups(self, value):
+        self.config["groups"] = dict(value)
+
+    def iter_groups(self, groups=[]):
+        for group in self.find_groups(groups):
+            for srcname, src in self._groups[group].items():
+                yield (
+                    group,
+                    SourceEntry(
+                        srcname, 
+                        srctype=src["srctype"],
+                        srcargs=src["srcargs"],
+                        ignore=src["ignore"],
+                        deps=src["deps"],
+                    ),
+                ) 
+
+    @property
+    def group_names(self):
+        yield from self._groups
+
+    def add_group(self, group, srcentry):
+        if group not in self.group_names:
+            self._groups[group] = {}
+        else:
+            if srcentry.srcname in self._groups[group]:
+                raise ValueError(
+                    f"'{srcentry.srcname}' source already exists in "
+                    f"'{group}' group"
+                )
+        self._groups[group][srcentry.srcname] = {
+            "srctype": srcentry.srctype,
+            "srcargs": srcentry.srcargs,
+            "ignore": srcentry.ignore,
+            "deps": list(),
+        }
+        self.save()
+
+    def del_group(self, groups, srcname=None):
+        # remove all groups by default
+        if not groups and srcname is None:
+            self.set_default()
+        else:
+            for group in self.find_groups(groups):
+                if srcname is None:
+                    del self._groups[group]
+                else:
+                    if srcname not in self._groups[group]:
+                        raise ValueError(
+                            f"Non existent srcname: {srcname} (group: {group})"
+                        )
+                    del self._groups[group][srcname]
+
+        self.save()
+
+    def set_deps(self, group, srcentry, deps):
+        # input should be validated by caller
+        self._groups[group][srcentry.srcname]["deps"] = list(set(deps))
+        self.save()
+
+    def to_json(self, indent=2):
+        return json.dumps(self.config, indent=indent)
+
+
+class DepsSources:
+    def __init__(self, depsfile):
+        self.deps_config = DepsSourcesConfig(depsfile)
+
+    def add(self, group, srcentry):
+        self.deps_config.add_group(group, srcentry)
+
+    def delete(self, groups, srcname=None):
+        self.deps_config.del_group(groups, srcname)
+
+    def show(self):
+        out = self.deps_config.to_json() + "\n"
+        sys.stdout.write(out)
+
+    def collect(self, group, srcentry):
+        collector_cls = get_collector(srcentry.srctype)
+        if collector_cls is None:
+            raise ValueError(
+                f"Unsupported collector type: {srcentry.srctype} "
+                f"(group: {group}, src: {srcentry.srcname})"
+            )
+        regexes = {re.compile(x) for x in srcentry.ignore}
+        collector = collector_cls(*srcentry.srcargs)
+        for req in collector.collect():
+            name = Requirement(req).name
+            if any(regex.match(name) for regex in regexes):
+                continue
+            yield req
+
+    def sync(self, groups=[]):
+        for group, srcentry in self.deps_config.iter_groups(groups):
+            self.deps_config.set_deps(
+                group, srcentry, set(self.collect(group, srcentry))
+            )
+
+    def eval(self, groups=[], namesonly=True):
+        deps = set()
+        for _, srcentry in self.deps_config.iter_groups(groups):
+            for req in srcentry.deps:
+                parsed_req = Requirement(req)
+                marker = parsed_req.marker
+                if marker is not None:
+                    marker_res = marker.evaluate()
+                    if not marker_res:
+                        continue
+                if namesonly:
+                    deps.add(parsed_req.name)
+                else:
+                    deps.add(req)
         for dep in deps:
             sys.stdout.write(dep + "\n")
 
     def verify(self, groups=[]):
-        config_groups = self.config["groups"]
-        missing_groups = set(groups) - config_groups.keys()
-        if missing_groups:
-            raise ValueError(
-                "Non existent groups: {}".format(', '.join(missing_groups))
-            )
-        selected_groups = config_groups.keys()
-        if groups:
-            selected_groups = selected_groups & set(groups)
-        for group in selected_groups:
-            for src in config_groups[group].values():
-                for req in src["deps"]:
-                    parsed_req = Requirement(req)
-                    marker = parsed_req.marker
-                    if marker is not None:
-                        marker_res = marker.evaluate()
-                        if not marker_res:
-                            continue
-                    if namesonly:
-                        deps.append(parsed_req.name)
-                    else:
-                        deps.append(req)
+        diff = {}
+        for group, srcentry in self.deps_config.iter_groups(groups):
+            synced_deps = set(self.collect(group, srcentry))
+            stored_deps = set(srcentry.deps)
+            if stored_deps == synced_deps:
+                continue
+
+            if group not in diff:
+                diff[group] = {}
+
+            if srcentry.srcname not in diff[group]:
+                diff[group][srcentry.srcname] = {}
+
+            new_deps = synced_deps - stored_deps
+            if new_deps:
+                diff[group][srcentry.srcname]["new_deps"] = list(new_deps)
+
+            extra_deps = stored_deps - synced_deps
+            if extra_deps:
+                diff[group][srcentry.srcname]["extra_deps"] = list(extra_deps)
+
+        if diff:
+            out = json.dumps(diff, indent=2) + "\n"
+            sys.stdout.write(out)
+            raise DepsVerifyError
 
 
 def deps_add(args, parser):
-    DepsSources(args.depsfile).add(
-        args.group,
-        srcname=args.srcname,
+    srcentry = SourceEntry(
+        args.srcname,
         srctype=args.srctype,
         srcargs=args.srcargs,
         ignore=args.ignore,
+        deps=set(),
     )
+
+    DepsSources(args.depsfile).add(args.group, srcentry)
 
 
 def deps_show(args, parser):
@@ -216,7 +250,7 @@ def deps_show(args, parser):
 
 
 def deps_sync(args, parser):
-    DepsSources(args.depsfile).sync()
+    DepsSources(args.depsfile).sync(args.groups)
 
 
 def deps_del(args, parser):
@@ -228,7 +262,10 @@ def deps_eval(args, parser):
 
 
 def deps_verify(args, parser):
-    DepsSources(args.depsfile).verify(args.groups)
+    try:
+        DepsSources(args.depsfile).verify(args.groups)
+    except DepsVerifyError:
+        sys.exit(ExitCodes.FAILURE)
 
 
 def build(args, parser):
@@ -392,6 +429,7 @@ def deps_subparsers(parser):
     )
     subparser_add.add_argument(
         "--ignore",
+        default=[],
         action="append",
         help=("TODO"),
     )
@@ -430,6 +468,11 @@ def deps_subparsers(parser):
         "sync",
         description=("TODO"),
     )
+    subparser_sync.add_argument(
+        "groups",
+        nargs="*",
+        help=("TODO"),
+    )
     subparser_sync.set_defaults(main=deps_sync)
 
     # del subcli
@@ -465,6 +508,18 @@ def deps_subparsers(parser):
         action="store_false"
     )
     subparser_eval.set_defaults(main=deps_eval)
+
+    # verify subcli
+    subparser_verify = subparsers.add_parser(
+        "verify",
+        description=("TODO"),
+    )
+    subparser_verify.add_argument(
+        "groups",
+        nargs="*",
+        help=("TODO"),
+    )
+    subparser_verify.set_defaults(main=deps_verify)
 
     return subparsers
 
