@@ -4,21 +4,21 @@ Use cases:
 As a downstream maintainer I have to sync distro dependencies to upstream.
 
 # Specification #
+
+# TODO
 deps [--depsfile]
 
-    add [--ignore REGEX]
-        GROUP SRCNAME SOURCETYPE ARGS
+    add
     
-    del [--srcname]
-        [GROUP, ...]
+    del
     
     sync
     
     show
     
-    verify [GROUP, ...]
+    verify
     
-    eval [GROUP, ...]
+    eval
 
 
 # Examples #
@@ -28,53 +28,56 @@ deps [--depsfile]
 {
     groups: {
         "build": {
-            "pep518": {
-                "srctype": "pep518",
-                "srcargs": [],
-                "deps": [],
+            "filters": {
+                "include": (),
+                "exclude": (),
             },
-            "pep517_wheel": {
-                "srctype": "pep517",
-                "srcargs": ["build_wheel"],
-                "deps": [],
-            },
-        },
-        "check": {
-            "some_file": {
-                "srctype": "file",
-                "srcargs": [],
-                "deps": [],
-            },
-            "testing": {
-                "srctype": "file",
-                "srcargs": [],
-                "deps": [],
-            },
-        },
+            "deps": (),
+            "sources": {
+                "pep518": {
+                    "srctype": "pep518",
+                    "srcargs": (),
+                },
+                "pep517_wheel": {
+                    "srctype": "pep517",
+                    "srcargs": ("build_wheel"),
+                }
+            }
+        }
     }
 }
 ```
 
 ## CLI usage
 
-# create configuration
-deps add build pep518 pep518
-# sync dependencies (parse according to configuration and dump deps to deps file)
-deps sync
+# group management
 
-# delete group of deps
-deps del build
-# delete source from group of deps
-deps del --srcname pep518 build
-# delete all groups of deps
-deps del --all
+deps group add build
+deps group del build
+
+# source management
+deps source add build pep518 pep518
+deps source del build pep518
+
+# filter management
+deps filter add build (exclude|include) types- pytest-
+deps filter del build (exclude|include)
+
+# sync dependencies (parse according to configuration and dump deps to deps file)
+deps sync build
 
 # evaluate deps of build group
 deps eval build
 
+# verify deps
+deps verify build
+
+# show config
+deps show
+
 # RPM specfile
-BuildRequires: read, evaluate, map and print deps
+BuildRequires: evaluate, map and print deps
 
 %pre
 # configuration is required
-deps sync
+deps verify

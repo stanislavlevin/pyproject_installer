@@ -10,7 +10,7 @@ class Pep517Collector(Collector):
     name = "pep517"
 
     def collect(self):
-        return call_hook(
+        yield from call_hook(
             python=sys.executable,
             srcdir=Path.cwd(),
             verbose=False,

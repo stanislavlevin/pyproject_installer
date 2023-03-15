@@ -16,12 +16,10 @@ class PipReqFileCollector(Collector):
     """
     name = "pip_reqfile"
 
-    def __init__(self, ignore, reqfile):
-        super().__init__(ignore=ignore)
+    def __init__(self, reqfile):
         self.reqfile = Path(reqfile)
 
     def collect(self):
-        parsed_reqs = []
         with self.reqfile.open(encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
@@ -30,5 +28,4 @@ class PipReqFileCollector(Collector):
                 except InvalidRequirement:
                     continue
                 else:
-                    parsed_reqs.append(line)
-        return parsed_reqs
+                    yield line

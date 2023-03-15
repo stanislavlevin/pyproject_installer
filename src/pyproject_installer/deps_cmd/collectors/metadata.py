@@ -25,11 +25,9 @@ class MetadataCollector(Collector):
         if self.wheel is None:
             raise ValueError("Currently unsupported wheel option")
 
-        parsed_reqs = []
         with WheelFile(self.wheel) as whl:
             distr = PathDistribution(whl.dist_info)
 
             for req in distr.requires:
                 parsed_req = Requirement(req)
-                parsed_reqs.append(req)
-        return parsed_reqs
+                yield req

@@ -42,13 +42,10 @@ class Pep518Collector(Collector):
                 f"requires should be a list of strings, given: {requires!r}"
             )
 
-        parsed_reqs = []
         for req in requires:
             if not isinstance(req, str):
                 raise TypeError(
                     f"requires should be a list of strings, given: {requires!r}"
                 )
             parsed_req = Requirement(req)
-            parsed_reqs.append(req)
-
-        return parsed_reqs
+            yield req
