@@ -887,7 +887,7 @@ def main_parser(prog):
     parser_deps.add_argument(
         "--depsfile",
         type=Path,
-        default=Path.cwd() / "deps.json",
+        default=Path.cwd() / "pyproject_deps.json",
         help=("TODO"),
     )
 
