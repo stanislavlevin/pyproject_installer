@@ -40,20 +40,22 @@ FILTER_TYPES = {"include", "exclude"}
 
 
 class DepsSourcesConfig:
-    def __init__(self, file):
+    def __init__(self, file, create=False):
         self.file = Path(file)
-        self.read()
+        self.read(create=create)
 
     def set_default(self):
         # default config
         self.config = {}
         self.groups = {}
 
-    def read(self):
+    def read(self, create):
         if not self.file.is_file():
-            # new file
-            self.set_default()
-            return
+            if create:
+                # new file
+                self.set_default()
+                return
+            raise FileNotFoundError(f"Missing deps config file: {self.file}")
 
         with self.file.open(encoding="utf-8") as f:
             try:
@@ -298,7 +300,7 @@ class DepsSourcesConfig:
 
 
 def deps_add(args, parser):
-    DepsSourcesConfig(args.depsfile).group_add(args.group)
+    DepsSourcesConfig(args.depsfile, create=True).group_add(args.group)
 
 
 def deps_del(args, parser):

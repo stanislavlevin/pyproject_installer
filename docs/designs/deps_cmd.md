@@ -83,5 +83,5 @@ BuildRequires: evaluate, map and print deps
 deps verify
 
 # howto add at first time
-- don't add any of 'pyproject_installer deps'-based macros into RPM spec file
-- build a package with pyproject_installer
+- append pyproject_deps_verify macro to %prep section of RPM spec file
+- run through %prep phase (we need unpacked sources and applied patches if any)
