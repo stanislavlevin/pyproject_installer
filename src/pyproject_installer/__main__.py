@@ -225,7 +225,12 @@ class DepsSourcesConfig:
         collector_cls = get_collector(srctype)
         if collector_cls is None:
             raise ValueError(f"Unsupported collector type: {srctype}")
-        return collector_cls(*srcargs)
+        try:
+            return collector_cls(*srcargs)
+        except TypeError as e:
+            raise ValueError(
+                f"Unsupported arguments of collector {srctype}: {e!s}"
+            ) from None
 
     def collect(self, srctype, srcargs, includes, excludes):
         collector = self.validate_collector(srctype, srcargs)
