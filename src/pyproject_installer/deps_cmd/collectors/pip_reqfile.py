@@ -28,7 +28,7 @@ class PipReqFileCollector(Collector):
                 line = comment_re.sub("", line)
                 line = line.strip()
                 try:
-                    parsed_req = Requirement(line)
+                    Requirement(line)
                 except InvalidRequirement:
                     continue
                 else:

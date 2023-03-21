@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import sys
 
-from packaging.requirements import Requirement
+from packaging.requirements import Requirement, InvalidRequirement
 from packaging.markers import Marker, default_environment, _evaluate_markers
 
 from .collector import Collector
@@ -37,5 +37,9 @@ class MetadataCollector(Collector):
 
             distr = PathDistribution(Path(tmpdir) / distinfo_dir)
             for req in distr.requires:
-                parsed_req = Requirement(req)
-                yield req
+                try:
+                    parsed_req = Requirement(req)
+                except InvalidRequirement:
+                    continue
+                else:
+                    yield req

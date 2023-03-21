@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from packaging.requirements import Requirement
+from packaging.requirements import Requirement, InvalidRequirement
 
 try:
     # Python 3.11+
@@ -47,5 +47,9 @@ class Pep518Collector(Collector):
                 raise TypeError(
                     f"requires should be a list of strings, given: {requires!r}"
                 )
-            parsed_req = Requirement(req)
-            yield req
+            try:
+                Requirement(req)
+            except InvalidRequirement:
+                continue
+            else:
+                yield req
