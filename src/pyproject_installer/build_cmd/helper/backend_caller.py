@@ -19,6 +19,7 @@ SUPPORTED_HOOKS = {
     "build_sdist": None,
     "get_requires_for_build_wheel": [],
     "get_requires_for_build_sdist": [],
+    "prepare_metadata_for_build_wheel": "",
 }
 
 

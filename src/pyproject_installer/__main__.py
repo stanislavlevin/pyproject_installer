@@ -523,6 +523,12 @@ def deps_source_subparsers(parsers):
         description=("TODO"),
     )
     subparser_add.add_argument(
+        "--extra",
+        dest="extra",
+        help="TODO",
+        type=str,
+    )
+    subparser_add.add_argument(
         "group",
         type=str,
         help=("TODO"),
