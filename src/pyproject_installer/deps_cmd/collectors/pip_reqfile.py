@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from packaging.requirements import Requirement, InvalidRequirement
 
@@ -9,7 +10,7 @@ class PipReqFileCollector(Collector):
     """Parses pip's requirements file
 
     - format:
-    https://pip.pypa.io/en/stable/reference/requirements-file-format/#requirements-file-format
+      https://pip.pypa.io/en/stable/reference/requirements-file-format/#requirements-file-format
     - supported only PEP508 requirements
     - line continuations are not supported for now,
       see pip._internal.req.req_file.join_lines for details
@@ -22,7 +23,10 @@ class PipReqFileCollector(Collector):
     def collect(self):
         with self.reqfile.open(encoding="utf-8") as f:
             for line in f:
-                line = line.rstrip()
+                # see pip._internal.req.req_file.ignore_comments
+                comment_re = re.compile(r"(^|\s+)#.*$")
+                line = comment_re.sub("", line)
+                line = line.strip()
                 try:
                     parsed_req = Requirement(line)
                 except InvalidRequirement:
