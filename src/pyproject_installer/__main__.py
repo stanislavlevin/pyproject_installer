@@ -118,6 +118,15 @@ class DepsSourcesConfig:
             gp["sources"] = {}
         return gp["sources"]
 
+    def _get_source(self, group, srcname):
+        srcs = self._get_sources(group)
+
+        if srcname not in srcs:
+            raise ValueError(
+                f"Source '{srcname}' doesn't exist (group: {group})"
+            )
+        return srcs[srcname]
+
     def _get_filters(self, group):
         gp = self._get_group(group)
         if "filters" not in gp:
@@ -138,17 +147,14 @@ class DepsSourcesConfig:
 
         yield from found_groups
 
-    def iter_deps(self, groups=()):
-        for group in self.find_groups(groups):
-            gp = self._get_group(group)
-            yield from gp.get("deps", ())
-
-    def set_deps(self, group, deps):
-        gp = self._get_group(group)
-        gp["deps"] = tuple(deps)
+    def set_deps(self, group, srcname, deps):
+        src = self._get_source(group, srcname)
+        src["deps"] = tuple(deps)
         self.save()
 
-    def source_add(self, group, srcname, srctype, srcargs):
+    def source_add(self, group, srcname, srctype, srcargs, extra):
+        self.validate_collector(srctype, srcargs)
+
         srcs = self._get_sources(group)
         if srcname in srcs:
             raise ValueError(
@@ -157,6 +163,8 @@ class DepsSourcesConfig:
         srcs[srcname] = {"srctype": srctype}
         if srcargs:
             srcs[srcname]["srcargs"] = srcargs
+        if extra:
+            srcs[srcname]["extra"] = extra
         self.save()
 
     def source_del(self, group, srcnames):
@@ -176,9 +184,8 @@ class DepsSourcesConfig:
 
     def iter_sources(self, group):
         srcs = self._get_sources(group)
-        for src in srcs.values():
-            yield src["srctype"], src.get("srcargs", ())
-
+        for srcname, src in srcs.items():
+            yield srcname, src
 
     def verify_filtertype(self, filtertype):
         if filtertype not in FILTER_TYPES:
@@ -214,13 +221,17 @@ class DepsSourcesConfig:
         filters = self._get_filters(group)
         yield from filters.get(filtertype, ())
 
-    def collect(self, srctype, srcargs, includes, excludes):
+    def validate_collector(self, srctype, srcargs):
         collector_cls = get_collector(srctype)
         if collector_cls is None:
             raise ValueError(f"Unsupported collector type: {srctype}")
+        return collector_cls(*srcargs)
+
+    def collect(self, srctype, srcargs, includes, excludes):
+        collector = self.validate_collector(srctype, srcargs)
+
         include_regexes = {re.compile(x) for x in includes}
         exclude_regexes = {re.compile(x) for x in excludes}
-        collector = collector_cls(*srcargs)
         for req in collector.collect():
             name = Requirement(req).name
             if include_regexes:
@@ -235,63 +246,71 @@ class DepsSourcesConfig:
 
     def sync(self, groups=()):
         for group in self.find_groups(groups):
-            deps = set()
-            for srctype, srcargs in self.iter_sources(group):
-                deps |= set(
-                    self.collect(
-                        srctype,
-                        srcargs=srcargs,
-                        includes=self.iter_filters(group, "include"),
-                        excludes=self.iter_filters(group, "exclude"),
+            for srcname, src in self.iter_sources(group):
+                self.set_deps(
+                    group,
+                    srcname=srcname,
+                    deps=set(
+                        self.collect(
+                            src["srctype"],
+                            srcargs=src.get("srcargs", ()),
+                            includes=self.iter_filters(group, "include"),
+                            excludes=self.iter_filters(group, "exclude"),
+                        )
                     )
                 )
 
-            self.set_deps(group, deps)
-
     def eval(self, groups=(), namesonly=True):
         deps = set()
-        for req in self.iter_deps(groups):
-            parsed_req = Requirement(req)
-            marker = parsed_req.marker
-            if marker is not None:
-                marker_res = marker.evaluate()
-                if not marker_res:
-                    continue
-            if namesonly:
-                deps.add(parsed_req.name)
-            else:
-                deps.add(req)
+        for group in self.find_groups(groups):
+            for _, src in self.iter_sources(group):
+                for req in src.get("deps", ()):
+                    parsed_req = Requirement(req)
+                    marker = parsed_req.marker
+                    if marker is not None:
+                        env = None
+                        extra = src.get("extra")
+                        if extra:
+                            env = {"extra": extra}
+                        marker_res = marker.evaluate(env)
+                        if not marker_res:
+                            continue
+                    if namesonly:
+                        deps.add(parsed_req.name)
+                    else:
+                        deps.add(req)
+
         for dep in deps:
             sys.stdout.write(dep + "\n")
 
     def verify(self, groups=()):
         diff = {}
         for group in self.find_groups(groups):
-            synced_deps = set()
-            for srctype, srcargs in self.iter_sources(group):
-                synced_deps |= set(
+            for srcname, src in self.iter_sources(group):
+                synced_deps = set(
                     self.collect(
-                        srctype,
-                        srcargs=srcargs,
+                        src["srctype"],
+                        srcargs=src.get("srcargs", ()),
                         includes=self.iter_filters(group, "include"),
                         excludes=self.iter_filters(group, "exclude"),
                     )
                 )
 
-            stored_deps = set(self.iter_deps([group]))
-            if stored_deps == synced_deps:
-                continue
+                stored_deps = set(src.get("deps", ()))
 
-            if group not in diff:
-                diff[group] = {}
+                if stored_deps == synced_deps:
+                    continue
 
-            new_deps = synced_deps - stored_deps
-            if new_deps:
-                diff[group]["new_deps"] = tuple(new_deps)
+                if group not in diff:
+                    diff[group] = {}
 
-            extra_deps = stored_deps - synced_deps
-            if extra_deps:
-                diff[group]["extra_deps"] = tuple(extra_deps)
+                new_deps = synced_deps - stored_deps
+                if new_deps:
+                    diff[group]["new_deps"] = tuple(new_deps)
+
+                extra_deps = stored_deps - synced_deps
+                if extra_deps:
+                    diff[group]["extra_deps"] = tuple(extra_deps)
 
         if diff:
             out = json.dumps(diff, indent=2) + "\n"
@@ -313,6 +332,7 @@ def deps_source_add(args, parser):
         srcname=args.srcname,
         srctype=args.srctype,
         srcargs=tuple(args.srcargs),
+        extra=args.extra,
     )
 
 
