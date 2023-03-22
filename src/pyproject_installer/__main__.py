@@ -134,18 +134,17 @@ class DepsSourcesConfig:
         return gp["filters"]
 
     def find_groups(self, groups=()):
-        config_groups = set(self.groups)
-        missing_groups = set(groups) - config_groups
+        missing_groups = set(groups) - set(self.groups)
         if missing_groups:
             raise ValueError(
                 "Non existent groups: {}".format(', '.join(missing_groups))
             )
-        if groups:
-            found_groups = config_groups & set(groups)
-        else:
-            found_groups = config_groups
 
-        yield from found_groups
+        if groups:
+            yield from groups
+        else:
+            yield from self.groups
+
 
     def set_deps(self, group, srcname, deps):
         src = self._get_source(group, srcname)
