@@ -265,7 +265,9 @@ class DepsSourcesConfig:
 
     def sync(self, groups=()):
         for group in self.find_groups(groups):
+            logger.info("Syncing group: %s", group)
             for srcname, src in self.iter_sources(group):
+                logger.info("Syncing source: %s", srcname)
                 self.set_deps(
                     group,
                     srcname=srcname,
@@ -276,6 +278,8 @@ class DepsSourcesConfig:
                         excludes=self.iter_filters(group, "exclude"),
                     ),
                 )
+                logger.info("Synced source: %s", srcname)
+            logger.info("Synced group: %s", group)
 
     def eval(self, groups=(), namesonly=True):
         deps = set()
