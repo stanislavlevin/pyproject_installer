@@ -216,6 +216,20 @@ class DepsSourcesConfig:
         filters = self._get_filters(group)
         self._show({"filters": filters})
 
+    def filter_apply(self, group):
+        for srcname, src in self.iter_sources(group):
+            self.set_deps(
+                group,
+                srcname=srcname,
+                deps=set(
+                    self._filter_apply(
+                        src.get("deps", ()),
+                        includes=self.iter_filters(group, "include"),
+                        excludes=self.iter_filters(group, "exclude"),
+                    )
+                ),
+            )
+
     def iter_filters(self, group, filtertype):
         self.verify_filtertype(filtertype)
         filters = self._get_filters(group)
@@ -232,12 +246,10 @@ class DepsSourcesConfig:
                 f"Unsupported arguments of collector {srctype}: {e!s}"
             ) from None
 
-    def collect(self, srctype, srcargs, includes, excludes):
-        collector = self.validate_collector(srctype, srcargs)
-
+    def _filter_apply(self, reqs, includes, excludes):
         include_regexes = {re.compile(x) for x in includes}
         exclude_regexes = {re.compile(x) for x in excludes}
-        for req in collector.collect():
+        for req in reqs:
             name = Requirement(req).name
             if include_regexes:
                 if any(regex.match(name) for regex in include_regexes):
@@ -248,6 +260,11 @@ class DepsSourcesConfig:
                     yield req
                 continue
             yield req
+
+    def collect(self, srctype, srcargs, includes, excludes):
+        collector = self.validate_collector(srctype, srcargs)
+
+        return self._filter_apply(collector.collect(), includes, excludes)
 
     def sync(self, groups=()):
         for group in self.find_groups(groups):
@@ -353,6 +370,9 @@ def deps_filter_add(args, parser):
     DepsSourcesConfig(args.depsfile).filter_add(
         args.group, args.filtertype, args.regexes
     )
+
+def deps_filter_apply(args, parser):
+    DepsSourcesConfig(args.depsfile).filter_apply(args.group)
 
 
 def deps_filter_del(args, parser):
@@ -674,6 +694,18 @@ def deps_filter_subparsers(parsers):
         help=("TODO"),
     )
     subparser_show.set_defaults(main=deps_filter_show)
+
+    # deps filter apply
+    subparser_apply = subparsers.add_parser(
+        "apply",
+        description=("TODO"),
+    )
+    subparser_apply.add_argument(
+        "group",
+        type=str,
+        help=("TODO"),
+    )
+    subparser_apply.set_defaults(main=deps_filter_apply)
 
 
 def deps_subparsers(parser):
