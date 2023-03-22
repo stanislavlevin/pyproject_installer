@@ -220,12 +220,10 @@ class DepsSourcesConfig:
             self.set_deps(
                 group,
                 srcname=srcname,
-                deps=set(
-                    self._filter_apply(
-                        src.get("deps", ()),
-                        includes=self.iter_filters(group, "include"),
-                        excludes=self.iter_filters(group, "exclude"),
-                    )
+                deps=self._filter_apply(
+                    src.get("deps", ()),
+                    includes=self.iter_filters(group, "include"),
+                    excludes=self.iter_filters(group, "exclude"),
                 ),
             )
 
@@ -271,14 +269,12 @@ class DepsSourcesConfig:
                 self.set_deps(
                     group,
                     srcname=srcname,
-                    deps=set(
-                        self.collect(
-                            src["srctype"],
-                            srcargs=src.get("srcargs", ()),
-                            includes=self.iter_filters(group, "include"),
-                            excludes=self.iter_filters(group, "exclude"),
-                        )
-                    )
+                    deps=self.collect(
+                        src["srctype"],
+                        srcargs=src.get("srcargs", ()),
+                        includes=self.iter_filters(group, "include"),
+                        excludes=self.iter_filters(group, "exclude"),
+                    ),
                 )
 
     def eval(self, groups=(), namesonly=True):
