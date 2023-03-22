@@ -9,5 +9,10 @@ class RunCommandEnvError(Exception):
 class WheelFileError(Exception):
     """Invalid wheel file"""
 
+
 class DepsVerifyError(Exception):
     """Mismatched stored and actual dependencies"""
+
+
+class DepsCollectionError(Exception):
+    """Error on dependencies collection"""
