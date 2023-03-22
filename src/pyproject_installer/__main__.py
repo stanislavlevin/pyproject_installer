@@ -27,9 +27,7 @@ from packaging.requirements import Requirement
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
-from .errors import (
-    RunCommandError, RunCommandEnvError, DepsVerifyError, DepsCollectionError
-)
+from .errors import RunCommandError, RunCommandEnvError, DepsVerifyError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
 # from .deps_cmd import deps_command
@@ -263,14 +261,7 @@ class DepsSourcesConfig:
     def collect(self, srctype, srcargs, includes, excludes):
         collector = self.validate_collector(srctype, srcargs)
 
-        try:
-            deps = collector.collect()
-        except Exception as e:
-            raise DepsCollectionError(
-                f"Collector {collector.name} fails: {e}"
-            ) from None
-
-        return self._filter_apply(deps, includes, excludes)
+        return self._filter_apply(collector.collect(), includes, excludes)
 
     def sync(self, groups=()):
         for group in self.find_groups(groups):
