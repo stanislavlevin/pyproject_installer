@@ -306,9 +306,12 @@ class DepsSourcesConfig:
             sys.stdout.write(dep + "\n")
 
     def verify(self, groups=()):
+        diff = {}
         for group in self.find_groups(groups):
-            diff = {}
+            diff[group] = {}
             for srcname, src in self.iter_sources(group):
+                diff[group][srcname] = {}
+
                 synced_deps = set(
                     self.collect(
                         src["srctype"],
@@ -323,21 +326,18 @@ class DepsSourcesConfig:
                 if stored_deps == synced_deps:
                     continue
 
-                if group not in diff:
-                    diff[group] = {}
-
                 new_deps = synced_deps - stored_deps
                 if new_deps:
-                    diff[group]["new_deps"] = tuple(new_deps)
+                    diff[group][srcname]["new_deps"] = tuple(new_deps)
 
                 extra_deps = stored_deps - synced_deps
                 if extra_deps:
-                    diff[group]["extra_deps"] = tuple(extra_deps)
+                    diff[group][srcname]["extra_deps"] = tuple(extra_deps)
 
-            if diff:
-                out = json.dumps(diff, indent=2) + "\n"
-                sys.stdout.write(out)
-                raise DepsVerifyError
+                if diff[group][srcname]:
+                    out = json.dumps(diff, indent=2) + "\n"
+                    sys.stdout.write(out)
+                    raise DepsVerifyError
 
 
 def deps_add(args, parser):
