@@ -149,7 +149,7 @@ class DepsSourcesConfig:
 
     def set_deps(self, group, srcname, deps):
         src = self._get_source(group, srcname)
-        src["deps"] = tuple(deps)
+        src["deps"] = tuple(sorted(deps))
         self.save()
 
     def source_add(self, group, srcname, srctype, srcargs, extra):
