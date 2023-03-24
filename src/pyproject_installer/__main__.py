@@ -47,7 +47,7 @@ class DepsSourcesConfig:
     def set_default(self):
         # default config
         self.config = {}
-        self.groups = {}
+        self.sources = {}
 
     def read(self, create):
         if not self.file.is_file():
@@ -70,11 +70,11 @@ class DepsSourcesConfig:
         json_config = json.dumps(self.config, indent=2) + "\n"
         self.file.write_text(json_config, encoding="utf-8")
 
-    def show(self, groups=()):
-        show_conf = {"groups": {}}
-        for group_name in self.find_groups(groups):
-            group = self._get_group(group_name)
-            show_conf["groups"][group_name] = group
+    def show(self, srcnames=()):
+        show_conf = {"sources": {}}
+        for source_name in self.find_sources(srcnames):
+            source = self.get_source(source_name)
+            show_conf["sources"][source_name] = source
         self._show(show_conf)
 
     def _show(self, conf):
@@ -82,155 +82,46 @@ class DepsSourcesConfig:
         sys.stdout.write(out)
 
     @property
-    def groups(self):
-        return self.config["groups"]
+    def sources(self):
+        return self.config["sources"]
 
-    @groups.setter
-    def groups(self, value):
-        self.config["groups"] = deepcopy(value)
+    @sources.setter
+    def sources(self, value):
+        self.config["sources"] = deepcopy(value)
 
-    def _get_group(self, group):
-        try:
-            return self.groups[group]
-        except KeyError:
-            raise ValueError(f"Group '{group}' doesn't exist") from None
+    def get_source(self, source):
+        if source not in self.sources:
+            raise ValueError(f"Source '{source}' doesn't exist")
+        return self.sources[source]
 
-    def group_add(self, group):
-        if group in self.groups:
-            raise ValueError(f"Group '{group}' already exists") from None
-        self.groups[group] = {}
-        self.save()
-
-    def group_del(self, group):
-        try:
-            del self.groups[group]
-        except KeyError:
-            raise ValueError(f"Group '{group}' doesn't exist") from None
-        self.save()
-
-    def group_show(self, group_name):
-        group = self._get_group(group_name)
-        self._show(group)
-
-    def _get_sources(self, group):
-        gp = self._get_group(group)
-        if "sources" not in gp:
-            gp["sources"] = {}
-        return gp["sources"]
-
-    def _get_source(self, group, srcname):
-        srcs = self._get_sources(group)
-
-        if srcname not in srcs:
-            raise ValueError(
-                f"Source '{srcname}' doesn't exist (group: {group})"
-            )
-        return srcs[srcname]
-
-    def _get_filters(self, group):
-        gp = self._get_group(group)
-        if "filters" not in gp:
-            gp["filters"] = {}
-        return gp["filters"]
-
-    def find_groups(self, groups=()):
-        missing_groups = set(groups) - set(self.groups)
-        if missing_groups:
-            raise ValueError(
-                "Non existent groups: {}".format(', '.join(missing_groups))
-            )
-
-        if groups:
-            yield from groups
-        else:
-            yield from self.groups
-
-
-    def set_deps(self, group, srcname, deps):
-        src = self._get_source(group, srcname)
-        src["deps"] = tuple(sorted(deps))
-        self.save()
-
-    def source_add(self, group, srcname, srctype, srcargs, extra):
+    def add_source(self, srcname, srctype, srcargs):
+        srcargs = tuple(srcargs)
         self.validate_collector(srctype, srcargs)
 
-        srcs = self._get_sources(group)
-        if srcname in srcs:
-            raise ValueError(
-                f"Source '{srcname}' already exists (group: {group})"
-            )
-        srcs[srcname] = {"srctype": srctype}
+        if srcname in self.sources:
+            raise ValueError(f"Source {srcname} already exists")
+        self.sources[srcname] = {"srctype": srctype}
         if srcargs:
-            srcs[srcname]["srcargs"] = srcargs
-        if extra:
-            srcs[srcname]["extra"] = extra
+            self.sources[srcname]["srcargs"] = srcargs
         self.save()
 
-    def source_del(self, group, srcnames):
-        srcs = self._get_sources(group)
-
-        for srcname in srcnames:
-            if srcname not in srcs:
-                raise ValueError(
-                    f"Source '{srcname}' doesn't exist (group: {group})"
-                )
-            del srcs[srcname]
+    def del_source(self, source):
+        if source not in self.sources:
+            raise ValueError(f"Source {source} doesn't exist")
+        del self.sources[source]
         self.save()
 
-    def source_show(self, group):
-        srcs = self._get_sources(group)
-        self._show({"sources": srcs})
-
-    def iter_sources(self, group):
-        srcs = self._get_sources(group)
-        for srcname, src in srcs.items():
-            yield srcname, src
-
-    def verify_filtertype(self, filtertype):
-        if filtertype not in FILTER_TYPES:
-            raise ValueError(f"Unsupported filter type: {filtertype}")
-
-    def filter_add(self, group, filtertype, regexes):
-        filters = self._get_filters(group)
-        self.verify_filtertype(filtertype)
-        if filtertype in filters:
+    def find_sources(self, srcnames=()):
+        missing_sources = set(srcnames) - set(self.sources)
+        if missing_sources:
             raise ValueError(
-                f"Filter '{filtertype}' already exists (group: {group})"
-            )
-        filters[filtertype] = regexes
-        self.save()
-
-    def filter_del(self, group, filtertypes):
-        filters = self._get_filters(group)
-        for filtertype in filtertypes:
-            self.verify_filtertype(filtertype)
-            if filtertype not in filters:
-                raise ValueError(
-                    f"Filter '{filtertype}' doesn't exist (group: {group})"
-                )
-            del filters[filtertype]
-        self.save()
-
-    def filter_show(self, group):
-        filters = self._get_filters(group)
-        self._show({"filters": filters})
-
-    def filter_apply(self, group):
-        for srcname, src in self.iter_sources(group):
-            self.set_deps(
-                group,
-                srcname=srcname,
-                deps=self._filter_apply(
-                    src.get("deps", ()),
-                    includes=self.iter_filters(group, "include"),
-                    excludes=self.iter_filters(group, "exclude"),
-                ),
+                "Non existent sources: {}".format(', '.join(missing_sources))
             )
 
-    def iter_filters(self, group, filtertype):
-        self.verify_filtertype(filtertype)
-        filters = self._get_filters(group)
-        yield from filters.get(filtertype, ())
+        if srcnames:
+            yield from srcnames
+        else:
+            yield from self.sources
 
     def validate_collector(self, srctype, srcargs):
         collector_cls = get_collector(srctype)
@@ -243,160 +134,111 @@ class DepsSourcesConfig:
                 f"Unsupported arguments of collector {srctype}: {e!s}"
             ) from None
 
-    def _filter_apply(self, reqs, includes, excludes):
-        include_regexes = {re.compile(x) for x in includes}
-        exclude_regexes = {re.compile(x) for x in excludes}
-        for req in reqs:
-            name = Requirement(req).name
-            if include_regexes:
-                if any(regex.match(name) for regex in include_regexes):
-                    yield req
-                continue
-            if exclude_regexes:
-                if not any(regex.match(name) for regex in exclude_regexes):
-                    yield req
-                continue
-            yield req
-
-    def collect(self, srctype, srcargs, includes, excludes):
+    def collect(self, srctype, srcargs):
         collector = self.validate_collector(srctype, srcargs)
+        return collector.collect()
 
-        return self._filter_apply(collector.collect(), includes, excludes)
-
-    def sync(self, groups=()):
-        for group in self.find_groups(groups):
-            logger.info("Syncing group: %s", group)
-            for srcname, src in self.iter_sources(group):
-                logger.info("Syncing source: %s", srcname)
-                self.set_deps(
-                    group,
-                    srcname=srcname,
-                    deps=self.collect(
-                        src["srctype"],
-                        srcargs=src.get("srcargs", ()),
-                        includes=self.iter_filters(group, "include"),
-                        excludes=self.iter_filters(group, "exclude"),
-                    ),
+    def sync(self, srcnames=()):
+        for srcname in self.find_sources(srcnames):
+            source = self.get_source(srcname)
+            source["deps"] = tuple(
+                sorted(
+                    self.collect(
+                        source["srctype"],
+                        srcargs=source.get("srcargs", ()),
+                    )
                 )
-                logger.info("Synced source: %s", srcname)
-            logger.info("Synced group: %s", group)
+            )
+        self.save()
 
-    def eval(self, groups=(), namesonly=True):
+    def eval(self, srcnames=(), namesonly=True, extra=None, excludes=set()):
         deps = set()
-        for group in self.find_groups(groups):
-            for _, src in self.iter_sources(group):
-                for req in src.get("deps", ()):
-                    parsed_req = Requirement(req)
-                    marker = parsed_req.marker
-                    if marker is not None:
-                        env = None
-                        extra = src.get("extra")
-                        if extra:
-                            env = {"extra": extra}
-                        marker_res = marker.evaluate(env)
-                        if not marker_res:
-                            continue
-                    if namesonly:
-                        deps.add(parsed_req.name)
-                    else:
-                        deps.add(req)
+        exclude_regexes = {re.compile(x) for x in excludes}
+
+        for srcname in self.find_sources(srcnames):
+            source = self.get_source(srcname)
+            for req in source.get("deps", ()):
+                parsed_req = Requirement(req)
+                marker = parsed_req.marker
+                if marker is not None:
+                    env = None
+                    if extra is not None:
+                        env = {"extra": extra}
+                    marker_res = marker.evaluate(env)
+                    if not marker_res:
+                        continue
+                if any(reg.match(parsed_req.name) for reg in exclude_regexes):
+                    continue
+                if namesonly:
+                    deps.add(parsed_req.name)
+                else:
+                    deps.add(req)
 
         for dep in deps:
             sys.stdout.write(dep + "\n")
 
-    def verify(self, groups=()):
+    def verify(self, srcnames=()):
         diff = {}
-        for group in self.find_groups(groups):
-            diff[group] = {}
-            for srcname, src in self.iter_sources(group):
-                diff[group][srcname] = {}
+        for srcname in self.find_sources(srcnames):
+            source = self.get_source(srcname)
+            diff[srcname] = {}
 
-                synced_deps = set(
-                    self.collect(
-                        src["srctype"],
-                        srcargs=src.get("srcargs", ()),
-                        includes=self.iter_filters(group, "include"),
-                        excludes=self.iter_filters(group, "exclude"),
-                    )
+            synced_deps = set(
+                self.collect(
+                    source["srctype"],
+                    srcargs=source.get("srcargs", ()),
                 )
+            )
 
-                stored_deps = set(src.get("deps", ()))
+            stored_deps = set(source.get("deps", ()))
 
-                if stored_deps == synced_deps:
-                    continue
+            if stored_deps == synced_deps:
+                continue
 
-                new_deps = synced_deps - stored_deps
-                if new_deps:
-                    diff[group][srcname]["new_deps"] = tuple(new_deps)
+            new_deps = synced_deps - stored_deps
+            if new_deps:
+                diff[srcname]["new_deps"] = tuple(new_deps)
 
-                extra_deps = stored_deps - synced_deps
-                if extra_deps:
-                    diff[group][srcname]["extra_deps"] = tuple(extra_deps)
+            extra_deps = stored_deps - synced_deps
+            if extra_deps:
+                diff[srcname]["extra_deps"] = tuple(extra_deps)
 
-                if diff[group][srcname]:
-                    out = json.dumps(diff, indent=2) + "\n"
-                    sys.stdout.write(out)
-                    raise DepsVerifyError
-
-
-def deps_add(args, parser):
-    DepsSourcesConfig(args.depsfile, create=True).group_add(args.group)
+            if diff[srcname]:
+                out = json.dumps(diff, indent=2) + "\n"
+                sys.stdout.write(out)
+                raise DepsVerifyError
 
 
 def deps_del(args, parser):
-    DepsSourcesConfig(args.depsfile).group_del(args.group)
+    DepsSourcesConfig(args.depsfile).del_source(args.source)
 
 
-def deps_source_add(args, parser):
-    DepsSourcesConfig(args.depsfile).source_add(
-        args.group,
-        srcname=args.srcname,
-        srctype=args.srctype,
-        srcargs=tuple(args.srcargs),
-        extra=args.extra,
+def deps_add(args, parser):
+    DepsSourcesConfig(args.depsfile, create=True).add_source(
+        args.source, srctype=args.srctype, srcargs=args.srcargs
     )
-
-
-def deps_source_del(args, parser):
-    DepsSourcesConfig(args.depsfile).source_del(args.group, args.srcnames)
-
-
-def deps_source_show(args, parser):
-    DepsSourcesConfig(args.depsfile).source_show(args.group)
-
-
-def deps_filter_add(args, parser):
-    DepsSourcesConfig(args.depsfile).filter_add(
-        args.group, args.filtertype, args.regexes
-    )
-
-def deps_filter_apply(args, parser):
-    DepsSourcesConfig(args.depsfile).filter_apply(args.group)
-
-
-def deps_filter_del(args, parser):
-    DepsSourcesConfig(args.depsfile).filter_del(args.group, args.filtertypes)
-
-
-def deps_filter_show(args, parser):
-    DepsSourcesConfig(args.depsfile).filter_show(args.group)
-
-
-def deps_show(args, parser):
-    DepsSourcesConfig(args.depsfile).show(args.groups)
-
-
-def deps_sync(args, parser):
-    DepsSourcesConfig(args.depsfile).sync(args.groups)
 
 
 def deps_eval(args, parser):
-    DepsSourcesConfig(args.depsfile).eval(args.groups, namesonly=args.namesonly)
+    DepsSourcesConfig(args.depsfile).eval(
+        args.srcnames,
+        namesonly=args.namesonly,
+        extra=args.extra,
+        excludes=args.excludes,
+    )
+
+
+def deps_show(args, parser):
+    DepsSourcesConfig(args.depsfile).show(args.srcnames)
+
+
+def deps_sync(args, parser):
+    DepsSourcesConfig(args.depsfile).sync(args.srcnames)
 
 
 def deps_verify(args, parser):
     try:
-        DepsSourcesConfig(args.depsfile).verify(args.groups)
+        DepsSourcesConfig(args.depsfile).verify(args.srcnames)
     except DepsVerifyError:
         sys.exit(ExitCodes.FAILURE)
 
@@ -549,36 +391,88 @@ class MainArgumentParser(argparse.ArgumentParser):
             raise
 
 
-def deps_source_subparsers(parsers):
-    # deps source
-    subparser = parsers.add_parser(
-        "source",
-        description=("TODO"),
-    )
-    subparsers = subparser.add_subparsers(
-        title="deps source subcommands",
+def deps_subparsers(parser):
+    subparsers = parser.add_subparsers(
+        title="deps subcommands",
         help="--help for additional help",
         required=True,
     )
+    # show subcli
+    subparser_show = subparsers.add_parser(
+        "show",
+        description=("TODO"),
+    )
+    subparser_show.add_argument(
+        "srcnames",
+        type=str,
+        help=("TODO"),
+        nargs="*",
+    )
+    subparser_show.set_defaults(main=deps_show)
 
-    # deps source add
+
+    # sync subcli
+    subparser_sync = subparsers.add_parser(
+        "sync",
+        description=("TODO"),
+    )
+    subparser_sync.add_argument(
+        "srcnames",
+        nargs="*",
+        help=("TODO"),
+    )
+    subparser_sync.set_defaults(main=deps_sync)
+
+    # eval subcli
+    subparser_eval = subparsers.add_parser(
+        "eval",
+        description=("TODO"),
+    )
+    subparser_eval.add_argument(
+        "srcnames",
+        nargs="*",
+        help=("TODO"),
+    )
+    subparser_eval.add_argument(
+        "--no-namesonly",
+        dest="namesonly",
+        help="TODO",
+        action="store_false"
+    )
+    subparser_eval.add_argument(
+        "--extra",
+        help="TODO",
+        type=str,
+    )
+    subparser_eval.add_argument(
+        "--exclude",
+        type=str,
+        dest="excludes",
+        nargs="+",
+        default=(),
+        help=("TODO"),
+    )
+    subparser_eval.set_defaults(main=deps_eval)
+
+    # verify subcli
+    subparser_verify = subparsers.add_parser(
+        "verify",
+        description=("TODO"),
+    )
+    subparser_verify.add_argument(
+        "srcnames",
+        nargs="*",
+        help=("TODO"),
+    )
+    subparser_verify.set_defaults(main=deps_verify)
+
+    # add subcli
     subparser_add = subparsers.add_parser(
         "add",
         description=("TODO"),
     )
     subparser_add.add_argument(
-        "--extra",
-        dest="extra",
-        help="TODO",
-        type=str,
-    )
-    subparser_add.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_add.add_argument(
-        "srcname",
+        "source",
         type=str,
         help=("TODO"),
     )
@@ -593,207 +487,19 @@ def deps_source_subparsers(parsers):
         nargs="*",
         help=("TODO"),
     )
-    subparser_add.set_defaults(main=deps_source_add)
-
-    # deps source del
-    subparser_del = subparsers.add_parser(
-        "del",
-        description=("TODO"),
-    )
-    subparser_del.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_del.add_argument(
-        "srcnames",
-        nargs="+",
-        default=(),
-        help=("TODO"),
-    )
-    subparser_del.set_defaults(main=deps_source_del)
-
-    # deps source show
-    subparser_show = subparsers.add_parser(
-        "show",
-        description=("TODO"),
-    )
-    subparser_show.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_show.set_defaults(main=deps_source_show)
-
-
-def deps_filter_subparsers(parsers):
-    # deps filter
-    subparser = parsers.add_parser(
-        "filter",
-        description=("TODO"),
-    )
-    subparsers = subparser.add_subparsers(
-        title="deps filter subcommands",
-        help="--help for additional help",
-        required=True,
-    )
-
-    # deps filter add
-    subparser_add = subparsers.add_parser(
-        "add",
-        description=("TODO"),
-    )
-    subparser_add.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_add.add_argument(
-        "filtertype",
-        type=str,
-        choices=FILTER_TYPES,
-        help=("TODO"),
-    )
-    subparser_add.add_argument(
-        "regexes",
-        type=str,
-        nargs="+",
-        default=(),
-        help=("TODO"),
-    )
-    subparser_add.set_defaults(main=deps_filter_add)
-
-    # deps filter del
-    subparser_del = subparsers.add_parser(
-        "del",
-        description=("TODO"),
-    )
-    subparser_del.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_del.add_argument(
-        "filtertypes",
-        type=str,
-        nargs="+",
-        choices=FILTER_TYPES,
-        help=("TODO"),
-    )
-    subparser_del.set_defaults(main=deps_filter_del)
-
-    # deps filter show
-    subparser_show = subparsers.add_parser(
-        "show",
-        description=("TODO"),
-    )
-    subparser_show.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_show.set_defaults(main=deps_filter_show)
-
-    # deps filter apply
-    subparser_apply = subparsers.add_parser(
-        "apply",
-        description=("TODO"),
-    )
-    subparser_apply.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
-    subparser_apply.set_defaults(main=deps_filter_apply)
-
-
-def deps_subparsers(parser):
-    subparsers = parser.add_subparsers(
-        title="deps subcommands",
-        help="--help for additional help",
-        required=True,
-    )
-    # show subcli
-    subparser_show = subparsers.add_parser(
-        "show",
-        description=("TODO"),
-    )
-    subparser_show.add_argument(
-        "groups",
-        type=str,
-        help=("TODO"),
-        nargs="*",
-    )
-    subparser_show.set_defaults(main=deps_show)
-
-    # sync subcli
-    subparser_sync = subparsers.add_parser(
-        "sync",
-        description=("TODO"),
-    )
-    subparser_sync.add_argument(
-        "groups",
-        nargs="*",
-        help=("TODO"),
-    )
-    subparser_sync.set_defaults(main=deps_sync)
-
-    # eval subcli
-    subparser_eval = subparsers.add_parser(
-        "eval",
-        description=("TODO"),
-    )
-    subparser_eval.add_argument(
-        "groups",
-        nargs="*",
-        help=("TODO"),
-    )
-    subparser_eval.add_argument(
-        "--no-namesonly",
-        dest="namesonly",
-        help="TODO",
-        action="store_false"
-    )
-    subparser_eval.set_defaults(main=deps_eval)
-
-    # verify subcli
-    subparser_verify = subparsers.add_parser(
-        "verify",
-        description=("TODO"),
-    )
-    subparser_verify.add_argument(
-        "groups",
-        nargs="*",
-        help=("TODO"),
-    )
-    subparser_verify.set_defaults(main=deps_verify)
-
-    # add
-    subparser_add = subparsers.add_parser(
-        "add",
-        description=("TODO"),
-    )
-    subparser_add.add_argument(
-        "group",
-        type=str,
-        help=("TODO"),
-    )
     subparser_add.set_defaults(main=deps_add)
 
-    # deps del
+    # del subcli
     subparser_del = subparsers.add_parser(
         "del",
         description=("TODO"),
     )
     subparser_del.add_argument(
-        "group",
+        "source",
         type=str,
         help=("TODO"),
     )
     subparser_del.set_defaults(main=deps_del)
-
-    deps_source_subparsers(subparsers)
-    deps_filter_subparsers(subparsers)
 
 
 def main_parser(prog):
