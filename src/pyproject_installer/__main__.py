@@ -151,7 +151,7 @@ class DepsSourcesConfig:
             )
         self.save()
 
-    def eval(self, srcnames=(), namesonly=True, extra=None, excludes=set()):
+    def eval(self, srcnames=(), namesonly=True, extra=None, excludes=[]):
         deps = set()
         exclude_regexes = {re.compile(x) for x in excludes}
 
@@ -448,8 +448,8 @@ def deps_subparsers(parser):
         "--exclude",
         type=str,
         dest="excludes",
-        nargs="+",
-        default=(),
+        action="append",
+        default=[],
         help=("TODO"),
     )
     subparser_eval.set_defaults(main=deps_eval)
