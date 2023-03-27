@@ -442,7 +442,7 @@ def deps_subparsers(parser):
         "--exclude",
         type=str,
         dest="excludes",
-        action="append",
+        nargs="+",
         default=[],
         help=("TODO"),
     )
