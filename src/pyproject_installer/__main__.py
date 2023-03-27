@@ -27,7 +27,7 @@ from packaging.requirements import Requirement
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
-from .errors import RunCommandError, RunCommandEnvError, DepsVerifyError
+from .errors import RunCommandError, RunCommandEnvError, DepsUnsyncedError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
 # from .deps_cmd import deps_command
@@ -138,18 +138,43 @@ class DepsSourcesConfig:
         collector = self.validate_collector(srctype, srcargs)
         return collector.collect()
 
-    def sync(self, srcnames=()):
+    def sync(self, srcnames=(), verify=False):
+        """Sync sources
+
+        With enabled `verify` DepsUnsyncedError is raised if sources are not
+        synced and the diff is printed.
+        """
         for srcname in self.find_sources(srcnames):
             source = self.get_source(srcname)
-            source["deps"] = tuple(
-                sorted(
-                    self.collect(
-                        source["srctype"],
-                        srcargs=source.get("srcargs", ()),
-                    )
+            diff = {srcname: {}}
+
+            synced_deps = set(
+                self.collect(
+                    source["srctype"],
+                    srcargs=source.get("srcargs", ()),
                 )
             )
-        self.save()
+
+            stored_deps = set(source.get("deps", ()))
+
+            if stored_deps == synced_deps:
+                continue
+
+            new_deps = synced_deps - stored_deps
+            if new_deps:
+                diff[srcname]["new_deps"] = tuple(new_deps)
+
+            extra_deps = stored_deps - synced_deps
+            if extra_deps:
+                diff[srcname]["extra_deps"] = tuple(extra_deps)
+
+            source["deps"] = sorted(synced_deps)
+            self.save()
+
+            if verify and diff[srcname]:
+                out = json.dumps(diff, indent=2) + "\n"
+                sys.stdout.write(out)
+                raise DepsUnsyncedError
 
     def eval(self, srcnames=(), namesonly=True, extra=None, excludes=[]):
         deps = set()
@@ -177,38 +202,6 @@ class DepsSourcesConfig:
         for dep in deps:
             sys.stdout.write(dep + "\n")
 
-    def verify(self, srcnames=()):
-        diff = {}
-        for srcname in self.find_sources(srcnames):
-            source = self.get_source(srcname)
-            diff[srcname] = {}
-
-            synced_deps = set(
-                self.collect(
-                    source["srctype"],
-                    srcargs=source.get("srcargs", ()),
-                )
-            )
-
-            stored_deps = set(source.get("deps", ()))
-
-            if stored_deps == synced_deps:
-                continue
-
-            new_deps = synced_deps - stored_deps
-            if new_deps:
-                diff[srcname]["new_deps"] = tuple(new_deps)
-
-            extra_deps = stored_deps - synced_deps
-            if extra_deps:
-                diff[srcname]["extra_deps"] = tuple(extra_deps)
-
-            if diff[srcname]:
-                out = json.dumps(diff, indent=2) + "\n"
-                sys.stdout.write(out)
-                raise DepsVerifyError
-
-
 def deps_del(args, parser):
     DepsSourcesConfig(args.depsfile).del_source(args.source)
 
@@ -233,13 +226,9 @@ def deps_show(args, parser):
 
 
 def deps_sync(args, parser):
-    DepsSourcesConfig(args.depsfile).sync(args.srcnames)
-
-
-def deps_verify(args, parser):
     try:
-        DepsSourcesConfig(args.depsfile).verify(args.srcnames)
-    except DepsVerifyError:
+        DepsSourcesConfig(args.depsfile).sync(args.srcnames, verify=args.verify)
+    except DepsUnsyncedError:
         sys.exit(ExitCodes.FAILURE)
 
 
@@ -421,6 +410,11 @@ def deps_subparsers(parser):
         nargs="*",
         help=("TODO"),
     )
+    subparser_sync.add_argument(
+        "--verify",
+        help="TODO",
+        action="store_true"
+    )
     subparser_sync.set_defaults(main=deps_sync)
 
     # eval subcli
@@ -453,18 +447,6 @@ def deps_subparsers(parser):
         help=("TODO"),
     )
     subparser_eval.set_defaults(main=deps_eval)
-
-    # verify subcli
-    subparser_verify = subparsers.add_parser(
-        "verify",
-        description=("TODO"),
-    )
-    subparser_verify.add_argument(
-        "srcnames",
-        nargs="*",
-        help=("TODO"),
-    )
-    subparser_verify.set_defaults(main=deps_verify)
 
     # add subcli
     subparser_add = subparsers.add_parser(
