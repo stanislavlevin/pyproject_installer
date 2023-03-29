@@ -2,6 +2,7 @@ from .pep517 import Pep517Collector
 from .pep518 import Pep518Collector
 from .pip_reqfile import PipReqFileCollector
 from .metadata import MetadataCollector
+from .poetry import PoetryCollector
 
 
 __all__ = ["parser"]
@@ -12,6 +13,7 @@ SUPPORTED_COLLECTORS = {
         Pep518Collector,
         PipReqFileCollector,
         MetadataCollector,
+        PoetryCollector,
     ]
 }
 
