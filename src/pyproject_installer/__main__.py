@@ -36,9 +36,6 @@ from .deps_cmd.collectors import SUPPORTED_COLLECTORS, get_collector
 logger = logging.getLogger(Path(__file__).parent.name)
 
 
-FILTER_TYPES = {"include", "exclude"}
-
-
 class DepsSourcesConfig:
     def __init__(self, file, create=False):
         self.file = Path(file)
