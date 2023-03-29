@@ -36,7 +36,8 @@ class MetadataCollector(Collector):
                 )
 
             distr = PathDistribution(Path(tmpdir) / distinfo_dir)
-            for req in distr.requires:
+            requires = distr.requires or []
+            for req in requires:
                 try:
                     parsed_req = Requirement(req)
                 except InvalidRequirement:
