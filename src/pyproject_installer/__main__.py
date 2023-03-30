@@ -21,214 +21,16 @@ import logging
 import re
 import sys
 
-from packaging.markers import Marker
-from packaging.requirements import Requirement
-
 from . import __version__ as project_version
 from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
 from .errors import RunCommandError, RunCommandEnvError, DepsUnsyncedError
 from .install_cmd import install_wheel
-from .lib.normalization import pep503_normalized_name
 from .run_cmd import run_command
-# from .deps_cmd import deps_command
+from .deps_cmd.deps_config import DepsSourcesConfig
 from .deps_cmd.collectors import SUPPORTED_COLLECTORS, get_collector
 
 logger = logging.getLogger(Path(__file__).parent.name)
-
-
-class DepsSourcesConfig:
-    def __init__(self, file, create=False):
-        self.file = Path(file)
-        self.read(create=create)
-
-    def set_default(self):
-        # default config
-        self.config = {}
-        self.sources = {}
-
-    def read(self, create):
-        if not self.file.is_file():
-            if create:
-                # new file
-                self.set_default()
-                return
-            raise FileNotFoundError(f"Missing deps config file: {self.file}")
-
-        with self.file.open(encoding="utf-8") as f:
-            try:
-                self.config = json.load(f)
-            except json.JSONDecodeError:
-                raise ValueError(
-                    f"Invalid dependencies file: {f}"
-                ) from None
-
-    def save(self):
-        # first parse the whole config
-        json_config = json.dumps(self.config, indent=2) + "\n"
-        self.file.write_text(json_config, encoding="utf-8")
-
-    def show(self, srcnames=()):
-        show_conf = {"sources": {}}
-        for source_name in self.find_sources(srcnames):
-            source = self.get_source(source_name)
-            show_conf["sources"][source_name] = source
-        self._show(show_conf)
-
-    def _show(self, conf):
-        out = json.dumps(conf, indent=2) + "\n"
-        sys.stdout.write(out)
-
-    @property
-    def sources(self):
-        return self.config["sources"]
-
-    @sources.setter
-    def sources(self, value):
-        self.config["sources"] = deepcopy(value)
-
-    def get_source(self, source):
-        if source not in self.sources:
-            raise ValueError(f"Source '{source}' doesn't exist")
-        return self.sources[source]
-
-    def add_source(self, srcname, srctype, srcargs):
-        srcargs = tuple(srcargs)
-        self.validate_collector(srctype, srcargs)
-
-        if srcname in self.sources:
-            raise ValueError(f"Source {srcname} already exists")
-        self.sources[srcname] = {"srctype": srctype}
-        if srcargs:
-            self.sources[srcname]["srcargs"] = srcargs
-        self.save()
-
-    def del_source(self, source):
-        if source not in self.sources:
-            raise ValueError(f"Source {source} doesn't exist")
-        del self.sources[source]
-        self.save()
-
-    def find_sources(self, srcnames=()):
-        missing_sources = set(srcnames) - set(self.sources)
-        if missing_sources:
-            raise ValueError(
-                "Non existent sources: {}".format(', '.join(missing_sources))
-            )
-
-        if srcnames:
-            yield from srcnames
-        else:
-            yield from self.sources
-
-    def validate_collector(self, srctype, srcargs):
-        collector_cls = get_collector(srctype)
-        if collector_cls is None:
-            raise ValueError(f"Unsupported collector type: {srctype}")
-        try:
-            return collector_cls(*srcargs)
-        except TypeError as e:
-            raise ValueError(
-                f"Unsupported arguments of collector {srctype}: {e!s}"
-            ) from None
-
-    def collect(self, srctype, srcargs):
-        collector = self.validate_collector(srctype, srcargs)
-        return collector.collect()
-
-    def sync(self, srcnames=(), verify=False):
-        """Sync sources
-
-        With enabled `verify` DepsUnsyncedError is raised if sources are not
-        synced and the diff is printed.
-        """
-        for srcname in self.find_sources(srcnames):
-            source = self.get_source(srcname)
-            diff = {srcname: {}}
-
-            synced_deps = set(
-                self.collect(
-                    source["srctype"],
-                    srcargs=source.get("srcargs", ()),
-                )
-            )
-
-            stored_deps = set(source.get("deps", ()))
-
-            if stored_deps == synced_deps:
-                continue
-
-            new_deps = synced_deps - stored_deps
-            if new_deps:
-                diff[srcname]["new_deps"] = tuple(new_deps)
-
-            extra_deps = stored_deps - synced_deps
-            if extra_deps:
-                diff[srcname]["extra_deps"] = tuple(extra_deps)
-
-            source["deps"] = sorted(synced_deps)
-            self.save()
-
-            if verify and diff[srcname]:
-                out = json.dumps(diff, indent=2) + "\n"
-                sys.stdout.write(out)
-                raise DepsUnsyncedError
-
-    def eval(self, srcnames=(), namesonly=True, extra=None, excludes=[]):
-        deps = set()
-        exclude_regexes = {re.compile(x) for x in excludes}
-
-        for srcname in self.find_sources(srcnames):
-            source = self.get_source(srcname)
-            for req in source.get("deps", ()):
-                parsed_req = Requirement(req)
-                marker = parsed_req.marker
-                if marker is not None:
-                    env = None
-                    if extra is not None:
-                        env = {"extra": extra}
-                    marker_res = marker.evaluate(env)
-                    if not marker_res:
-                        continue
-                normalized_name = pep503_normalized_name(parsed_req.name)
-                if any(reg.match(normalized_name) for reg in exclude_regexes):
-                    continue
-                if namesonly:
-                    deps.add(normalized_name)
-                else:
-                    deps.add(req)
-
-        for dep in deps:
-            sys.stdout.write(dep + "\n")
-
-def deps_del(args, parser):
-    DepsSourcesConfig(args.depsfile).del_source(args.source)
-
-
-def deps_add(args, parser):
-    DepsSourcesConfig(args.depsfile, create=True).add_source(
-        args.source, srctype=args.srctype, srcargs=args.srcargs
-    )
-
-
-def deps_eval(args, parser):
-    DepsSourcesConfig(args.depsfile).eval(
-        args.srcnames,
-        namesonly=args.namesonly,
-        extra=args.extra,
-        excludes=args.excludes,
-    )
-
-
-def deps_show(args, parser):
-    DepsSourcesConfig(args.depsfile).show(args.srcnames)
-
-
-def deps_sync(args, parser):
-    try:
-        DepsSourcesConfig(args.depsfile).sync(args.srcnames, verify=args.verify)
-    except DepsUnsyncedError:
-        sys.exit(ExitCodes.FAILURE)
 
 
 def build(args, parser):
@@ -259,6 +61,21 @@ def install(args, parser):
         installer=args.installer,
         strip_dist_info=args.strip_dist_info,
     )
+
+
+def deps_command(action_name):
+    def wrapped(args, parser):
+        config = DepsSourcesConfig(
+            args.depsfile, create=getattr(args, "create", False)
+        )
+        cmd_kwargs = {x:getattr(args, x) for x in args.main_args}
+        try:
+            getattr(config, action_name)(**cmd_kwargs)
+        except DepsUnsyncedError:
+            # sync --verify error
+            sys.exit(ExitCodes.FAILURE)
+
+    return wrapped
 
 
 class RunnerResult:
@@ -385,102 +202,129 @@ def deps_subparsers(parser):
         help="--help for additional help",
         required=True,
     )
-    # show subcli
-    subparser_show = subparsers.add_parser(
-        "show",
-        description=("TODO"),
-    )
-    subparser_show.add_argument(
-        "srcnames",
-        type=str,
+
+    def add_deps_argument(parser, destname, *args, **kwargs):
+        parser.add_argument(*args, **kwargs)
+        destnames = parser.get_default("main_args") or []
+        destnames.append(destname)
+        parser.set_defaults(main_args=destnames)
+
+    def add_deps_parser(parsers, name, *args, **kwargs):
+        parser = parsers.add_parser(name, *args, **kwargs)
+        parser.set_defaults(main=deps_command(name))
+        return parser
+
+    subparser_show = add_deps_parser(subparsers, "show", description=("TODO"))
+
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_show,
+        destname,
+        destname,
         help=("TODO"),
         nargs="*",
     )
-    subparser_show.set_defaults(main=deps_show)
 
+    subparser_sync = add_deps_parser(subparsers, "sync", description=("TODO"))
 
-    # sync subcli
-    subparser_sync = subparsers.add_parser(
-        "sync",
-        description=("TODO"),
-    )
-    subparser_sync.add_argument(
-        "srcnames",
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        destname,
         nargs="*",
         help=("TODO"),
     )
-    subparser_sync.add_argument(
-        "--verify",
+    destname = "verify"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        f"--{destname}",
         help="TODO",
         action="store_true"
     )
-    subparser_sync.set_defaults(main=deps_sync)
 
-    # eval subcli
-    subparser_eval = subparsers.add_parser(
-        "eval",
-        description=("TODO"),
-    )
-    subparser_eval.add_argument(
-        "srcnames",
+    subparser_eval = add_deps_parser(subparsers, "eval", description=("TODO"))
+    destname = "srcnames"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        destname,
         nargs="*",
         help=("TODO"),
     )
-    subparser_eval.add_argument(
-        "--no-namesonly",
-        dest="namesonly",
+
+    destname = "namesonly"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        f"--no-{destname}",
+        dest=destname,
         help="TODO",
         action="store_false"
     )
-    subparser_eval.add_argument(
-        "--extra",
+
+    destname = "extra"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        f"--{destname}",
+        dest=destname,
         help="TODO",
-        type=str,
     )
-    subparser_eval.add_argument(
+
+    destname = "excludes"
+    add_deps_argument(
+        subparser_eval,
+        destname,
         "--exclude",
-        type=str,
-        dest="excludes",
+        dest=destname,
         nargs="+",
         default=[],
         help=("TODO"),
     )
-    subparser_eval.set_defaults(main=deps_eval)
 
-    # add subcli
-    subparser_add = subparsers.add_parser(
-        "add",
-        description=("TODO"),
-    )
-    subparser_add.add_argument(
-        "source",
-        type=str,
+    subparser_add = add_deps_parser(subparsers, "add", description=("TODO"))
+
+    destname = "srcname"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
         help=("TODO"),
     )
-    subparser_add.add_argument(
-        "srctype",
-        type=str,
+
+    destname = "srctype"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
         choices=SUPPORTED_COLLECTORS,
         help=("TODO"),
     )
-    subparser_add.add_argument(
-        "srcargs",
+
+    destname = "srcargs"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        destname,
         nargs="*",
         help=("TODO"),
     )
-    subparser_add.set_defaults(main=deps_add)
+    subparser_add.set_defaults(create=True)
 
-    # del subcli
-    subparser_del = subparsers.add_parser(
-        "del",
-        description=("TODO"),
+    subparser_delete = add_deps_parser(
+        subparsers, "delete", description=("TODO")
     )
-    subparser_del.add_argument(
-        "source",
+
+    destname = "srcname"
+    add_deps_argument(
+        subparser_delete,
+        destname,
+        destname,
         type=str,
         help=("TODO"),
     )
-    subparser_del.set_defaults(main=deps_del)
 
 
 def main_parser(prog):
