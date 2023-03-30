@@ -3,6 +3,7 @@ from .pep518 import Pep518Collector
 from .pip_reqfile import PipReqFileCollector
 from .metadata import MetadataCollector
 from .poetry import PoetryCollector
+from .tox import ToxCollector
 
 
 __all__ = ["parser"]
@@ -14,6 +15,7 @@ SUPPORTED_COLLECTORS = {
         PipReqFileCollector,
         MetadataCollector,
         PoetryCollector,
+        ToxCollector,
     ]
 }
 
