@@ -29,6 +29,7 @@ from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
 from .codes import ExitCodes
 from .errors import RunCommandError, RunCommandEnvError, DepsUnsyncedError
 from .install_cmd import install_wheel
+from .lib.normalization import pep503_normalized_name
 from .run_cmd import run_command
 # from .deps_cmd import deps_command
 from .deps_cmd.collectors import SUPPORTED_COLLECTORS, get_collector
@@ -189,10 +190,11 @@ class DepsSourcesConfig:
                     marker_res = marker.evaluate(env)
                     if not marker_res:
                         continue
-                if any(reg.match(parsed_req.name) for reg in exclude_regexes):
+                normalized_name = pep503_normalized_name(parsed_req.name)
+                if any(reg.match(normalized_name) for reg in exclude_regexes):
                     continue
                 if namesonly:
-                    deps.add(parsed_req.name)
+                    deps.add(normalized_name)
                 else:
                     deps.add(req)
 
