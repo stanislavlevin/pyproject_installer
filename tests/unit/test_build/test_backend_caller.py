@@ -7,7 +7,10 @@ import sys
 
 import pytest
 
-from pyproject_installer.build_cmd.helper import backend_caller
+from pyproject_installer.lib.backend_helper import backend_caller
+
+
+BACKEND_CALLER_MOD = "pyproject_installer.lib.backend_helper.backend_caller"
 
 
 @pytest.fixture
@@ -106,12 +109,7 @@ def build_backend_path():
 
 def test_help():
     result = subprocess.run(
-        args=[
-            sys.executable,
-            "-m",
-            "pyproject_installer.build_cmd.helper.backend_caller",
-            "--help",
-        ],
+        args=[sys.executable, "-m", BACKEND_CALLER_MOD, "--help"],
         capture_output=True,
     )
     assert result.returncode == 0
@@ -122,13 +120,7 @@ def test_help():
 def test_invalid_hook_choice():
     invalid_hook = "invalid_hook_name"
     result = subprocess.run(
-        args=[
-            sys.executable,
-            "-m",
-            "pyproject_installer.build_cmd.helper.backend_caller",
-            "be",
-            invalid_hook,
-        ],
+        args=[sys.executable, "-m", BACKEND_CALLER_MOD, "be", invalid_hook],
         capture_output=True,
     )
     expected_err_msg = (
@@ -215,7 +207,7 @@ def test_logging(verbose, logging_kwargs, mocker, mock_call_hook):
 def test_logging_destination(level, destination):
     code = textwrap.dedent(
         f"""\
-            from pyproject_installer.build_cmd.helper import backend_caller
+            import {BACKEND_CALLER_MOD} as backend_caller
 
             backend_caller.setup_logging(verbose=True)
             backend_caller.logger.{level}("{level}")
