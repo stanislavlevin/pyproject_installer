@@ -12,10 +12,10 @@ from pyproject_installer.build_cmd import (
     WHEEL_TRACKER,
 )
 from pyproject_installer.build_cmd._build import (
-    BACKEND_CALLER,
     SUPPORTED_BUILD_HOOKS,
     build,
 )
+from pyproject_installer.lib.build_backend import BACKEND_CALLER
 
 
 def test_srcdir_nonexistent(wheeldir):
@@ -288,7 +288,7 @@ def test_raisable_thread(mock_build, pyproject, mocker):
     outdir = pyproject_path / "dist"
 
     # override mock_build's mock for os.read
-    mock_os_read = mocker.patch("pyproject_installer.build_cmd._build.os.read")
+    mock_os_read = mocker.patch("pyproject_installer.lib.build_backend.os.read")
 
     # emulate os.read error to raise thread
     mock_os_read.side_effect = OSError("oops")
@@ -303,7 +303,7 @@ def test_received_invalid_data(mock_build, pyproject, mocker):
     outdir = pyproject_path / "dist"
 
     # override mock_build's mock for os.read
-    mock_os_read = mocker.patch("pyproject_installer.build_cmd._build.os.read")
+    mock_os_read = mocker.patch("pyproject_installer.lib.build_backend.os.read")
     mock_os_read.side_effect = [b"invalid_json", b""]
 
     with pytest.raises(

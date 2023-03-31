@@ -9,8 +9,8 @@ import pytest
 
 from pyproject_installer import __version__ as installer_version
 from pyproject_installer.build_cmd import WHEEL_TRACKER
-from pyproject_installer.build_cmd._build import call_hook
 from pyproject_installer.lib import tomllib
+from pyproject_installer.lib.build_backend import backend_hook
 
 
 class ContextVenv(EnvBuilder):
@@ -107,7 +107,7 @@ def install_build_deps():
                 subprocess.check_call(install_args)
 
         # get wheel build requirements(PEP517)
-        wheel_build_requires = call_hook(
+        wheel_build_requires = backend_hook(
             python=python,
             srcdir=srcdir,
             verbose=False,

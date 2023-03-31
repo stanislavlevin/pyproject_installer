@@ -6,7 +6,7 @@ import sys
 import pytest
 
 from pyproject_installer.build_cmd import build_wheel
-from pyproject_installer.build_cmd._build import BACKEND_CALLER
+from pyproject_installer.lib.build_backend import BACKEND_CALLER
 
 
 def test_pyproject_invalid_toml(pyproject, wheeldir):
