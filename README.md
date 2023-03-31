@@ -37,10 +37,10 @@ tree in network-isolated environments.
 
 - Only stdlib or vendored dependencies can be used in runtime for bootstrapping
   any Python project.<br>
-  Currently, only `tomli` (used for parsing `pyproject.toml` configuration file)
-  is vendored by `pyproject_installer`.
-
-  Note: `tomli` is the part of stdlib since Python 3.11.
+  Current vendored packages:
+  - `tomli` (used for parsing `pyproject.toml` configuration file).
+     Note: `tomli` is the part of stdlib since Python 3.11.
+  - `packaging` (used for parsing PEP508 dependencies)
 
 - Installation of build dependencies is up to the caller.<br>
   Moreover, parsing of build requirements requires two additional external
