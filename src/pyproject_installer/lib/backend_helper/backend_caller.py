@@ -19,6 +19,8 @@ SUPPORTED_HOOKS = {
     "build_sdist": None,
     "get_requires_for_build_wheel": [],
     "get_requires_for_build_sdist": [],
+    # PEP517 doesn't specify default value
+    "prepare_metadata_for_build_wheel": "",
 }
 
 

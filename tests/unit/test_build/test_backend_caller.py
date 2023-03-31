@@ -41,6 +41,11 @@ def build_backend_src(tmpdir):
 
             def _get_requires_for_build_sdist(config_settings=None):
                 return ["build_sdist_dep"]
+
+            def _prepare_metadata_for_build_wheel(
+                metadata_directory, config_settings=None
+            ):
+                return "foo-1.0.dist-info"
             """
         )
         if hooks is None:
@@ -443,6 +448,34 @@ def test_get_requires_for_build_sdist(build_backend):
         be.name, backend_path=None, hook=hook, hook_args=[], hook_kwargs={}
     )
     assert hook_result == ["build_sdist_dep"]
+
+
+def test_missing_prepare_metadata_for_build_wheel(build_backend, wheeldir):
+    hook = "prepare_metadata_for_build_wheel"
+    hooks = list(backend_caller.SUPPORTED_HOOKS)
+    hooks.remove(hook)
+    be = build_backend("be", hooks=hooks)
+    hook_result = backend_caller.call_hook(
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[str(wheeldir)],
+        hook_kwargs={},
+    )
+    assert hook_result == ""
+
+
+def test_prepare_metadata_for_build_wheel(build_backend, wheeldir):
+    be = build_backend("be")
+    hook = "prepare_metadata_for_build_wheel"
+    hook_result = backend_caller.call_hook(
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[str(wheeldir)],
+        hook_kwargs={},
+    )
+    assert hook_result == "foo-1.0.dist-info"
 
 
 @pytest.mark.parametrize(
