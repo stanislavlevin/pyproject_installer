@@ -2,21 +2,21 @@
 Vendor required packages
 
 Updating vendored packages:
-- bump required package in `src/pyproject_installer/build_cmd/vendored.txt`
+- bump required package in `src/pyproject_installer/vendored.txt`
 - run `python3 tools/vendored.py`
 
 Currently there are no changes made on vendored packages.
 
 To verify changes if any:
 - tomli: https://github.com/hukkin/tomli.git
-git diff 2.0.1:src/tomli @:src/pyproject_installer/build_cmd/_vendor/tomli
+git diff 2.0.1:src/tomli @:src/pyproject_installer/_vendor/tomli
 """
 from pathlib import Path
 import sys
 import subprocess
 import shutil
 
-BUILDER_VENDORED_PATH = "src/pyproject_installer/build_cmd/_vendor"
+VENDORED_PATH = "src/pyproject_installer/_vendor"
 BACKEND_VENDORED_PATH = "backend/_vendor"
 
 
@@ -37,8 +37,8 @@ def install(vendored_path):
     (vendored_path / "__init__.py").touch()
 
 
-def update_builder():
-    vendored_path = Path(BUILDER_VENDORED_PATH)
+def update_main():
+    vendored_path = Path(VENDORED_PATH)
     if vendored_path.exists():
         shutil.rmtree(vendored_path)
     vendored_path.mkdir()
@@ -54,5 +54,5 @@ def update_backend():
 
 
 if __name__ == "__main__":
-    update_builder()
+    update_main()
     update_backend()

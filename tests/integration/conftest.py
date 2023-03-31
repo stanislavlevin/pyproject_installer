@@ -5,17 +5,12 @@ import sys
 import tempfile
 import textwrap
 
-try:
-    # Python 3.11+
-    import tomllib
-except ModuleNotFoundError:
-    import pyproject_installer.build_cmd._vendor.tomli as tomllib
-
 import pytest
 
 from pyproject_installer import __version__ as installer_version
 from pyproject_installer.build_cmd import WHEEL_TRACKER
 from pyproject_installer.build_cmd._build import call_hook
+from pyproject_installer.lib import tomllib
 
 
 class ContextVenv(EnvBuilder):
