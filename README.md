@@ -43,10 +43,9 @@ sources of Python project in source tree within network-isolated environments.
   - `packaging` (used for parsing PEP508 dependencies)
 
 - Installation of build dependencies is up to the caller.<br>
-  Moreover, parsing of build requirements requires two additional external
-  packages: `packaging` and its dependency `pyparsing`. But since the validation
-  of build dependencies is optional (disabled by default) there is no point to
-  vendor them.
+  These dependencies of Python projects are managed externally with system
+  package managers like `apt` or `dnf`. [External source](#management-of-dependencies-sources) of upstream's
+  dependencies may be used for provision of formatted list of dependencies to external tools.
 
 - There is no post-installation bytecompilation.<br>
   PEP427 says that wheel installers should compile any installed .py to .pyc.
@@ -204,7 +203,7 @@ Run options:
 Note: venv's directory name is `.run_venv`.
 
 
-### Management of dependencies' sources
+### Management of dependencies sources
 
 Collect PEP508 requirements from different sources, store and evaluate
 them in Python environment.
@@ -373,8 +372,8 @@ Functionally, today's builder is similar to [build](https://pypi.org/project/bui
 The key differences are:
 - highly specialized defaults (see [description](#Description))
 - highly specialized features to drop extra runtime dependencies like
-  `pep517` or `packaging`. No point to vendor `pep517` to call only
-  `build_wheel` backend hook in subprocess.
+  `pep517`. No point to vendor `pep517` to call only `build_wheel` backend hook
+  in subprocess.
 
 ### installer
 
