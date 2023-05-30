@@ -1,12 +1,11 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import email
-import sys
 
 
 from .collector import Collector
+from ...build_cmd import build_metadata
 from ...lib import requirements
-from ...lib.build_backend import backend_hook
 
 
 class MetadataCollector(Collector):
@@ -23,26 +22,17 @@ class MetadataCollector(Collector):
     name = "metadata"
 
     def collect(self):
-        hook_name = "prepare_metadata_for_build_wheel"
         with TemporaryDirectory() as tmpdir:
-            distinfo_dir = backend_hook(
-                python=sys.executable,
-                srcdir=Path.cwd(),
-                verbose=False,
-                hook=hook_name,
-                hook_args=[((tmpdir),), {}],
-            )["result"]
-            if distinfo_dir == "":
-                raise ValueError(f"Backend doesn't support {hook_name} hook")
-
-            metadata_path = Path(tmpdir) / distinfo_dir / "METADATA"
+            tmp_path = Path(tmpdir)
+            metadata_filename = build_metadata(Path.cwd(), outdir=tmp_path)
+            metadata_path = tmp_path / metadata_filename
             metadata_text = metadata_path.read_text(encoding="utf-8")
-            msg = email.message_from_string(metadata_text)
-            requires = msg.get_all("Requires-Dist", [])
-            for req in requires:
-                try:
-                    requirements.Requirement(req)
-                except requirements.InvalidRequirement:
-                    continue
-                else:
-                    yield req
+        metadata_email = email.message_from_string(metadata_text)
+        requires = metadata_email.get_all("Requires-Dist", [])
+        for req in requires:
+            try:
+                requirements.Requirement(req)
+            except requirements.InvalidRequirement:
+                continue
+            else:
+                yield req

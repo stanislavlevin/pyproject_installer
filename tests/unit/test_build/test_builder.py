@@ -9,6 +9,7 @@ import pytest
 from pyproject_installer.build_cmd import (
     build_wheel,
     build_sdist,
+    build_metadata,
     WHEEL_TRACKER,
 )
 from pyproject_installer.build_cmd._build import (
@@ -311,3 +312,111 @@ def test_received_invalid_data(mock_build, pyproject, mocker):
         match="Received invalid JSON data from backend helper: 'invalid_json'",
     ):
         build_wheel(pyproject_path, outdir=outdir)
+
+
+def test_metadata_no_wheeltracker_metadata(pyproject_metadata):
+    """Check if .wheeltracker is not created on metadata build (metadata)"""
+    pyproject_path = pyproject_metadata()
+    outdir = pyproject_path / "dist"
+
+    tracker = outdir / WHEEL_TRACKER
+    assert not tracker.exists()
+
+    build_metadata(pyproject_path, outdir=outdir)
+
+    assert not tracker.exists()
+
+
+def test_metadata_no_wheeltracker_wheel(pyproject_metadata_wheel):
+    """Check if .wheeltracker is not created on metadata build (wheel)"""
+    pyproject_path = pyproject_metadata_wheel()
+    outdir = pyproject_path / "dist"
+
+    tracker = outdir / WHEEL_TRACKER
+    assert not tracker.exists()
+
+    build_metadata(pyproject_path, outdir=outdir)
+
+    assert not tracker.exists()
+
+
+def test_metadata_nonexistent_outdir(pyproject_metadata):
+    """Check if outdir is created when it's missing on metadata build"""
+    pyproject_path = pyproject_metadata()
+
+    outdir = pyproject_path / "dist"
+    assert not outdir.exists()
+
+    build_metadata(pyproject_path, outdir=outdir)
+
+    assert outdir.exists()
+
+
+def test_metadata_existent_outdir(pyproject_metadata):
+    """Check if build_metadata doesn't fail on existent outdir"""
+    pyproject_path = pyproject_metadata()
+
+    outdir = pyproject_path / "dist"
+    outdir.mkdir()
+
+    build_metadata(pyproject_path, outdir=outdir)
+
+
+def test_metadata_outdir_resolved(pyproject_metadata):
+    """Check if outdir is resolved for build_metadata"""
+    pyproject_path = pyproject_metadata()
+
+    outdir = Path("dist")
+    expected_outdir = pyproject_path / outdir
+    assert not expected_outdir.exists()
+
+    build_metadata(pyproject_path, outdir=outdir)
+
+    assert expected_outdir.exists()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="Requires unprivileged user")
+def test_metadata_uncreatable_outdir(pyproject_metadata):
+    """Check error if outdir is uncreatable(e.g. not enough permissions)"""
+    pyproject_path = pyproject_metadata()
+
+    outdir = Path("/uncreatable_dir")
+    with pytest.raises(
+        ValueError,
+        match="Unable to create path for outdir: /uncreatable_dir",
+    ):
+        build_metadata(pyproject_path, outdir=outdir)
+
+
+def test_metadata_content_metadata(pyproject_metadata):
+    """Check content of metadata for build_metadata (metadata)"""
+    expected_fields = [
+        "Metadata-Version: 2.1",
+        "Name: foo",
+        "Version: 1.0",
+    ]
+    pyproject_path = pyproject_metadata(expected_fields)
+    outdir = pyproject_path / "dist"
+
+    metadata_filename = build_metadata(pyproject_path, outdir=outdir)
+    assert metadata_filename == "METADATA"
+    actual_contents = (outdir / metadata_filename).read_text(encoding="utf-8")
+    expected_contents = "\n".join(expected_fields) + "\n"
+    assert actual_contents == expected_contents
+
+
+def test_metadata_content_wheel(pyproject_metadata_wheel):
+    """Check content of metadata for build_metadata (wheel)"""
+    expected_fields = [
+        "Metadata-Version: 2.1",
+        "Name: foo",
+        "Version: 1.0",
+    ]
+    pyproject_path = pyproject_metadata_wheel(expected_fields)
+    outdir = pyproject_path / "dist"
+
+    metadata_filename = build_metadata(pyproject_path, outdir=outdir)
+    assert metadata_filename == "METADATA"
+    actual_contents = (outdir / metadata_filename).read_text(encoding="utf-8")
+    expected_contents = "\n".join(expected_fields) + "\n"
+    assert actual_contents == expected_contents
