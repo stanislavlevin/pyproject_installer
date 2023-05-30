@@ -169,3 +169,107 @@ def wheel(tmpdir):
         return wheel
 
     return _wheel
+
+
+@pytest.fixture
+def pyproject_with_backend(pyproject, monkeypatch):
+    """Generates pyproject with self-hosted build backend"""
+
+    def _build_backend_src(be_content):
+        be_module = "be"
+        pyproject_toml_content = textwrap.dedent(
+            f"""\
+            [build-system]
+            requires=[]
+            build-backend="{be_module}"
+            backend-path=["."]
+            """
+        )
+        pyproject_path = pyproject(pyproject_toml_content)
+
+        backend_path = pyproject_path / be_module
+        backend_path.mkdir()
+        (backend_path / "__init__.py").write_text(be_content)
+
+        monkeypatch.chdir(pyproject_path)
+        return pyproject_path
+
+    return _build_backend_src
+
+
+@pytest.fixture
+def pyproject_metadata(pyproject_with_backend):
+    """Build backend with prepare_metadata_for_build_wheel"""
+    default_content_fields = [
+        "Metadata-Version: 2.1",
+        "Name: foo",
+        "Version: 1.0",
+    ]
+
+    def _core_metadata(headers=default_content_fields, reqs=[]):
+        content_fields = list(headers)
+        for req in reqs:
+            content_fields.append(f"Requires-Dist: {req}")
+
+        be_content = textwrap.dedent(
+            """\
+            def prepare_metadata_for_build_wheel(
+                metadata_directory, config_settings=None
+            ):
+                from pathlib import Path
+
+                distinfo = "foo-1.0.dist-info"
+                distinfo_path = Path(metadata_directory) / distinfo
+                distinfo_path.mkdir()
+                metadata_path = distinfo_path / "METADATA"
+                content = "{content}"
+
+                metadata_path.write_text(content, encoding="utf-8")
+
+                return distinfo
+
+            def build_wheel(
+                wheel_directory, config_settings=None, metadata_directory=None
+            ):
+                # prepare_metadata_for_build_wheel is preferred over build_wheel
+                assert False
+            """
+        ).format(content="\\n".join(content_fields) + "\\n")
+        return pyproject_with_backend(be_content)
+
+    return _core_metadata
+
+
+@pytest.fixture
+def pyproject_metadata_wheel(pyproject_with_backend, wheel_contents, wheel):
+    """Build backend with build_wheel only"""
+    default_content_fields = [
+        "Metadata-Version: 2.1",
+        "Name: foo",
+        "Version: 1.0",
+    ]
+
+    def _core_metadata(headers=default_content_fields, reqs=[]):
+        contents = wheel_contents()
+        content_fields = list(headers)
+        content_fields.extend((f"Requires-Dist: {x}" for x in reqs))
+        metadata_content = "\n".join(content_fields) + "\n"
+        contents["foo-1.0.dist-info/METADATA"] = metadata_content
+        wheel_path = wheel(contents=contents)
+
+        be_content = textwrap.dedent(
+            f"""\
+            from pathlib import Path
+
+
+            def build_wheel(
+                wheel_directory, config_settings=None, metadata_directory=None
+            ):
+                target_path = Path(wheel_directory) / "{wheel_path.name}"
+                Path("{wheel_path}").rename(target_path)
+                return "{wheel_path.name}"
+            """
+        )
+        return pyproject_with_backend(be_content)
+
+    return _core_metadata

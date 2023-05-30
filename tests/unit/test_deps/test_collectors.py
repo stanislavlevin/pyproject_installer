@@ -31,68 +31,6 @@ def test_supported_collectors():
 
 
 @pytest.fixture
-def pyproject_with_backend(pyproject, monkeypatch):
-    """Generates pyproject with self-hosted build backend"""
-
-    def _build_backend_src(be_content):
-        be_module = "be"
-        pyproject_toml_content = textwrap.dedent(
-            f"""\
-            [build-system]
-            requires=[]
-            build-backend="{be_module}"
-            backend-path=["."]
-            """
-        )
-        pyproject_path = pyproject(pyproject_toml_content)
-
-        backend_path = pyproject_path / be_module
-        backend_path.mkdir()
-        (backend_path / "__init__.py").write_text(be_content)
-
-        monkeypatch.chdir(pyproject_path)
-        return pyproject_path
-
-    return _build_backend_src
-
-
-@pytest.fixture
-def pyproject_metadata(pyproject_with_backend):
-    """Build backend with prepare_metadata_for_build_wheel"""
-
-    def _core_metadata(reqs):
-        content_fields = [
-            "Metadata-Version: 2.1",
-            "Name: foo",
-            "Version: 1.0",
-        ]
-        for req in reqs:
-            content_fields.append(f"Requires-Dist: {req}")
-
-        be_content = textwrap.dedent(
-            """\
-            def prepare_metadata_for_build_wheel(
-                metadata_directory, config_settings=None
-            ):
-                from pathlib import Path
-
-                distinfo = "foo-1.0.dist-info"
-                distinfo_path = Path(metadata_directory) / distinfo
-                distinfo_path.mkdir()
-                metadata_path = distinfo_path / "METADATA"
-                content = "{content}"
-
-                metadata_path.write_text(content, encoding="utf-8")
-
-                return distinfo
-            """
-        ).format(content="\\n".join(content_fields) + "\\n")
-        return pyproject_with_backend(be_content)
-
-    return _core_metadata
-
-
-@pytest.fixture
 def pyproject_pep517_wheel(pyproject_with_backend):
     """Build backend with get_requires_for_build_wheel"""
 
@@ -208,8 +146,8 @@ PEP508_DEPS_DATA = (
 
 
 @pytest.mark.parametrize("deps_data", PEP508_DEPS_DATA)
-def test_metadata_collector(deps_data, pyproject_metadata, depsconfig):
-    """Collection of core metadata"""
+def test_metadata_collector_metadata(deps_data, pyproject_metadata, depsconfig):
+    """Collection of core metadata via prepare_metadata_for_build_wheel"""
     # prepare source config
     srcname = "foo"
     collector = "metadata"
@@ -219,7 +157,7 @@ def test_metadata_collector(deps_data, pyproject_metadata, depsconfig):
     in_reqs, out_reqs = deps_data
 
     # configure pyproject with build backend
-    pyproject_metadata(in_reqs)
+    pyproject_metadata(reqs=in_reqs)
 
     deps_command("sync", depsconfig_path, srcnames=[])
 
@@ -230,26 +168,29 @@ def test_metadata_collector(deps_data, pyproject_metadata, depsconfig):
     assert actual_conf == expected_conf
 
 
-def test_metadata_collector_unsupported(pyproject_with_backend, depsconfig):
-    """Build backend doesn't support prepare_metadata_for_build_wheel"""
+@pytest.mark.parametrize("deps_data", PEP508_DEPS_DATA)
+def test_metadata_collector_wheel(
+    deps_data, pyproject_metadata_wheel, depsconfig
+):
+    """Collection of core metadata via build_wheel"""
     # prepare source config
     srcname = "foo"
     collector = "metadata"
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
+    in_reqs, out_reqs = deps_data
+
     # configure pyproject with build backend
-    pyproject_with_backend("")
+    pyproject_metadata_wheel(reqs=in_reqs)
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
-        "Backend doesn't support prepare_metadata_for_build_wheel hook"
-    )
-    assert expected_err in str(exc.value)
+    deps_command("sync", depsconfig_path, srcnames=[])
 
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
-    assert actual_conf == input_conf
+    assert actual_conf == expected_conf
 
 
 def test_pep518_collector_missing_pyproject_toml(
