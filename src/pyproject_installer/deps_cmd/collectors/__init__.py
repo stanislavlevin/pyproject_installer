@@ -4,6 +4,7 @@ from .pip_reqfile import PipReqFileCollector
 from .metadata import MetadataCollector
 from .poetry import PoetryCollector
 from .tox import ToxCollector
+from .hatch import HatchCollector
 
 
 __all__ = ["get_collector", "SUPPORTED_COLLECTORS"]
@@ -17,6 +18,7 @@ SUPPORTED_COLLECTORS = {
         PipReqFileCollector,
         PoetryCollector,
         ToxCollector,
+        HatchCollector,
     ]
 }
 
