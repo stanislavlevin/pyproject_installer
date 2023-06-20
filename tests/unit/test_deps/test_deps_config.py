@@ -477,6 +477,45 @@ def test_config_sync_verify_unchanged(
     assert not captured.out
 
 
+@pytest.mark.parametrize(
+    "old_reqs,new_reqs",
+    (
+        (["foo"], ["foo "]),
+        (["foo[a,b]"], ["foo [ a, b ]"]),
+        (["foo>1"], ["foo > 1"]),
+        (["foo;python_version=='3'"], ["foo ; python_version == '3'"]),
+    ),
+)
+def test_config_sync_verify_normalized_dep(
+    old_reqs, new_reqs, depsconfig, mock_collector, capsys
+):
+    """Sync unchanged source with verify and dependency normalization"""
+
+    action = "sync"
+
+    # prepare source config
+    input_conf = {
+        "sources": {
+            "foo": {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    deps_command(action, depsconfig_path, srcnames=[], verify=True)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == input_conf
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
 @pytest.mark.parametrize("select_data", NONEXISTENT_SOURCE_DATA)
 def test_config_sync_nonexistent_source(select_data, depsconfig, capsys):
     """Sync nonexistent source"""
