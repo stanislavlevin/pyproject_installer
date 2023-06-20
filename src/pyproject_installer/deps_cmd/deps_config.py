@@ -178,13 +178,18 @@ class DepsSourcesConfig:
         diff = {}
         for srcname, source in self.iter_sources(srcnames):
             synced_deps = set(
-                self.collect(
-                    source["srctype"],
-                    srcargs=source.get("srcargs", ()),
+                map(
+                    requirements.Requirement,
+                    self.collect(
+                        source["srctype"],
+                        srcargs=source.get("srcargs", ()),
+                    ),
                 )
             )
 
-            stored_deps = set(source.get("deps", ()))
+            stored_deps = set(
+                map(requirements.Requirement, source.get("deps", ()))
+            )
 
             if stored_deps == synced_deps:
                 continue
@@ -193,15 +198,15 @@ class DepsSourcesConfig:
             if new_deps:
                 if srcname not in diff:
                     diff[srcname] = {}
-                diff[srcname]["new_deps"] = sorted(new_deps)
+                diff[srcname]["new_deps"] = sorted(map(str, new_deps))
 
             extra_deps = stored_deps - synced_deps
             if extra_deps:
                 if srcname not in diff:
                     diff[srcname] = {}
-                diff[srcname]["extra_deps"] = sorted(extra_deps)
+                diff[srcname]["extra_deps"] = sorted(map(str, extra_deps))
 
-            source["deps"] = sorted(synced_deps)
+            source["deps"] = sorted(map(str, synced_deps))
 
         self.save()
 
