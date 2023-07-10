@@ -168,25 +168,25 @@ def pdm_deps(tmpdir, monkeypatch):
 PEP508_DEPS_DATA = (
     ([], []),
     (["foo"], ["foo"]),
-    (["foo == 1.0"], ["foo == 1.0"]),
+    (["foo == 1.0"], ["foo==1.0"]),
     (
         ["foo @ https://example.com/foo.zip"],
-        ["foo @ https://example.com/foo.zip"],
+        ["foo@ https://example.com/foo.zip"],
     ),
-    (["foo [test]"], ["foo [test]"]),
-    (["foo [test] > 1.0"], ["foo [test] > 1.0"]),
-    (["foo [test] > 1.0", "bar"], ["bar", "foo [test] > 1.0"]),
+    (["foo [test]"], ["foo[test]"]),
+    (["foo [test] > 1.0"], ["foo[test]>1.0"]),
+    (["foo [test] > 1.0", "bar"], ["bar", "foo[test]>1.0"]),
     (["Fo_.--o"], ["Fo_.--o"]),
     (["bar", "foo"], ["bar", "foo"]),
     (["foo", "bar"], ["bar", "foo"]),
-    (["foo", "bar > 1.0"], ["bar > 1.0", "foo"]),
+    (["foo", "bar > 1.0"], ["bar>1.0", "foo"]),
     (
-        ["foo", "bar > 1.0; python_version == '1.0'"],
-        ["bar > 1.0; python_version == '1.0'", "foo"],
+        ["foo", "bar > 1.0; python_version=='1.0'"],
+        ['bar>1.0; python_version == "1.0"', "foo"],
     ),
     (["_foo"], []),
     (["foo", "bar !> 1.0"], ["foo"]),
-    (["foo", "bar > 1.0; invalid_marker == '1.0'"], ["foo"]),
+    (["foo", "bar > 1.0; invalid_marker=='1.0'"], ["foo"]),
 )
 
 
@@ -424,7 +424,7 @@ def test_pipreqfile_collector_unsupported_deps(
         (['foo = { version = "^2.0.1", python = "<3.11" }'], ["foo"]),
         (
             ['foo = {version = "^2.2", markers = "python_version <= \'3.4\'"}'],
-            ["foo;python_version <= '3.4'"],
+            ['foo; python_version <= "3.4"'],
         ),
         (
             ['foo = {version = "^2.2", markers = "invalid_marker == \'3.4\'"}'],
