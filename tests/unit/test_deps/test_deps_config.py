@@ -716,18 +716,26 @@ def test_config_eval_formatting_depformatextra_only(depsconfig, capsys):
 
 
 @pytest.mark.parametrize(
-    "deps",
+    "data",
     (
-        ["foo [bar]"],
-        ["foo == 1.0.0"],
-        ["foo [bar,foobar] >= 2.8.1, == 2.8.*"],
-        ["foo [bar,foobar] >= 2.8.1, == 2.8.* ; python_version > '2.7'"],
+        (["foo"], ["foo"]),
+        (["foo [bar]"], ["foo[bar]"]),
+        (["foo == 1.0.0"], ["foo==1.0.0"]),
+        (
+            ["foo [bar,foobar] >= 2.8.1, == 2.8.*"],
+            ["foo[bar,foobar]==2.8.*,>=2.8.1"],
+        ),
+        (
+            ["foo [bar,foobar] >= 2.8.1, == 2.8.* ; python_version > '2.7'"],
+            ['foo[bar,foobar]==2.8.*,>=2.8.1; python_version > "2.7"'],
+        ),
     ),
 )
-def test_config_eval_default(deps, depsconfig, capsys):
-    """Eval source and print in PEP508 format"""
+def test_config_eval_default(data, depsconfig, capsys):
+    """Eval source and print in normalized(packaging) PEP508 format"""
 
     action = "eval"
+    deps, out = data
 
     # prepare source config
     input_conf = {"sources": {"foo": {"srctype": "metadata", "deps": deps}}}
@@ -735,7 +743,7 @@ def test_config_eval_default(deps, depsconfig, capsys):
 
     deps_command(action, depsconfig_path, srcnames=[])
 
-    expected_out = "\n".join(deps) + "\n"
+    expected_out = "\n".join(out) + "\n"
 
     captured = capsys.readouterr()
     assert not captured.err
@@ -745,11 +753,11 @@ def test_config_eval_default(deps, depsconfig, capsys):
 @pytest.mark.parametrize(
     "data",
     (
-        (["foo ; python_version>'2.7'"], ["foo ; python_version>'2.7'"]),
+        (["foo ; python_version>'2.7'"], ['foo; python_version > "2.7"']),
         (["foo ; python_version<'2.7'"], ""),
         (
             ["foo ; python_version>'2.7'", "bar ; python_version<'2.7'"],
-            ["foo ; python_version>'2.7'"],
+            ['foo; python_version > "2.7"'],
         ),
         (
             [
@@ -757,11 +765,11 @@ def test_config_eval_default(deps, depsconfig, capsys):
                 "bar ; python_version<'2.7'",
                 "foo1 ; extra == 'test'",
             ],
-            ["foo ; python_version>'2.7'"],
+            ['foo; python_version > "2.7"'],
         ),
         (
             ["foobar", "foo ; python_version>'2.7'"],
-            ["foo ; python_version>'2.7'", "foobar"],
+            ['foo; python_version > "2.7"', "foobar"],
         ),
         (
             [
@@ -770,7 +778,7 @@ def test_config_eval_default(deps, depsconfig, capsys):
                 'foo1 ; extra == "test"',
                 "foobar",
             ],
-            ["foo ; python_version>'2.7'", "foobar"],
+            ['foo; python_version > "2.7"', "foobar"],
         ),
     ),
 )
@@ -800,11 +808,11 @@ def test_config_eval_markers(data, depsconfig, capsys):
         (["foo", 'bar ; extra == "doc"'], ["foo"]),
         (
             ['foo ; extra == "test"', 'bar ; extra == "doc"'],
-            ['foo ; extra == "test"'],
+            ['foo; extra == "test"'],
         ),
         (
             ['foo ; extra == "test"', 'bar ; extra == "doc"', "foobar"],
-            ['foo ; extra == "test"', "foobar"],
+            ['foo; extra == "test"', "foobar"],
         ),
         (
             [
@@ -815,8 +823,8 @@ def test_config_eval_markers(data, depsconfig, capsys):
                 "foobar1",
             ],
             [
-                'foo ; extra == "test"',
-                'foo1 ; extra == "test"',
+                'foo1; extra == "test"',
+                'foo; extra == "test"',
                 "foobar",
                 "foobar1",
             ],
