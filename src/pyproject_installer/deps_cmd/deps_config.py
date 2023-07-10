@@ -280,7 +280,7 @@ class DepsSourcesConfig:
                         )
                     )
                 else:
-                    deps.add(req)
+                    deps.add(str(parsed_req))
 
         for dep in sorted(deps):
             sys.stdout.write(dep + "\n")
