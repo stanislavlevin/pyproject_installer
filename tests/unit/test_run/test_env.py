@@ -543,6 +543,7 @@ def test_env_console_script(
             command=[command],
             capture_output=True,
         )
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert res.returncode == 0
         expected_out = f"Hello, World! ({command})"
         assert res.stdout.strip().decode("utf-8") == expected_out

@@ -52,6 +52,7 @@ def test_version():
         args=[sys.executable, "-m", "pyproject_installer", "--version"],
         capture_output=True,
     )
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout.rstrip().decode("utf-8") == project_version
     assert result.stderr == b""
@@ -62,6 +63,7 @@ def test_help():
         args=[sys.executable, "-m", "pyproject_installer", "--help"],
         capture_output=True,
     )
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout.rstrip().startswith(
         b"usage: python -m pyproject_installer "
@@ -137,6 +139,7 @@ def test_logging_destination(level, destination):
     )
     cmd = [sys.executable, "-c", code]
     result = subprocess.run(args=cmd, capture_output=True)
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     if destination == "stderr":
         log_out = result.stderr

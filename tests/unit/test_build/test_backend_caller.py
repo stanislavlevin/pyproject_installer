@@ -117,6 +117,7 @@ def test_help():
         args=[sys.executable, "-m", BACKEND_CALLER_MOD, "--help"],
         capture_output=True,
     )
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout.rstrip().startswith(b"usage: backend_caller.py ")
     assert result.stderr == b""
@@ -135,7 +136,7 @@ def test_invalid_hook_choice():
         ", ".join([f"{x!r}" for x in backend_caller.SUPPORTED_HOOKS]),
     )
 
-    assert result.returncode != 0
+    assert result.returncode
     assert expected_err_msg.encode("utf-8") in result.stderr
     assert result.stdout == b""
 
@@ -220,6 +221,7 @@ def test_logging_destination(level, destination):
     )
     cmd = [sys.executable, "-c", code]
     result = subprocess.run(args=cmd, capture_output=True)
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     if destination == "stderr":
         log_out = result.stderr
