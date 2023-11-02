@@ -120,7 +120,7 @@ def build_metadata(srcdir, outdir, config=None, verbose=False):
         distinfo_dir,
         tmp_path,
     ):
-        if distinfo_dir != "":
+        if distinfo_dir:
             metadata_path_src = tmp_path / distinfo_dir / metadata_filename
             # Python 3.8 syntax
             with metadata_path_src.open(

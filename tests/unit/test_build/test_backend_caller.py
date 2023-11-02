@@ -462,6 +462,7 @@ def test_missing_prepare_metadata_for_build_wheel(build_backend, wheeldir):
         hook_args=[str(wheeldir)],
         hook_kwargs={},
     )
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-string
     assert hook_result == ""
 
 
