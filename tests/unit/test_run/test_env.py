@@ -359,8 +359,8 @@ def test_env_command_failed_captured(project, wheel_no_csript, capfd, outs):
         assert f"Command's {noout}:\n" not in str(exc.value)
 
     captured = capfd.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
+    assert not captured.out
+    assert not captured.err
 
 
 @pytest.mark.parametrize(
@@ -394,7 +394,7 @@ def test_env_command_failed_notcaptured(project, wheel_no_csript, capfd, outs):
     for out in outs:
         assert getattr(captured, out[3:]) == f"{out}\n"
     for noout in [x for x in ["stdout", "stderr"] if x not in outs]:
-        assert getattr(captured, noout[3:]) == ""
+        assert not getattr(captured, noout[3:])
 
 
 @pytest.mark.parametrize(
@@ -426,8 +426,8 @@ def test_env_command_captured(project, wheel_no_csript, capfd, outs):
         assert getattr(res, noout) == b""
 
     captured = capfd.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
+    assert not captured.out
+    assert not captured.err
 
 
 @pytest.mark.parametrize(
@@ -459,7 +459,7 @@ def test_env_command_notcaptured(project, wheel_no_csript, capfd, outs):
     for out in outs:
         assert getattr(captured, out[3:]) == f"{out}\n"
     for noout in [x for x in ["stdout", "stderr"] if x not in outs]:
-        assert getattr(captured, noout[3:]) == ""
+        assert not getattr(captured, noout[3:])
 
 
 @pytest.fixture(
