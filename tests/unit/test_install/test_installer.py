@@ -79,7 +79,11 @@ def test_bad_wheel(tmpdir, destdir):
         install_wheel(bad_whl, destdir=destdir)
 
 
-@pytest.mark.skipif(os.geteuid() == 0, reason="Requires unprivileged user")
+@pytest.mark.skipif(
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
+    os.geteuid() == 0,
+    reason="Requires unprivileged user",
+)
 def test_unaccessible_destdir(wheel):
     with pytest.raises(ValueError, match="Unable to create path for destdir"):
         install_wheel(wheel(), destdir=Path("/unaccessible/dest/dir"))
@@ -521,6 +525,7 @@ def test_data_scripts(
     assert script.read_text() == expected_content
 
     result = subprocess.run([script], capture_output=True)
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""
@@ -566,6 +571,7 @@ def test_entry_points_scripts(
         str(dest_wheel.sitedir) + os.pathsep + new_env.get("PYTHONPATH", "")
     )
     result = subprocess.run([script], capture_output=True, env=new_env)
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""

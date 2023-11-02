@@ -201,7 +201,11 @@ def test_existent_outdir(mock_build, pyproject):
     build_wheel(pyproject_path, outdir=outdir)
 
 
-@pytest.mark.skipif(os.geteuid() == 0, reason="Requires unprivileged user")
+@pytest.mark.skipif(
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
+    os.geteuid() == 0,
+    reason="Requires unprivileged user",
+)
 def test_uncreatable_outdir(mock_build, pyproject):
     """Check error if outdir is uncreatable(e.g. not enough permissions)"""
     pyproject_path = pyproject()
@@ -375,7 +379,11 @@ def test_metadata_outdir_resolved(pyproject_metadata):
     assert expected_outdir.exists()
 
 
-@pytest.mark.skipif(os.geteuid() == 0, reason="Requires unprivileged user")
+@pytest.mark.skipif(
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
+    os.geteuid() == 0,
+    reason="Requires unprivileged user",
+)
 def test_metadata_uncreatable_outdir(pyproject_metadata):
     """Check error if outdir is uncreatable(e.g. not enough permissions)"""
     pyproject_path = pyproject_metadata()
