@@ -10,7 +10,7 @@ def test_config_settings_setuptools(
     2. Create pyproject with setuptools build backend
     3. Install build requirements with pip
     4. Build with custom config_settings (today's setuptools respects
-       `--global-option` key)
+       `--build-option` key)
     """
     python = virt_env_installer.env_exec_cmd
     install_build_deps(python, srcdir=setuptools_project)
@@ -22,7 +22,7 @@ def test_config_settings_setuptools(
         "--backend-config-settings",
         json.dumps(
             {
-                "--global-option": [
+                "--build-option": [
                     "--python-tag=test_tag",
                     "--build-number=123",
                     "--plat-name=test_plat",
