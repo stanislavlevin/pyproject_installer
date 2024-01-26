@@ -13,6 +13,7 @@ git diff 2.0.1:src/tomli @:src/pyproject_installer/_vendor/tomli
 - packaging: https://github.com/pypa/packaging
 git diff 23.1:src/packaging @:src/pyproject_installer/_vendor/packaging
 """
+
 from pathlib import Path
 import sys
 import subprocess

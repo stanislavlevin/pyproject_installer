@@ -10,6 +10,7 @@ build_wheel:
    - include *.py for now
    - exclude __pycache__ and .pyc
 """
+
 from base64 import urlsafe_b64encode
 from io import TextIOWrapper, BytesIO
 from pathlib import Path

@@ -338,9 +338,9 @@ def test_data_invalid_scheme_key(wheel_contents, wheel, installed_wheel):
 @pytest.mark.parametrize("ep_spec", ("foo", "foo.bar"))
 def test_invalid_entry_points(ep_spec, wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
-    contents[
-        "foo-1.0.dist-info/entry_points.txt"
-    ] = f"[console_scripts]\nbar = {ep_spec}\n"
+    contents["foo-1.0.dist-info/entry_points.txt"] = (
+        f"[console_scripts]\nbar = {ep_spec}\n"
+    )
     with pytest.raises(ValueError, match="Invalid entry_points specification"):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir
@@ -414,9 +414,9 @@ def test_installation_filelist(
     strip_dist_info, wheel_contents, wheel, installed_wheel
 ):
     contents = wheel_contents()
-    contents[
-        "foo-1.0.dist-info/entry_points.txt"
-    ] = "[console_scripts]\nbar = foo:main\n"
+    contents["foo-1.0.dist-info/entry_points.txt"] = (
+        "[console_scripts]\nbar = foo:main\n"
+    )
 
     dest_wheel = installed_wheel()
     kwargs = {"destdir": dest_wheel.destdir}
@@ -552,9 +552,9 @@ def test_entry_points_scripts(
         "pyproject_installer.install_cmd._install.sys.executable", sys_exec
     )
     contents = wheel_contents()
-    contents[
-        "foo-1.0.dist-info/entry_points.txt"
-    ] = "[console_scripts]\nbar = foo:main\n"
+    contents["foo-1.0.dist-info/entry_points.txt"] = (
+        "[console_scripts]\nbar = foo:main\n"
+    )
 
     dest_wheel = installed_wheel()
 

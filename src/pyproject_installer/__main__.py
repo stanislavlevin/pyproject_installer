@@ -11,6 +11,7 @@ Install features:
     - RECORD is dropped (PEP627)
     - signature verification of signed wheel is not supported
 """
+
 from pathlib import Path
 import argparse
 import json
