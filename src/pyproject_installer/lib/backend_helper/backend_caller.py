@@ -2,6 +2,7 @@
 Intended to be run in subprocess to call build backend's hooks.
 Must not have dependencies other than stdlib.
 """
+
 from importlib import import_module
 from pathlib import Path
 import argparse

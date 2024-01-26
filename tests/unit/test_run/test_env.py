@@ -52,9 +52,9 @@ def wheel_cscript(wheel, wheel_contents):
                     print("Hello, World! ({script_name})")
             """
         )
-        contents[
-            f"{contents.distinfo}/entry_points.txt"
-        ] = f"[console_scripts]\n{script_name} = {distr}:main\n"
+        contents[f"{contents.distinfo}/entry_points.txt"] = (
+            f"[console_scripts]\n{script_name} = {distr}:main\n"
+        )
 
         return wheel(name=f"{distr}-1.0-py3-none-any.whl", contents=contents)
 

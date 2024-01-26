@@ -1,4 +1,5 @@
 """Tests for parser of pyproject.toml"""
+
 import json
 import textwrap
 import sys
