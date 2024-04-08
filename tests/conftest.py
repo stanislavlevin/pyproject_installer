@@ -60,7 +60,10 @@ class WheelContents(MutableMapping):
                 (
                     f,
                     "sha256={}".format(
-                        digest_for_record("sha256", v.encode("utf8"))
+                        digest_for_record(
+                            "sha256",
+                            v if isinstance(v, bytes) else v.encode("utf8"),
+                        )
                     ),
                     0,
                 )

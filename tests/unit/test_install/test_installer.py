@@ -1,9 +1,11 @@
 from pathlib import Path
 import os
 import logging
+import shutil
 import sys
 import subprocess
 import sysconfig
+import textwrap
 
 import pytest
 
@@ -40,6 +42,23 @@ class InstalledWheel:
                 actual_filelist.add(Path(root) / f)
 
         return actual_filelist
+
+
+@pytest.fixture
+def compiled_binary(tmpdir):
+    gcc_exe = shutil.which("gcc")
+    if gcc_exe is None:
+        pytest.skip("Requires gcc to compile a test binary")
+
+    def _compiled_binary(exec_name, content):
+        output_bin = tmpdir / exec_name
+        source_c = tmpdir / f"{exec_name}.c"
+        source_c.write_text(content)
+        gcc_cmd = [gcc_exe, "-o", output_bin, source_c]
+        subprocess.check_call(gcc_cmd)
+        return output_bin
+
+    return _compiled_binary
 
 
 @pytest.fixture
@@ -523,6 +542,40 @@ def test_data_scripts(
 
     expected_content = f"{expected_shebang}\nprint('Hello, World!')\n"
     assert script.read_text() == expected_content
+
+    result = subprocess.run([script], capture_output=True)
+    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
+    assert result.returncode == 0
+    assert result.stdout == b"Hello, World!\n"
+    assert result.stderr == b""
+
+
+def test_data_binary_scripts(
+    compiled_binary, wheel_contents, wheel, installed_wheel
+):
+    """
+    Test that compiled binary can be executed on installation
+    """
+    binary_name = "foo_binary"
+    binary_path = compiled_binary(
+        binary_name,
+        textwrap.dedent(
+            """\
+            #include <stdio.h>
+            int main() {
+               printf("Hello, World!\\n");
+            }
+            """
+        ),
+    )
+
+    contents = wheel_contents()
+    contents[f"foo-1.0.data/scripts/{binary_name}"] = binary_path.read_bytes()
+
+    dest_wheel = installed_wheel()
+
+    install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
+    script = dest_wheel.scripts / binary_name
 
     result = subprocess.run([script], capture_output=True)
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
