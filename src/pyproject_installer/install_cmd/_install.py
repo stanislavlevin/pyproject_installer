@@ -68,11 +68,11 @@ def install_wheel_data(data_path, scheme, destdir):
             # point to the correct interpreter.
             for s in f.iterdir():
                 if s.is_file() and not s.is_symlink():
+                    script_path = rootdir / s.name
                     with s.open(mode="rb") as sf:
                         if sf.read(len(MAGIC_SHEBANG)) == MAGIC_SHEBANG:
                             sf.seek(0)
                             sf.readline()  # discard shebang
-                            script_path = rootdir / s.name
                             with script_path.open(mode="wb") as fsf:
                                 fsf.write(
                                     (
@@ -80,9 +80,9 @@ def install_wheel_data(data_path, scheme, destdir):
                                     ).encode("utf-8")
                                 )
                                 shutil.copyfileobj(sf, fsf)
-                            script_path.chmod(
-                                script_path.stat().st_mode | 0o555
-                            )
+                    # make any file in scripts directory executable
+                    # (can be a compiled binary for example)
+                    script_path.chmod(script_path.stat().st_mode | 0o555)
 
         shutil.rmtree(data_path / f)
 
