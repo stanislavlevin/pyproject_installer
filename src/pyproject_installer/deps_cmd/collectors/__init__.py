@@ -6,6 +6,7 @@ from .poetry import PoetryCollector
 from .tox import ToxCollector
 from .hatch import HatchCollector
 from .pdm import PdmCollector
+from .pipenv import PipenvCollector
 
 
 __all__ = ["get_collector", "SUPPORTED_COLLECTORS"]
@@ -21,6 +22,7 @@ SUPPORTED_COLLECTORS = {
         ToxCollector,
         HatchCollector,
         PdmCollector,
+        PipenvCollector,
     ]
 }
 

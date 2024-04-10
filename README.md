@@ -239,7 +239,7 @@ Positional arguments:
 
 <pre>
 <em><strong>name</strong></em>: add
-<em><strong>description</strong></em>: configure source of Python dependencies. Supported sources: standardized formats like PEP517, PEP518 or core metadata are fully supported, while tool-specific formats like pip, tox, poetry, hatch or pdm have limited support.
+<em><strong>description</strong></em>: configure source of Python dependencies. Supported sources: standardized formats like PEP517, PEP518 or core metadata are fully supported, while tool-specific formats like pip, tox, poetry, hatch, pdm or pipenv have limited support.
 <em><strong>example</strong></em>: python -m pyproject_installer deps add --help
 </pre>
 
@@ -250,7 +250,7 @@ Positional arguments:
 
 <pre>
 <em><strong>description</strong></em>: source type
-<em><strong>choice</strong></em>: pep517, pep518, metadata, pip_reqfile, poetry, tox, hatch, pdm
+<em><strong>choice</strong></em>: pep517, pep518, metadata, pip_reqfile, poetry, tox, hatch, pdm, pipenv
 </pre>
 
 <pre>
@@ -283,6 +283,9 @@ python -m pyproject_installer deps add check hatch hatch.toml test
 
 Configuration of source of <strong>pdm</strong> requirements:
 python -m pyproject_installer deps add check pdm test
+
+Configuration of source of <strong>pipenv</strong> requirements:
+python -m pyproject_installer deps add check pipenv Pipfile packages
 </pre>
 
 ---
