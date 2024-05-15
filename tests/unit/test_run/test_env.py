@@ -511,6 +511,9 @@ def test_env_console_script(
     into venv then console scripts of the package from those locations
     will be ignored.
     """
+    # wheel that will be installed into venv on command's run
+    vsp_wheel = None
+
     for ps, data in console_scripts_data.items():
         if data["install"]:
             if data["external_install"]:
@@ -524,6 +527,9 @@ def test_env_console_script(
             # wheel without console script will be installed into venv on
             # command's run
             vsp_wheel = wheel_no_csript("bar")
+
+    # should be guaranteed by tests configuration
+    assert vsp_wheel is not None
 
     expected_passes = [
         console_scripts_data[ps]
