@@ -695,7 +695,7 @@ def test_deps_cli_sync_default(mock_deps_command):
     deps_args = ["deps", action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": False}
+    r_kwargs = {"srcnames": [], "verify": False, "verify_excludes": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -712,7 +712,7 @@ def test_deps_cli_sync_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": False}
+    r_kwargs = {"srcnames": [], "verify": False, "verify_excludes": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -731,7 +731,7 @@ def test_deps_cli_sync_selected(mock_deps_command, srcnames):
     deps_args.extend(srcnames)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": srcnames, "verify": False}
+    r_kwargs = {"srcnames": srcnames, "verify": False, "verify_excludes": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -748,7 +748,7 @@ def test_deps_cli_sync_verify(mock_deps_command):
     deps_args = ["deps", action, "--verify"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": True}
+    r_kwargs = {"srcnames": [], "verify": True, "verify_excludes": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -767,6 +767,47 @@ def test_deps_cli_sync_verify_fail(mock_deps_command):
     with pytest.raises(SystemExit) as exc:
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.SYNC_VERIFY_ERROR
+
+
+@pytest.mark.parametrize("excludes", (["foo"], ["foo", "bar"]))
+def test_deps_cli_sync_verify_excludes(excludes, mock_deps_command):
+    """Run deps sync with verify and excludes
+
+    - mock deps_command
+    - check args
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--verify", "--verify-exclude"]
+    deps_args.extend(excludes)
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": [], "verify": True, "verify_excludes": excludes}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_verify_excludes_without_verify(
+    mock_deps_command, capsys
+):
+    """Run deps sync with verify_excludes and without verify
+
+    - mock deps_command
+    - check error
+    """
+    action = "sync"
+    deps_args = ["deps", action, "--verify-exclude", "foo.*"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "--verify-exclude option must be used with --verify"
+    assert expected_msg in captured.err
 
 
 def test_deps_cli_eval_help(capsys):
