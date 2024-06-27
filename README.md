@@ -311,6 +311,13 @@ Options:
 <em><strong>example</strong></em>: python -m pyproject_installer deps sync --verify build
 </pre>
 
+<pre>
+<em><strong>name</strong></em>: --verify-exclude
+<em><strong>description</strong></em>: Regex patterns, exclude from diff requirements PEP503-normalized names of those match one of the patterns. Requires --verify.
+<em><strong>default</strong></em>: []
+<em><strong>example</strong></em>: python -m pyproject_installer deps sync --verify build --verify-exclude 'foo.*'
+</pre>
+
 ---
 
 <pre>

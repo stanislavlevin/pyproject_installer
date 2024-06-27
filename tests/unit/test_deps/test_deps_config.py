@@ -516,6 +516,185 @@ def test_config_sync_verify_normalized_dep(
     assert not captured.out
 
 
+@pytest.mark.parametrize(
+    "data",
+    # original reqs, updated reqs, filter, expected diff
+    (
+        (
+            ["foo", "bar", "foobar"],
+            [],
+            ["foob.*"],
+            {"extra_deps": ["bar", "foo"]},
+        ),
+        (
+            ["foo", "bar", "foobar"],
+            [],
+            ["foofoo.*", "barbar.*"],
+            {"extra_deps": ["bar", "foo", "foobar"]},
+        ),
+        (
+            [],
+            ["foo", "bar", "foobar"],
+            ["foob.*"],
+            {"new_deps": ["bar", "foo"]},
+        ),
+        (
+            [],
+            ["foo", "bar", "foobar"],
+            ["foofoo.*", "barbar.*"],
+            {"new_deps": ["bar", "foo", "foobar"]},
+        ),
+        (
+            ["foo", "bar", "foobar"],
+            ["foobar>=1"],
+            ["foobar.*"],
+            {"extra_deps": ["bar", "foo"]},
+        ),
+        (
+            ["foo", "bar", "foobar >= 1"],
+            ["foobar"],
+            ["foobar.*"],
+            {"extra_deps": ["bar", "foo"]},
+        ),
+        (
+            ["foo", "ffoo"],
+            ["bar", "bbar"],
+            ["foo.*", "bar.*"],
+            {"extra_deps": ["ffoo"], "new_deps": ["bbar"]},
+        ),
+        (
+            ["fo_o", "BaR", "foobar"],
+            ["bbarfoo"],
+            ["fo-o.*", "bar.*"],
+            {"extra_deps": ["foobar"], "new_deps": ["bbarfoo"]},
+        ),
+    ),
+)
+def test_config_sync_verify_exclude_changed(
+    data, depsconfig, mock_collector, capsys
+):
+    """Sync source with verify and exclude, check config and diff of changes"""
+
+    action = "sync"
+    old_reqs, new_reqs, excludes, diff = data
+
+    srcname = "src_foo"
+
+    # prepare source config
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcnames=[],
+            verify=True,
+            verify_excludes=excludes,
+        )
+
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = sorted(new_reqs)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+    expected_out = json.dumps({srcname: diff}, indent=2) + "\n"
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == expected_out
+
+
+@pytest.mark.parametrize(
+    "data",
+    # original reqs, updated reqs, filter
+    (
+        (["foo", "bar", "foobar"], [], ["foo.*", "bar.*"]),
+        ([], ["bar", "foo", "foobar"], ["foo.*", "bar.*"]),
+        ([], [], ["foofoo.*", "barbar.*"]),
+        ([], [], []),
+        (["foo"], ["bar"], ["foo.*", "bar.*"]),
+        (["foo", "bar"], ["foo", "bar"], ["foobar.*"]),
+        (["fo_o", "BaR"], [], ["fo-o.*", "bar.*"]),
+        (["fo_o"], ["Bar"], ["fo-o.*", "bar.*"]),
+    ),
+)
+def test_config_sync_verify_exclude_unchanged(
+    data, depsconfig, mock_collector, capsys
+):
+    """
+    Sync source with verify and exclude, check config and nodiff of changes
+    """
+
+    action = "sync"
+    old_reqs, new_reqs, excludes = data
+
+    srcname = "src_foo"
+
+    # prepare source config
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcnames=[],
+        verify=True,
+        verify_excludes=excludes,
+    )
+
+    expected_conf = deepcopy(input_conf)
+    # same order as it was before
+    expected_conf["sources"][srcname]["deps"] = new_reqs
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
+def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
+    """Sync with --verify-exclude and without --verify"""
+
+    action = "sync"
+
+    # prepare source config
+    input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    with pytest.raises(ValueError) as exc:
+        deps_command(
+            action, depsconfig_path, srcnames=[], verify_excludes=["foo.*"]
+        )
+    expected_err = "verify_excludes must be used with verify"
+    assert expected_err in str(exc.value)
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
 @pytest.mark.parametrize("select_data", NONEXISTENT_SOURCE_DATA)
 def test_config_sync_nonexistent_source(select_data, depsconfig, capsys):
     """Sync nonexistent source"""

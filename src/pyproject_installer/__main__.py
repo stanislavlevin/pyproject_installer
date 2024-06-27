@@ -67,6 +67,10 @@ def deps(action_name):
             and args.depformat is None
         ):
             parser.error("depformatextra option must be used with depformat")
+
+        if getattr(args, "verify_excludes", []) and not args.verify:
+            parser.error("--verify-exclude option must be used with --verify")
+
         kwargs = {x: getattr(args, x) for x in args.main_args}
         try:
             deps_command(action_name, args.depsconfig, **kwargs)
@@ -255,6 +259,21 @@ def deps_subparsers(parser):
             f"{ExitCodes.SYNC_VERIFY_ERROR} if the sources were unsynced"
         ),
         action="store_true",
+    )
+
+    destname = "verify_excludes"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        "--verify-exclude",
+        dest=destname,
+        nargs="+",
+        default=[],
+        help=(
+            "Regex patterns, exclude from diff requirements PEP503-normalized "
+            " names of those match one of the patterns (default: []). "
+            "Requires --verify"
+        ),
     )
 
     # eval

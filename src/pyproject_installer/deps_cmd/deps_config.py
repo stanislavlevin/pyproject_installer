@@ -169,13 +169,26 @@ class DepsSourcesConfig:
         collector = self.validate_collector(srctype, srcargs)
         return collector.collect()
 
-    def sync(self, srcnames=[], verify=False):
+    def sync(self, srcnames=[], verify=False, verify_excludes=[]):
         """Sync sources
 
         verify: do sync of selected sources, but print the diff on
         stdout and raise DepsUnsyncedError if sources were unsynced before
+
+        verify_excludes: filter out dependencies from diff output
+        normalized names of those match given regexes (requires verify=True).
         """
+        if verify_excludes and not verify:
+            raise ValueError("verify_excludes must be used with verify")
+
         diff = {}
+        verify_excludes_regs = {re.compile(x) for x in verify_excludes}
+
+        def filter_verify_excludes(req):
+            """filter diff output"""
+            req_name = pep503_normalized_name(req.name)
+            return not any(reg.match(req_name) for reg in verify_excludes_regs)
+
         for srcname, source in self.iter_sources(srcnames):
             synced_deps = set(
                 map(
@@ -194,19 +207,23 @@ class DepsSourcesConfig:
             if stored_deps == synced_deps:
                 continue
 
-            new_deps = synced_deps - stored_deps
-            if new_deps:
-                if srcname not in diff:
-                    diff[srcname] = {}
-                diff[srcname]["new_deps"] = sorted(map(str, new_deps))
-
-            extra_deps = stored_deps - synced_deps
-            if extra_deps:
-                if srcname not in diff:
-                    diff[srcname] = {}
-                diff[srcname]["extra_deps"] = sorted(map(str, extra_deps))
-
             source["deps"] = sorted(map(str, synced_deps))
+
+            if not verify:
+                continue
+
+            for field_name, diff_deps in (
+                ("new_deps", synced_deps - stored_deps),
+                ("extra_deps", stored_deps - synced_deps),
+            ):
+                diff_deps = set(filter(filter_verify_excludes, diff_deps))
+
+                if not diff_deps:
+                    continue
+
+                if srcname not in diff:
+                    diff[srcname] = {}
+                diff[srcname][field_name] = sorted(map(str, diff_deps))
 
         self.save()
 
