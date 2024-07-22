@@ -95,10 +95,6 @@ def normalized_name(request):
                 None,
             ),
             "enscons",
-            marks=pytest.mark.xfail(
-                reason="https://github.com/dholth/enscons/issues/25",
-                strict=True,
-            ),
             id="enscons",
         ),
     ),
