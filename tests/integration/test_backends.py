@@ -72,15 +72,6 @@ def normalized_name(request):
         ),
         pytest.param(
             (
-                "trampolim",
-                "https://github.com/FFY00/trampolim",
-                None,
-            ),
-            "trampolim",
-            id="trampolim",
-        ),
-        pytest.param(
-            (
                 "pdm-backend",
                 "https://github.com/pdm-project/pdm-backend",
                 None,
