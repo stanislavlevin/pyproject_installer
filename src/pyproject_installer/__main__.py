@@ -83,7 +83,7 @@ def deps(action_name):
 
 class RunnerResult:
     def __init__(
-        self, status, message, log, exception=None, print_traceback=False
+        self, status, message, log, *, exception=None, print_traceback=False
     ):
         self.status = status
         self.message = message
