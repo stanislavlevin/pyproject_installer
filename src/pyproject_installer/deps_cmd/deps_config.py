@@ -257,6 +257,7 @@ class DepsSourcesConfig:
 
     def eval(
         self,
+        *,
         srcnames=[],
         depformat=None,
         depformatextra=None,
