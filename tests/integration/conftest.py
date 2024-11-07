@@ -21,10 +21,6 @@ class ContextVenv(EnvBuilder):
     def ensure_directories(self, *args, **kwargs):
         # save context for reusage
         self.context = super().ensure_directories(*args, **kwargs)
-        # env_exec_cmd requires Python3.9+ (https://bugs.python.org/issue45337),
-        # for non-windows systems: context.env_exec_cmd = context.env_exe
-        if not hasattr(self.context, "env_exec_cmd"):
-            self.context.env_exec_cmd = self.context.env_exe
         return self.context
 
 
