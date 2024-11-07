@@ -7,7 +7,6 @@ import base64
 import csv
 import hashlib
 import logging
-import sys
 
 from ..errors import WheelFileError
 from .entry_points import parse_entry_points
@@ -151,16 +150,10 @@ class WheelFile:
         record_path = self.dist_info / "RECORD"
         recorded_files = set()
 
-        if sys.version_info > (3, 9):
-            # since Python3.9 zipfile.Path.open opens in text mode by default
-            mode = "rb"
-        else:
-            # while Python3.8 zipfile.Path.open supports only binary mode
-            mode = "r"
-
-        with record_path.open(mode=mode) as csvbf, TextIOWrapper(
-            csvbf, encoding="utf-8", newline=""
-        ) as csvf:
+        with (
+            record_path.open(mode="rb") as csvbf,
+            TextIOWrapper(csvbf, encoding="utf-8", newline="") as csvf,
+        ):
             reader = csv.reader(csvf)
             for row in reader:
                 # path, hash and size

@@ -170,9 +170,10 @@ class WheelBuilder:
         zinfo.compress_type = ZIP_DEFLATED
 
         self.records.append((str(dist_info_record), "", ""))
-        with self._zipfile.open(zinfo, "w") as f, TextIOWrapper(
-            f, encoding="utf-8", newline=""
-        ) as csvf:
+        with (
+            self._zipfile.open(zinfo, "w") as f,
+            TextIOWrapper(f, encoding="utf-8", newline="") as csvf,
+        ):
             writer = csv.writer(csvf, lineterminator="\n")
             writer.writerows(self.records)
 

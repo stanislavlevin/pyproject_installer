@@ -116,16 +116,18 @@ def build_metadata(srcdir, outdir, config=None, verbose=False):
 
     hook = "prepare_metadata_for_build_wheel"
     logger.info("Building metadata with %s", hook)
-    with build_out_tmpdir(srcdir, hook, config, verbose) as (
-        distinfo_dir,
-        tmp_path,
+    with (
+        build_out_tmpdir(srcdir, hook, config, verbose) as (
+            distinfo_dir,
+            tmp_path,
+        ),
     ):
         if distinfo_dir:
             metadata_path_src = tmp_path / distinfo_dir / metadata_filename
-            # Python 3.8 syntax
-            with metadata_path_src.open(
-                mode="rb"
-            ) as fsrc, metadata_path_dest.open(mode="wb") as fdst:
+            with (
+                metadata_path_src.open(mode="rb") as fsrc,
+                metadata_path_dest.open(mode="wb") as fdst,
+            ):
                 shutil.copyfileobj(fsrc, fdst)
             return metadata_filename
 
@@ -133,22 +135,18 @@ def build_metadata(srcdir, outdir, config=None, verbose=False):
     # fallback to build_wheel
     hook = "build_wheel"
     logger.info("Fallback to building metadata with %s", hook)
-    with build_out_tmpdir(srcdir, hook, config, verbose) as (
-        wheel_filename,
-        tmp_path,
+    with (
+        build_out_tmpdir(srcdir, hook, config, verbose) as (
+            wheel_filename,
+            tmp_path,
+        ),
     ):
         wheel_path = tmp_path / wheel_filename
         with WheelFile(wheel_path) as whl:
             metadata_path_src = whl.dist_info / metadata_filename
-            if sys.version_info > (3, 9):
-                # Python3.9: zipfile.Path.open opens in text mode by default
-                mode = "rb"
-            else:
-                # Python3.8: zipfile.Path.open supports only binary mode
-                mode = "r"
-            # Python 3.8 syntax
-            with metadata_path_src.open(
-                mode=mode
-            ) as fsrc, metadata_path_dest.open(mode="wb") as fdst:
+            with (
+                metadata_path_src.open(mode="rb") as fsrc,
+                metadata_path_dest.open(mode="wb") as fdst,
+            ):
                 shutil.copyfileobj(fsrc, fdst)
     return metadata_filename

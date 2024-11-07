@@ -33,19 +33,13 @@ class PyprojectVenv(EnvBuilder):
             "clear": True,
             "upgrade": False,
             "with_pip": False,
+            "upgrade_deps": False,
         }
-        if sys.version_info > (3, 9):
-            # New in version 3.9: Added the upgrade_deps parameter
-            venv_kwargs["upgrade_deps"] = False
         super().__init__(**venv_kwargs)
 
     def ensure_directories(self, *args, **kwargs):
         # save context for reusage
         self.context = super().ensure_directories(*args, **kwargs)
-        # env_exec_cmd requires Python3.9+ (https://bugs.python.org/issue45337),
-        # for non-windows systems: context.env_exec_cmd = context.env_exe
-        if not hasattr(self.context, "env_exec_cmd"):
-            self.context.env_exec_cmd = self.context.env_exe
         return self.context
 
     def install_console_scripts(self, context):

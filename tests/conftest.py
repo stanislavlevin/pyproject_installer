@@ -75,9 +75,10 @@ class WheelContents(MutableMapping):
             self.record = ws.getvalue()
 
     def drop_from_record(self, file):
-        with StringIO(self.record, newline="") as rs, StringIO(
-            newline=""
-        ) as ws:
+        with (
+            StringIO(self.record, newline="") as rs,
+            StringIO(newline="") as ws,
+        ):
             reader = csv.reader(rs)
             writer = csv.writer(ws, lineterminator="\n")
             for row in reader:
