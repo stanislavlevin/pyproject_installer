@@ -9,7 +9,7 @@ Currently there are no changes made on vendored packages.
 
 To verify changes if any:
 - tomli: https://github.com/hukkin/tomli.git
-git diff 2.0.1:src/tomli @:src/pyproject_installer/_vendor/tomli
+git diff 2.0.2:src/tomli @:src/pyproject_installer/_vendor/tomli
 - packaging: https://github.com/pypa/packaging
 git diff 24.1:src/packaging @:src/pyproject_installer/_vendor/packaging
 """
