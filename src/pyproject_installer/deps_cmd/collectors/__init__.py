@@ -7,6 +7,7 @@ from .tox import ToxCollector
 from .hatch import HatchCollector
 from .pdm import PdmCollector
 from .pipenv import PipenvCollector
+from .pep735 import Pep735Collector
 
 
 __all__ = ["get_collector", "SUPPORTED_COLLECTORS"]
@@ -23,6 +24,7 @@ SUPPORTED_COLLECTORS = {
         HatchCollector,
         PdmCollector,
         PipenvCollector,
+        Pep735Collector,
     ]
 }
 

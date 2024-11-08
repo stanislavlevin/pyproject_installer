@@ -150,6 +150,18 @@ def pyproject(tmpdir):
 
 
 @pytest.fixture
+def pyproject_toml(pyproject, monkeypatch):
+    """Create pyproject.toml and cd to its directory"""
+
+    def _pyproject_toml(content):
+        pyproject_path = pyproject(content)
+        monkeypatch.chdir(pyproject_path)
+        return pyproject_path
+
+    return _pyproject_toml
+
+
+@pytest.fixture
 def wheel_contents():
     def _wheel_contents(*args, **kwargs):
         return WheelContents(*args, **kwargs)
