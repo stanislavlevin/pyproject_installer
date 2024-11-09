@@ -68,15 +68,39 @@ def test_pep518_collector_missing_build_system(
     assert actual_conf == expected_conf
 
 
-def test_pep518_collector(deps_data, pyproject_pep518, depsconfig):
-    """Collection of pep518 reqs"""
+def test_pep518_collector_valid_deps(
+    valid_pep508_data, pyproject_pep518, depsconfig
+):
+    """Collection of PEP518 (valid PEP508) dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "pep518"
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
+
+    pyproject_pep518(in_reqs)
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_pep518_collector_invalid_deps(
+    invalid_pep508_data, pyproject_pep518, depsconfig
+):
+    """Collection of PEP518 (invalid PEP508) dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "pep518"
+    input_conf = {"sources": {srcname: {"srctype": collector}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    in_reqs, out_reqs = invalid_pep508_data
 
     pyproject_pep518(in_reqs)
     deps_command("sync", depsconfig_path, srcnames=[])
