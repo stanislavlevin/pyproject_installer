@@ -33,14 +33,16 @@ def hatch_deps(tmpdir, monkeypatch):
 
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
-def test_hatch_collector_deps(deps_data, config, hatch_deps, depsconfig):
-    """Collection of hatch dependencies"""
+def test_hatch_collector_valid_deps(
+    valid_pep508_data, config, hatch_deps, depsconfig
+):
+    """Collection of hatch (valid PEP508) dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "hatch"
     envname = "test"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
 
     hatch_config_path = hatch_deps(config, envname, in_reqs)
     input_conf = {
@@ -63,14 +65,82 @@ def test_hatch_collector_deps(deps_data, config, hatch_deps, depsconfig):
 
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
-def test_hatch_collector_extra_deps(deps_data, config, hatch_deps, depsconfig):
+def test_hatch_collector_invalid_deps(
+    invalid_pep508_data, config, hatch_deps, depsconfig
+):
+    """Collection of hatch (invalid PEP508) dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "hatch"
+    envname = "test"
+
+    in_reqs, out_reqs = invalid_pep508_data
+
+    hatch_config_path = hatch_deps(config, envname, in_reqs)
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": collector,
+                "srcargs": [str(hatch_config_path), envname],
+            },
+        }
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+@pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
+def test_hatch_collector_extra_valid_deps(
+    valid_pep508_data, config, hatch_deps, depsconfig
+):
     """Collection of hatch extra-dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "hatch"
     envname = "test"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
+
+    hatch_config_path = hatch_deps(
+        config, envname, deps=None, extra_deps=in_reqs
+    )
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": collector,
+                "srcargs": [str(hatch_config_path), envname],
+            },
+        }
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+@pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
+def test_hatch_collector_extra_invalid_deps(
+    invalid_pep508_data, config, hatch_deps, depsconfig
+):
+    """Collection of hatch extra-dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "hatch"
+    envname = "test"
+
+    in_reqs, out_reqs = invalid_pep508_data
 
     hatch_config_path = hatch_deps(
         config, envname, deps=None, extra_deps=in_reqs

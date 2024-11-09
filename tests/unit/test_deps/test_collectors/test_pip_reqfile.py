@@ -19,13 +19,43 @@ def pip_reqfile(tmpdir, monkeypatch):
     return _pip_reqfile
 
 
-def test_pipreqfile_collector(deps_data, pip_reqfile, depsconfig):
-    """Collection of pip's reqs"""
+def test_pipreqfile_collector_valid_deps(
+    valid_pep508_data, pip_reqfile, depsconfig
+):
+    """Collection of pip's (valid PEP508) dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "pip_reqfile"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
+
+    pip_reqfile_path = pip_reqfile("\n".join(in_reqs) + "\n")
+
+    input_conf = {
+        "sources": {
+            srcname: {"srctype": collector, "srcargs": [str(pip_reqfile_path)]},
+        }
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_pipreqfile_collector_invalid_deps(
+    invalid_pep508_data, pip_reqfile, depsconfig
+):
+    """Collection of pip's (invalid PEP508) dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "pip_reqfile"
+
+    in_reqs, out_reqs = invalid_pep508_data
 
     pip_reqfile_path = pip_reqfile("\n".join(in_reqs) + "\n")
 
@@ -46,7 +76,7 @@ def test_pipreqfile_collector(deps_data, pip_reqfile, depsconfig):
 
 
 @pytest.mark.parametrize(
-    "deps_data",
+    "valid_pip_deps_data",
     (
         (["-r other-requirements.txt"], []),
         (["-r other-requirements.txt", "foo"], ["foo"]),
@@ -64,14 +94,14 @@ def test_pipreqfile_collector(deps_data, pip_reqfile, depsconfig):
     ),
 )
 def test_pipreqfile_collector_unsupported_deps(
-    deps_data, pip_reqfile, depsconfig
+    valid_pip_deps_data, pip_reqfile, depsconfig
 ):
     """Collection of pip's unsupported reqs"""
     # prepare source config
     srcname = "foo"
     collector = "pip_reqfile"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pip_deps_data
 
     pip_reqfile_path = pip_reqfile("\n".join(in_reqs) + "\n")
 

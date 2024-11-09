@@ -23,15 +23,41 @@ def pyproject_pep517_wheel(pyproject_with_backend):
     return _pep517_wheel
 
 
-def test_pep517_collector(deps_data, pyproject_pep517_wheel, depsconfig):
-    """Collection of pep517 wheel reqs"""
+def test_pep517_collector_valid_deps(
+    valid_pep508_data, pyproject_pep517_wheel, depsconfig
+):
+    """Collection of PEP517 (valid PEP508) wheel dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "pep517"
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
+
+    # configure pyproject with build backend
+    pyproject_pep517_wheel(in_reqs)
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_pep517_collector_invalid_deps(
+    invalid_pep508_data, pyproject_pep517_wheel, depsconfig
+):
+    """Collection of PEP517 (invalid PEP508) wheel dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "pep517"
+    input_conf = {"sources": {srcname: {"srctype": collector}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    in_reqs, out_reqs = invalid_pep508_data
 
     # configure pyproject with build backend
     pyproject_pep517_wheel(in_reqs)

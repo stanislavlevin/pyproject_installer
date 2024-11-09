@@ -36,14 +36,48 @@ def tox_deps(tmpdir, monkeypatch):
 
 
 @pytest.mark.parametrize("config_type", ("toml", "ini"))
-def test_tox_collector(deps_data, config_type, tox_deps, depsconfig):
-    """Collection of tox deps"""
+def test_tox_collector_valid_deps(
+    valid_pep508_data, config_type, tox_deps, depsconfig
+):
+    """Collection of tox (valid PEP508) dependencies"""
     # prepare source config
     srcname = "foo"
     collector = "tox"
     testenv = "testenv"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_pep508_data
+
+    tox_config_path = tox_deps(config_type, testenv, in_reqs)
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": collector,
+                "srcargs": [str(tox_config_path), testenv],
+            },
+        }
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_conf = deepcopy(input_conf)
+    if out_reqs:
+        expected_conf["sources"][srcname]["deps"] = out_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+@pytest.mark.parametrize("config_type", ("toml", "ini"))
+def test_tox_collector_invalid_deps(
+    invalid_pep508_data, config_type, tox_deps, depsconfig
+):
+    """Collection of tox (invalid PEP508) dependencies"""
+    # prepare source config
+    srcname = "foo"
+    collector = "tox"
+    testenv = "testenv"
+
+    in_reqs, out_reqs = invalid_pep508_data
 
     tox_config_path = tox_deps(config_type, testenv, in_reqs)
     input_conf = {
@@ -66,7 +100,7 @@ def test_tox_collector(deps_data, config_type, tox_deps, depsconfig):
 
 
 @pytest.mark.parametrize(
-    "deps_data",
+    "valid_tox_deps",
     (
         (["-r requirements.txt"], []),
         (["-r requirements.txt", "foo"], ["foo"]),
@@ -76,7 +110,7 @@ def test_tox_collector(deps_data, config_type, tox_deps, depsconfig):
 )
 @pytest.mark.parametrize("config_type", ("toml", "ini"))
 def test_tox_collector_unsupported(
-    deps_data, config_type, tox_deps, depsconfig
+    valid_tox_deps, config_type, tox_deps, depsconfig
 ):
     """Collection of unsupported tox formats"""
     # prepare source config
@@ -84,7 +118,7 @@ def test_tox_collector_unsupported(
     collector = "tox"
     testenv = "testenv"
 
-    in_reqs, out_reqs = deps_data
+    in_reqs, out_reqs = valid_tox_deps
 
     tox_config_path = tox_deps(config_type, testenv, in_reqs)
     input_conf = {
