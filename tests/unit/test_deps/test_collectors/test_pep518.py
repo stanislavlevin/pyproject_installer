@@ -100,13 +100,15 @@ def test_pep518_collector_invalid_deps(
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    in_reqs, out_reqs = invalid_pep508_data
+    in_reqs, _ = invalid_pep508_data
 
     pyproject_pep518(in_reqs)
-    deps_command("sync", depsconfig_path, srcnames=[])
 
-    expected_conf = deepcopy(input_conf)
-    if out_reqs:
-        expected_conf["sources"][srcname]["deps"] = out_reqs
+    with pytest.raises(ValueError) as exc:
+        deps_command("sync", depsconfig_path, srcnames=[])
+
+    expected_err = f"{collector}: invalid PEP508 Dependency Specifier: "
+    assert str(exc.value).startswith(expected_err)
+
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
-    assert actual_conf == expected_conf
+    assert actual_conf == input_conf
