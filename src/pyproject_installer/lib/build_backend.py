@@ -64,7 +64,7 @@ def parse_build_system_spec(srcdir):
     pyproject_file = srcdir / "pyproject.toml"
     default_build_system = {
         "build-backend": "setuptools.build_meta:__legacy__",
-        "requires": ["setuptools", "wheel"],
+        "requires": ["setuptools"],
     }
 
     if not pyproject_file.is_file():

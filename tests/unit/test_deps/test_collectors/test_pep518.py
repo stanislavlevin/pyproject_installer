@@ -42,7 +42,7 @@ def test_pep518_collector_missing_pyproject_toml(
     deps_command("sync", depsconfig_path, srcnames=[])
 
     expected_conf = deepcopy(input_conf)
-    expected_conf["sources"][srcname]["deps"] = ["setuptools", "wheel"]
+    expected_conf["sources"][srcname]["deps"] = ["setuptools"]
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == expected_conf
 
@@ -63,7 +63,7 @@ def test_pep518_collector_missing_build_system(
     deps_command("sync", depsconfig_path, srcnames=[])
 
     expected_conf = deepcopy(input_conf)
-    expected_conf["sources"][srcname]["deps"] = ["setuptools", "wheel"]
+    expected_conf["sources"][srcname]["deps"] = ["setuptools"]
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == expected_conf
 
