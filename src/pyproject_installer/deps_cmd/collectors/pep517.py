@@ -25,7 +25,9 @@ class Pep517Collector(Collector):
         )["result"]:
             try:
                 requirements.Requirement(req)
-            except requirements.InvalidRequirement:
-                continue
-            else:
-                yield req
+            except requirements.InvalidRequirement as e:
+                err_msg = (
+                    f"{self.name}: invalid PEP508 Dependency Specifier: {e}"
+                )
+                raise ValueError(err_msg) from None
+            yield req
