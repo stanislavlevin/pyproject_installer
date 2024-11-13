@@ -1,6 +1,8 @@
 from copy import deepcopy
 import json
 
+import pytest
+
 from pyproject_installer.deps_cmd import deps_command
 
 
@@ -44,18 +46,19 @@ def test_metadata_collector_metadata_invalid_deps(
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    in_reqs, out_reqs = invalid_pep508_data
+    in_reqs, _ = invalid_pep508_data
 
     # configure pyproject with build backend
     pyproject_metadata(reqs=in_reqs)
 
-    deps_command("sync", depsconfig_path, srcnames=[])
+    with pytest.raises(ValueError) as exc:
+        deps_command("sync", depsconfig_path, srcnames=[])
 
-    expected_conf = deepcopy(input_conf)
-    if out_reqs:
-        expected_conf["sources"][srcname]["deps"] = out_reqs
+    expected_err = f"{collector}: invalid PEP508 Dependency Specifier: "
+    assert str(exc.value).startswith(expected_err)
+
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
-    assert actual_conf == expected_conf
+    assert actual_conf == input_conf
 
 
 def test_metadata_collector_wheel_valid_deps(
@@ -98,15 +101,16 @@ def test_metadata_collector_wheel_invalid_deps(
     input_conf = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    in_reqs, out_reqs = invalid_pep508_data
+    in_reqs, _ = invalid_pep508_data
 
     # configure pyproject with build backend
     pyproject_metadata_wheel(reqs=in_reqs)
 
-    deps_command("sync", depsconfig_path, srcnames=[])
+    with pytest.raises(ValueError) as exc:
+        deps_command("sync", depsconfig_path, srcnames=[])
 
-    expected_conf = deepcopy(input_conf)
-    if out_reqs:
-        expected_conf["sources"][srcname]["deps"] = out_reqs
+    expected_err = f"{collector}: invalid PEP508 Dependency Specifier: "
+    assert str(exc.value).startswith(expected_err)
+
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
-    assert actual_conf == expected_conf
+    assert actual_conf == input_conf
