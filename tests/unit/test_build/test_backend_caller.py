@@ -129,15 +129,21 @@ def test_invalid_hook_choice():
         args=[sys.executable, "-m", BACKEND_CALLER_MOD, "be", invalid_hook],
         capture_output=True,
     )
-    expected_err_msg = (
-        "argument hook_name: invalid choice: '{}' (choose from {})\n"
-    ).format(
-        invalid_hook,
-        ", ".join([f"{x!r}" for x in backend_caller.SUPPORTED_HOOKS]),
+    expected_err_msgs = (
+        f"invalid choice: '{invalid_hook}' (choose from {msg})\n"
+        for msg in [
+            # Python 3.12.8/3.13.1+
+            ", ".join(backend_caller.SUPPORTED_HOOKS),
+            # Python < 3.12.8/3.13.1
+            ", ".join(f"'{x}'" for x in backend_caller.SUPPORTED_HOOKS),
+        ]
     )
-
     assert result.returncode
-    assert expected_err_msg.encode("utf-8") in result.stderr
+    assert any(
+        True
+        for msg in expected_err_msgs
+        if msg.encode("utf-8") in result.stderr
+    )
     assert result.stdout == b""
 
 

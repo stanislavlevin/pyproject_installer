@@ -1106,15 +1106,18 @@ def test_deps_cli_add_wrong_srctype(mock_deps_command, capsys):
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.WRONG_USAGE
 
-    supported_types_msg = ", ".join(
-        f"'{x}'" for x in project_main.SUPPORTED_COLLECTORS
-    )
-    expected_err_msg = (
-        f"invalid choice: '{srctype}' (choose from {supported_types_msg})"
+    expected_err_msgs = (
+        f"invalid choice: '{srctype}' (choose from {msg})\n"
+        for msg in [
+            # Python 3.12.8/3.13.1+
+            ", ".join(project_main.SUPPORTED_COLLECTORS),
+            # Python < 3.12.8/3.13.1
+            ", ".join(f"'{x}'" for x in project_main.SUPPORTED_COLLECTORS),
+        ]
     )
     captured = capsys.readouterr()
     assert not captured.out
-    assert expected_err_msg in captured.err
+    assert any(True for msg in expected_err_msgs if msg in captured.err)
 
 
 @pytest.mark.parametrize("srcargs", (["foo"], ["foo", "bar"]))
