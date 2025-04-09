@@ -133,7 +133,7 @@ def setuptools_project(pyproject):
         textwrap.dedent(
             """\
             [build-system]
-            requires = ["setuptools>=64"]
+            requires = ["setuptools>=70.1.0"]
             build-backend = "setuptools.build_meta"
             """
         )
