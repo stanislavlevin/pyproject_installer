@@ -56,7 +56,6 @@ ignore-paths = [
     '.*/\.run_venv/.*',
     '^.run_venv/.*',  # dot escaping doesn't work, see pylint#5398
 ]
-suggestion-mode = "yes"
 persistent="no"
 
 [tool.pylint."messages control"]
