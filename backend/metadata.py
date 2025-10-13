@@ -33,7 +33,8 @@ def parse_version_from_file(version_file):
         and len(child.targets) == 1
         and isinstance(child.targets[0], ast.Name)
         and child.targets[0].id == "version"
-        and isinstance(child.value, ast.Str)
+        and isinstance(child.value, ast.Constant)
+        and isinstance(child.value.value, str)
     ):
         return child.value.value
 
