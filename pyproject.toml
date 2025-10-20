@@ -34,6 +34,21 @@ requires = []
 build-backend = "backend"
 backend-path = ["."]
 
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-mock",
+]
+coverage = [
+    "pytest-cov",
+    {include-group = "test"},
+]
+lint = [
+    "black",
+    "pylint",
+    {include-group = "test"},
+]
+
 [tool.pyproject_installer.backend]
 package_dir = "src"
 version_file = "src/pyproject_installer/version.py"
