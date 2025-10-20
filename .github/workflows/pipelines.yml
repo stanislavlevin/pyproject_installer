@@ -45,11 +45,7 @@ jobs:
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install \
-          pylint \
-          black \
-          pytest \
-
+        python -m pip install --group lint
     - name: Pylint
       run: |
         python -m pylint -v --rcfile=pyproject.toml .
@@ -75,11 +71,7 @@ jobs:
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install \
-          pytest \
-          pytest-mock \
-          pytest-cov \
-
+        python -m pip install --group coverage
         python -m pip install .
 
     - name: Unit tests with coverage
@@ -105,10 +97,7 @@ jobs:
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install \
-          pytest \
-          pytest-mock \
-
+        python -m pip install --group test
         python -m pip install .
 
     - name: Unit tests with self run
@@ -133,7 +122,7 @@ jobs:
       run: |
         python --version
         python -m pip install --upgrade pip
-        python -m pip install pytest
+        python -m pip install --group test
         python -m pip install .
 
     - name: integration tests

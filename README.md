@@ -415,6 +415,10 @@ python -m pyproject_installer install --destdir=/rootdir
 ```
 
 ## Tests
+- install tests dependencies (requires `pip 25.1+`):
+  ```
+  python -m pip install --group test
+  ```
 - unit tests can be run as:
   ```
   pytest tests/unit
