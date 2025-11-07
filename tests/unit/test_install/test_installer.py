@@ -1,4 +1,5 @@
 from pathlib import Path
+from zipfile import ZipFile
 import os
 import logging
 import shutil
@@ -80,6 +81,25 @@ def sub_execs(tmpdir, request):
     sys_exec_path = sys_execs / sys_exec
     sys_exec_path.symlink_to(sys.executable)
     return str(sys_exec_path), expected_shebang.format(sys_execs=sys_execs)
+
+
+@pytest.fixture
+def wheel_dir(tmpdir):
+    """
+    Compat make dir in wheel:
+    https://docs.python.org/3/library/zipfile.html#zipfile.ZipFile.mkdir
+    """
+
+    def _wheel_dir(whl, dirname):
+        with ZipFile(whl, "a") as z:
+            if sys.version_info >= (3, 11):
+                # pylint: disable-next=no-member
+                z.mkdir(dirname)
+            else:
+                (dir_path := tmpdir / dirname).mkdir()
+                z.write(dir_path, dirname)
+
+    return _wheel_dir
 
 
 def test_nonexistent_wheel(installed_wheel):
@@ -304,6 +324,57 @@ def test_not_recorded_files(wheel_contents, wheel, installed_wheel):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir
         )
+
+
+def test_non_empty_wheel_dirs(
+    wheel_contents,
+    wheel_dir,
+    wheel,
+    installed_wheel,
+):
+    """Non empty wheel dirs are ignored (not verified and not installed)"""
+    contents = wheel_contents()
+    parent_dir = "parentdir"
+    extra_content = f"{parent_dir}/__init__.py"
+    contents[extra_content] = ""
+    whl = wheel(contents=contents)
+    wheel_dir(whl, parent_dir)
+    dest_wheel = installed_wheel()
+    install_wheel(whl, destdir=dest_wheel.destdir)
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo-1.0.dist-info/METADATA",
+            "foo/__init__.py",
+            extra_content,
+        )
+    }
+
+    assert dest_wheel.filelist() == expected_filelist
+
+
+def test_empty_wheel_dirs(
+    wheel_contents,
+    wheel_dir,
+    wheel,
+    installed_wheel,
+):
+    """Empty wheel dirs are ignored (not verified and not installed)"""
+    contents = wheel_contents()
+    whl = wheel(contents=contents)
+    wheel_dir(whl, "empty_dir")
+    dest_wheel = installed_wheel()
+    install_wheel(whl, destdir=dest_wheel.destdir)
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo-1.0.dist-info/METADATA",
+            "foo/__init__.py",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
 
 
 def test_extra_recorded_files(wheel_contents, wheel, installed_wheel):

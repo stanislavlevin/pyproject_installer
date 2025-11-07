@@ -63,9 +63,13 @@ class WheelFile:
         self.name = Path(wheel_path).name
         self.dist_name, self.dist_version = self.parse_name()
 
-        # zipfile.Path mutates namelist of original object by adding dirs,
-        # while ZipFile.NameToInfo includes only files and fails on extract
-        self._memberlist = self._zipfile.namelist()
+        # filter directories,
+        # directories can be listed in central directory record of zip (wheel).
+        # However they can't be verified by wheel's RECORD and thereby can't be
+        # installed.
+        self._memberlist = tuple(
+            n for n in self._zipfile.namelist() if not n.endswith("/")
+        )
 
         self.root = ZipPath(self._zipfile)
         self.dist_info = (
