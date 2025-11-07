@@ -14,8 +14,6 @@ from pyproject_installer.errors import WheelFileError
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.install_cmd._install import (
     get_installation_scheme,
-    ALLOW_DIST_INFO_LIST,
-    DENY_DIST_INFO_LIST,
 )
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
 
@@ -515,26 +513,15 @@ def test_installation_filelist(
 
     install_wheel(wheel(contents=contents), **kwargs)
 
-    expected_filelist = set()
-    allowed_files = {
-        str(Path(contents.distinfo) / x) for x in ALLOW_DIST_INFO_LIST
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo-1.0.dist-info/METADATA",
+            "foo-1.0.dist-info/entry_points.txt",
+            "foo/__init__.py",
+            *(("foo-1.0.dist-info/WHEEL",) if strip_dist_info is False else ()),
+        )
     }
-    deny_files = {str(Path(contents.distinfo) / x) for x in DENY_DIST_INFO_LIST}
-
-    for f in contents.keys():
-        if (
-            strip_dist_info is not False
-            and f.startswith(contents.distinfo)
-            and f not in allowed_files
-        ):
-            continue
-
-        # unconditionally stripped by installer
-        if f in deny_files:
-            continue
-
-        expected_filelist.add(dest_wheel.sitedir / f)
-
     # console script
     expected_filelist.add(dest_wheel.scripts / "bar")
     assert dest_wheel.filelist() == expected_filelist
@@ -554,31 +541,19 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
 
     install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
 
-    expected_filelist = set()
-    allowed_files = {
-        str(Path(contents.distinfo) / x) for x in ALLOW_DIST_INFO_LIST
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo-1.0.dist-info/METADATA",
+            "foo/__init__.py",
+        )
     }
-    deny_files = {str(Path(contents.distinfo) / x) for x in DENY_DIST_INFO_LIST}
-
-    for f in contents.keys():
-        if f == data_name:
-            expected_filelist.add(
-                Path(
-                    str(dest_wheel.destdir)
-                    + get_installation_scheme("foo")[scheme_key]
-                )
-                / data_subpath_name
-            )
-            continue
-
-        if f.startswith(contents.distinfo) and f not in allowed_files:
-            continue
-
-        # unconditionally stripped by installer
-        if f in deny_files:
-            continue
-
-        expected_filelist.add(dest_wheel.sitedir / f)
+    expected_filelist.add(
+        Path(
+            str(dest_wheel.destdir) + get_installation_scheme("foo")[scheme_key]
+        )
+        / data_subpath_name
+    )
 
     assert dest_wheel.filelist() == expected_filelist
 
