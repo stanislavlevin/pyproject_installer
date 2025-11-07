@@ -4,4 +4,4 @@ try:
 except ModuleNotFoundError:
     from .._vendor import tomli as tomllib
 
-from .._vendor.packaging import requirements, markers, specifiers
+from .._vendor.packaging import markers, requirements, specifiers

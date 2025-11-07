@@ -1,11 +1,11 @@
+import csv
+import shutil
+import textwrap
 from collections.abc import MutableMapping
 from io import StringIO
 from pathlib import Path
 from tempfile import mkdtemp
 from zipfile import ZipFile
-import csv
-import shutil
-import textwrap
 
 import pytest
 

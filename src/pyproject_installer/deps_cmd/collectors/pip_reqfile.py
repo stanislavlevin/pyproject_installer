@@ -1,8 +1,8 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
-from .collector import Collector
 from ...lib import requirements
+from .collector import Collector
 
 
 class PipReqFileCollector(Collector):

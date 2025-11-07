@@ -1,7 +1,7 @@
 from pyproject_installer.deps_cmd.collectors import (
-    get_collector,
-    MetadataCollector,
     SUPPORTED_COLLECTORS,
+    MetadataCollector,
+    get_collector,
 )
 from pyproject_installer.deps_cmd.collectors.collector import Collector
 

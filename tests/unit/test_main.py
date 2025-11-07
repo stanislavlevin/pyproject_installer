@@ -1,15 +1,15 @@
-from pathlib import Path
 import logging
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import pytest
 
-from pyproject_installer import __version__ as project_version
 from pyproject_installer import __main__ as project_main
+from pyproject_installer import __version__ as project_version
 from pyproject_installer.codes import ExitCodes
-from pyproject_installer.errors import RunCommandError, RunCommandEnvError
+from pyproject_installer.errors import RunCommandEnvError, RunCommandError
 
 
 @pytest.fixture

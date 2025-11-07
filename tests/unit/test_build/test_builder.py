@@ -1,16 +1,16 @@
-from pathlib import Path
-from subprocess import CalledProcessError
 import json
 import os
 import sys
+from pathlib import Path
+from subprocess import CalledProcessError
 
 import pytest
 
 from pyproject_installer.build_cmd import (
-    build_wheel,
-    build_sdist,
-    build_metadata,
     WHEEL_TRACKER,
+    build_metadata,
+    build_sdist,
+    build_wheel,
 )
 from pyproject_installer.build_cmd._build import (
     SUPPORTED_BUILD_HOOKS,

@@ -16,11 +16,11 @@ git diff 2.3.0:src/tomli @:src/pyproject_installer/_vendor/tomli
 git diff 25.0:src/packaging @:src/pyproject_installer/_vendor/packaging
 """
 
-from pathlib import Path
 import os
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
+from pathlib import Path
 
 VENDORED_PATH = "src/pyproject_installer/_vendor"
 BACKEND_VENDORED_PATH = "backend/_vendor"

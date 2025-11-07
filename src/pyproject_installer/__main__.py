@@ -12,19 +12,19 @@ Install features:
     - signature verification of signed wheel is not supported
 """
 
-from pathlib import Path
 import argparse
 import json
 import logging
 import sys
+from pathlib import Path
 
 from . import __version__ as project_version
-from .build_cmd import build_wheel, build_sdist, WHEEL_TRACKER
+from .build_cmd import WHEEL_TRACKER, build_sdist, build_wheel
 from .codes import ExitCodes
-from .errors import RunCommandError, RunCommandEnvError, DepsUnsyncedError
+from .deps_cmd import DEFAULT_CONFIG_NAME, SUPPORTED_COLLECTORS, deps_command
+from .errors import DepsUnsyncedError, RunCommandEnvError, RunCommandError
 from .install_cmd import install_wheel
 from .run_cmd import run_command
-from .deps_cmd import deps_command, SUPPORTED_COLLECTORS, DEFAULT_CONFIG_NAME
 
 logger = logging.getLogger(Path(__file__).parent.name)
 

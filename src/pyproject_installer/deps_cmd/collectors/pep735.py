@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from .collector import Collector
-from ...lib import requirements
-from ...lib import tomllib
+from ...lib import requirements, tomllib
 from ...lib.normalization import pep503_normalized_name
+from .collector import Collector
 
 
 class Pep735Collector(Collector):

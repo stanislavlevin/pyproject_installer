@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-from pathlib import Path
-from tempfile import TemporaryDirectory
 import logging
 import shutil
 import sys
+from contextlib import contextmanager
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from ..lib.build_backend import backend_hook
 from ..lib.wheel import WheelFile

@@ -1,6 +1,6 @@
 from pyproject_installer.errors import RunCommandEnvError
-from ._run_env import PyprojectVenv
 
+from ._run_env import PyprojectVenv
 
 __all__ = ["run_command"]
 

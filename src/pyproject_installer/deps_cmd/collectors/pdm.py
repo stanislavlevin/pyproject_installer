@@ -1,8 +1,7 @@
 from pathlib import Path
 
+from ...lib import requirements, tomllib
 from .collector import Collector
-from ...lib import requirements
-from ...lib import tomllib
 
 
 class PdmCollector(Collector):

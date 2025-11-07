@@ -3,14 +3,13 @@ Intended to be run in subprocess to call build backend's hooks.
 Must not have dependencies other than stdlib.
 """
 
-from importlib import import_module
-from pathlib import Path
 import argparse
+import json
 import logging
 import os
-import json
 import sys
-
+from importlib import import_module
+from pathlib import Path
 
 logger = logging.getLogger(Path(__file__).name)
 

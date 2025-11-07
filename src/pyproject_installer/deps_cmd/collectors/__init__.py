@@ -1,14 +1,13 @@
+from .hatch import HatchCollector
+from .metadata import MetadataCollector
+from .pdm import PdmCollector
 from .pep517 import Pep517Collector
 from .pep518 import Pep518Collector
+from .pep735 import Pep735Collector
 from .pip_reqfile import PipReqFileCollector
-from .metadata import MetadataCollector
+from .pipenv import PipenvCollector
 from .poetry import PoetryCollector
 from .tox import ToxCollector
-from .hatch import HatchCollector
-from .pdm import PdmCollector
-from .pipenv import PipenvCollector
-from .pep735 import Pep735Collector
-
 
 __all__ = ["get_collector", "SUPPORTED_COLLECTORS"]
 

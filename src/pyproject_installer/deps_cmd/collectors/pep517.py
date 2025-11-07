@@ -1,9 +1,9 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
-from .collector import Collector
 from ...lib import requirements
 from ...lib.build_backend import backend_hook
+from .collector import Collector
 
 
 class Pep517Collector(Collector):

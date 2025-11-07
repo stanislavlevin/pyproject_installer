@@ -1,12 +1,12 @@
-from pathlib import Path
-from zipfile import ZipFile
-import os
 import logging
+import os
 import shutil
-import sys
 import subprocess
+import sys
 import sysconfig
 import textwrap
+from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 

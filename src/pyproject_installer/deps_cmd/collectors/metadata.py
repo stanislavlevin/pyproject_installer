@@ -1,11 +1,10 @@
+import email
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import email
 
-
-from .collector import Collector
 from ...build_cmd import build_metadata
 from ...lib import requirements
+from .collector import Collector
 
 
 class MetadataCollector(Collector):

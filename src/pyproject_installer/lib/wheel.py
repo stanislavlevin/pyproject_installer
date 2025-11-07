@@ -1,16 +1,16 @@
-from email.parser import Parser
-from importlib.metadata import PathDistribution
-from io import TextIOWrapper
-from pathlib import Path
-from zipfile import ZipFile, Path as ZipPath, BadZipFile
 import base64
 import csv
 import hashlib
 import logging
+from email.parser import Parser
+from importlib.metadata import PathDistribution
+from io import TextIOWrapper
+from pathlib import Path
+from zipfile import BadZipFile, ZipFile
+from zipfile import Path as ZipPath
 
 from ..errors import WheelFileError
 from .entry_points import parse_entry_points
-
 
 logger = logging.getLogger(__name__)
 

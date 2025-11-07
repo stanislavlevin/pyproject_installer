@@ -1,15 +1,14 @@
-from copy import deepcopy
-from pathlib import Path
-from string import Template
 import json
 import re
 import sys
+from copy import deepcopy
+from pathlib import Path
+from string import Template
 
-from .collectors import get_collector
-from ..errors import DepsUnsyncedError, DepsSourcesConfigError
+from ..errors import DepsSourcesConfigError, DepsUnsyncedError
 from ..lib import requirements
 from ..lib.normalization import pep503_normalized_name
-
+from .collectors import get_collector
 
 DEFAULT_CONFIG_NAME = "pyproject_deps.json"
 
