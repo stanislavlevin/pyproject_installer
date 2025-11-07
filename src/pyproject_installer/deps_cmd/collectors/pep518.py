@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from .collector import Collector
 from ...lib import requirements
 from ...lib.build_backend import parse_build_system_spec
+from .collector import Collector
 
 
 class Pep518Collector(Collector):

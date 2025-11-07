@@ -1,13 +1,12 @@
-from contextlib import suppress
-from pathlib import Path
 import json
 import logging
 import os
 import subprocess
 import threading
+from contextlib import suppress
+from pathlib import Path
 
 from . import tomllib
-
 
 __all__ = [
     "backend_hook",

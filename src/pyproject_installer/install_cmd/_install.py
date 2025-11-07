@@ -1,9 +1,9 @@
-from importlib.metadata import PathDistribution
-from pathlib import Path
 import logging
 import shutil
 import sys
 import sysconfig
+from importlib.metadata import PathDistribution
+from pathlib import Path
 
 from pyproject_installer.lib.scripts import (
     build_shebang,

@@ -4,7 +4,6 @@ Check if pyproject_installer is buildable by other tools like `build` or `pip`
 
 import subprocess
 
-
 from pyproject_installer import __version__ as installer_version
 
 

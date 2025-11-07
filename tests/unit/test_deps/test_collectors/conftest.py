@@ -1,6 +1,5 @@
 import pytest
 
-
 VALID_PEP508_DEPS_DATA = (
     ([], []),
     (["foo"], ["foo"]),

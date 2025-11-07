@@ -1,14 +1,13 @@
-from contextlib import suppress
-import logging
 import json
-import textwrap
+import logging
 import subprocess
 import sys
+import textwrap
+from contextlib import suppress
 
 import pytest
 
 from pyproject_installer.lib.backend_helper import backend_caller
-
 
 BACKEND_CALLER_MOD = "pyproject_installer.lib.backend_helper.backend_caller"
 

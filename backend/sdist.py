@@ -11,12 +11,12 @@ build_sdist:
    - exclude __pycache__ and .pyc
 """
 
-from io import BytesIO
-from pathlib import Path
 import logging
 import os
 import tarfile
 import time
+from io import BytesIO
+from pathlib import Path
 
 from .common import normalize_name_pep427, source_date_time
 from .config import parse_backend_config

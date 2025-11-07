@@ -1,11 +1,11 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 
 import pytest
 
-from pyproject_installer.errors import DepsSourcesConfigError, DepsUnsyncedError
 from pyproject_installer.deps_cmd import deps_command
 from pyproject_installer.deps_cmd.collectors.collector import Collector
+from pyproject_installer.errors import DepsSourcesConfigError, DepsUnsyncedError
 
 
 @pytest.fixture

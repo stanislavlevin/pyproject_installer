@@ -1,11 +1,11 @@
+import ast
 from abc import ABC, abstractmethod
 from contextlib import suppress
 from email.generator import BytesGenerator
-from email.message import Message
 from email.headerregistry import Address
+from email.message import Message
 from io import BytesIO
 from pathlib import Path
-import ast
 
 try:
     # Python 3.11+

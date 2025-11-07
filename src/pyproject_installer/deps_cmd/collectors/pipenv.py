@@ -1,8 +1,7 @@
 from pathlib import Path
 
+from ...lib import markers, requirements, tomllib
 from .collector import Collector
-from ...lib import requirements, markers
-from ...lib import tomllib
 
 
 class PipenvCollector(Collector):

@@ -1,19 +1,19 @@
-from itertools import product
-from pathlib import Path
-from sysconfig import get_path, get_paths
 import json
 import os
 import re
 import site
 import sys
 import textwrap
+from itertools import product
+from pathlib import Path
+from sysconfig import get_path, get_paths
 
 import pytest
 
+from pyproject_installer.errors import RunCommandEnvError, RunCommandError
 from pyproject_installer.install_cmd import install_wheel
-from pyproject_installer.errors import RunCommandError, RunCommandEnvError
-from pyproject_installer.run_cmd import run_command, _run_env, _run_command
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE, build_shebang
+from pyproject_installer.run_cmd import _run_command, _run_env, run_command
 
 
 @pytest.fixture

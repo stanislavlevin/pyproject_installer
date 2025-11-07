@@ -11,19 +11,19 @@ build_wheel:
    - exclude __pycache__ and .pyc
 """
 
-from base64 import urlsafe_b64encode
-from io import TextIOWrapper, BytesIO
-from pathlib import Path
-from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 import csv
 import hashlib
 import logging
 import os
 import time
+from base64 import urlsafe_b64encode
+from io import BytesIO, TextIOWrapper
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from .common import normalize_name_pep427, source_date_time_zinfo
 from .config import parse_backend_config
-from .metadata import CoreMetadata, parse_pep621_metadata, WheelMetadata
+from .metadata import CoreMetadata, WheelMetadata, parse_pep621_metadata
 
 __all__ = [
     "build_wheel",

@@ -1,6 +1,6 @@
-from copy import deepcopy
 import json
 import textwrap
+from copy import deepcopy
 
 import pytest
 
