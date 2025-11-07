@@ -34,7 +34,7 @@ class HatchCollector(Collector):
             except KeyError:
                 raise ValueError(
                     f"Hatch: missing tool.hatch.envs.{self.hatchenv} table in "
-                    f"{self.hatchconfig.name}"
+                    f"{self.hatchconfig.name}",
                 ) from None
         else:
             # hatch.toml or custom config
@@ -43,7 +43,7 @@ class HatchCollector(Collector):
             except KeyError:
                 raise ValueError(
                     f"Hatch: missing envs.{self.hatchenv} table in "
-                    f"{self.hatchconfig.name}"
+                    f"{self.hatchconfig.name}",
                 ) from None
         return env_data
 
@@ -58,7 +58,7 @@ class HatchCollector(Collector):
                 raise ValueError(
                     f"Hatch dependencies are not configured for {self.hatchenv}"
                     f": missing {self.hatchenv}.dependencies and "
-                    f"{self.hatchenv}.extra-dependencies"
+                    f"{self.hatchenv}.extra-dependencies",
                 ) from None
 
         for line in deps:

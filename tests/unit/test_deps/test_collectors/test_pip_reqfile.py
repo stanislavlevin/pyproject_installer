@@ -20,7 +20,7 @@ def pip_reqfile(tmpdir, monkeypatch):
 
 
 def test_pipreqfile_collector_valid_deps(
-    valid_pep508_data, pip_reqfile, depsconfig
+    valid_pep508_data, pip_reqfile, depsconfig,
 ):
     """Collection of pip's (valid PEP508) dependencies"""
     # prepare source config
@@ -34,7 +34,7 @@ def test_pipreqfile_collector_valid_deps(
     input_conf = {
         "sources": {
             srcname: {"srctype": collector, "srcargs": [str(pip_reqfile_path)]},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -48,7 +48,7 @@ def test_pipreqfile_collector_valid_deps(
 
 
 def test_pipreqfile_collector_invalid_deps(
-    invalid_pep508_data, pip_reqfile, depsconfig
+    invalid_pep508_data, pip_reqfile, depsconfig,
 ):
     """Collection of pip's (invalid PEP508) dependencies"""
     # prepare source config
@@ -62,7 +62,7 @@ def test_pipreqfile_collector_invalid_deps(
     input_conf = {
         "sources": {
             srcname: {"srctype": collector, "srcargs": [str(pip_reqfile_path)]},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -94,7 +94,7 @@ def test_pipreqfile_collector_invalid_deps(
     ),
 )
 def test_pipreqfile_collector_unsupported_deps(
-    valid_pip_deps_data, pip_reqfile, depsconfig
+    valid_pip_deps_data, pip_reqfile, depsconfig,
 ):
     """Collection of pip's unsupported reqs"""
     # prepare source config
@@ -108,7 +108,7 @@ def test_pipreqfile_collector_unsupported_deps(
     input_conf = {
         "sources": {
             srcname: {"srctype": collector, "srcargs": [str(pip_reqfile_path)]},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 

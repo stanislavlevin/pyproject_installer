@@ -36,10 +36,10 @@ def get_installation_scheme(dist_name):
         scheme_dict["headers"] = str(
             Path(
                 sysconfig.get_path(
-                    "include", vars={"installed_base": installed_base}
-                )
+                    "include", vars={"installed_base": installed_base},
+                ),
             )
-            / dist_name
+            / dist_name,
         )
 
     return scheme_dict
@@ -77,7 +77,7 @@ def install_wheel_data(data_path, scheme, destdir):
                                 fsf.write(
                                     (
                                         build_shebang(sys.executable) + "\n"
-                                    ).encode("utf-8")
+                                    ).encode("utf-8"),
                                 )
                                 shutil.copyfileobj(sf, fsf)
                     # make any file in scripts directory executable
@@ -94,7 +94,7 @@ def validate_wheel_path(wheel_path):
         wheel_path = wheel_path.resolve(strict=True)
     except (FileNotFoundError, RuntimeError):
         raise ValueError(
-            f"Unable to resolve path for wheel: {wheel_path}"
+            f"Unable to resolve path for wheel: {wheel_path}",
         ) from None
     return wheel_path
 
@@ -104,7 +104,7 @@ def validate_destdir(destdir):
         destdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for destdir: {destdir}"
+            f"Unable to create path for destdir: {destdir}",
         ) from None
 
     return destdir.resolve(strict=True)
@@ -157,7 +157,7 @@ def install_wheel(
 
         dist_info = f"{dist_name}-{dist_version}.dist-info"
         members = filter_dist_info(
-            dist_info, members=whl.memberlist, strip_dist_info=strip_dist_info
+            dist_info, members=whl.memberlist, strip_dist_info=strip_dist_info,
         )
 
         logger.info("Extracting wheel")

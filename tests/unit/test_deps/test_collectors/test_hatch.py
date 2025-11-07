@@ -34,7 +34,7 @@ def hatch_deps(tmpdir, monkeypatch):
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
 def test_hatch_collector_valid_deps(
-    valid_pep508_data, config, hatch_deps, depsconfig
+    valid_pep508_data, config, hatch_deps, depsconfig,
 ):
     """Collection of hatch (valid PEP508) dependencies"""
     # prepare source config
@@ -51,7 +51,7 @@ def test_hatch_collector_valid_deps(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), envname],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -66,7 +66,7 @@ def test_hatch_collector_valid_deps(
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
 def test_hatch_collector_invalid_deps(
-    invalid_pep508_data, config, hatch_deps, depsconfig
+    invalid_pep508_data, config, hatch_deps, depsconfig,
 ):
     """Collection of hatch (invalid PEP508) dependencies"""
     # prepare source config
@@ -83,7 +83,7 @@ def test_hatch_collector_invalid_deps(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), envname],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -98,7 +98,7 @@ def test_hatch_collector_invalid_deps(
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
 def test_hatch_collector_extra_valid_deps(
-    valid_pep508_data, config, hatch_deps, depsconfig
+    valid_pep508_data, config, hatch_deps, depsconfig,
 ):
     """Collection of hatch extra-dependencies"""
     # prepare source config
@@ -109,7 +109,7 @@ def test_hatch_collector_extra_valid_deps(
     in_reqs, out_reqs = valid_pep508_data
 
     hatch_config_path = hatch_deps(
-        config, envname, deps=None, extra_deps=in_reqs
+        config, envname, deps=None, extra_deps=in_reqs,
     )
     input_conf = {
         "sources": {
@@ -117,7 +117,7 @@ def test_hatch_collector_extra_valid_deps(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), envname],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -132,7 +132,7 @@ def test_hatch_collector_extra_valid_deps(
 
 @pytest.mark.parametrize("config", ("pyproject.toml", "hatch.toml"))
 def test_hatch_collector_extra_invalid_deps(
-    invalid_pep508_data, config, hatch_deps, depsconfig
+    invalid_pep508_data, config, hatch_deps, depsconfig,
 ):
     """Collection of hatch extra-dependencies"""
     # prepare source config
@@ -143,7 +143,7 @@ def test_hatch_collector_extra_invalid_deps(
     in_reqs, out_reqs = invalid_pep508_data
 
     hatch_config_path = hatch_deps(
-        config, envname, deps=None, extra_deps=in_reqs
+        config, envname, deps=None, extra_deps=in_reqs,
     )
     input_conf = {
         "sources": {
@@ -151,7 +151,7 @@ def test_hatch_collector_extra_invalid_deps(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), envname],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -169,7 +169,7 @@ def test_hatch_collector_extra_invalid_deps(
     ("", "[tool]", "[tool.hatch]", "[tool.hatch.envs]", "[tool.hatch.envs.a]"),
 )
 def test_hatch_collector_missing_configuration_pyproject(
-    hatch_config, tmpdir, depsconfig, monkeypatch
+    hatch_config, tmpdir, depsconfig, monkeypatch,
 ):
     """Collection of hatch(pyproject.toml) with missing configuration"""
     # prepare source config
@@ -185,7 +185,7 @@ def test_hatch_collector_missing_configuration_pyproject(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), hatchenv],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -204,7 +204,7 @@ def test_hatch_collector_missing_configuration_pyproject(
 
 @pytest.mark.parametrize("hatch_config", ("", "[envs]", "[envs.a]"))
 def test_hatch_collector_missing_configuration_hatch(
-    hatch_config, tmpdir, depsconfig, monkeypatch
+    hatch_config, tmpdir, depsconfig, monkeypatch,
 ):
     """Collection of hatch(hatch.toml) with missing configuration"""
     # prepare source config
@@ -220,7 +220,7 @@ def test_hatch_collector_missing_configuration_hatch(
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), hatchenv],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -252,7 +252,7 @@ def test_hatch_collector_missing_deps(config, hatch_deps, depsconfig):
                 "srctype": collector,
                 "srcargs": [str(hatch_config_path), hatchenv],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 

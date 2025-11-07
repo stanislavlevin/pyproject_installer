@@ -42,7 +42,7 @@ def parse_backend_config(cwd, path):
         if not isinstance(include_dirs_sdist, list):
             raise TypeError(
                 "include_dirs_sdist should be a list, "
-                f"given: {include_dirs_sdist!r}"
+                f"given: {include_dirs_sdist!r}",
             )
         include_dirs_sdist = [
             str(validate_path(cwd, Path(x))) for x in include_dirs_sdist
@@ -55,7 +55,7 @@ def parse_backend_config(cwd, path):
     license_files = parsed_config.get("license_files", default_license_files)
     if not isinstance(license_files, list):
         raise TypeError(
-            f"license_files should be a list, given: {license_files!r}"
+            f"license_files should be a list, given: {license_files!r}",
         )
     backend_config["license_files"] = license_files
 

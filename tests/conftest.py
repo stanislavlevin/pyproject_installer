@@ -21,7 +21,7 @@ class WheelContents(MutableMapping):
                 """\
                     def main():
                         print("Hello, World!")
-                """
+                """,
             ),
             f"{self.distinfo}/METADATA": textwrap.dedent(
                 f"""\
@@ -32,7 +32,7 @@ class WheelContents(MutableMapping):
                     Summary: Test project
                     Author-email: somebody@example.com
                     Classifier: License :: OSI Approved :: MIT License
-                """
+                """,
             ),
             f"{self.distinfo}/WHEEL": textwrap.dedent(
                 f"""\
@@ -40,7 +40,7 @@ class WheelContents(MutableMapping):
                     Generator: bdist_wheel
                     Root-Is-Purelib: {str(purelib).lower()}
                     Tag: py3-none-any
-                """
+                """,
             ),
         }
         self.update_record()
@@ -63,7 +63,7 @@ class WheelContents(MutableMapping):
                         digest_for_record(
                             "sha256",
                             v if isinstance(v, bytes) else v.encode("utf8"),
-                        )
+                        ),
                     ),
                     0,
                 )
@@ -138,7 +138,7 @@ def pyproject(tmpdir):
                 [build-system]
                 requires=[]
                 build-backend="be"
-                """
+                """,
             )
         project_path = tmpdir / "srcroot"
         project_path.mkdir()
@@ -199,7 +199,7 @@ def pyproject_with_backend(pyproject, monkeypatch):
             requires=[]
             build-backend="{be_module}"
             backend-path=["."]
-            """
+            """,
         )
         pyproject_path = pyproject(pyproject_toml_content)
 
@@ -249,7 +249,7 @@ def pyproject_metadata(pyproject_with_backend):
             ):
                 # prepare_metadata_for_build_wheel is preferred over build_wheel
                 assert False
-            """
+            """,
         ).format(content="\\n".join(content_fields) + "\\n")
         return pyproject_with_backend(be_content)
 
@@ -284,7 +284,7 @@ def pyproject_metadata_wheel(pyproject_with_backend, wheel_contents, wheel):
                 target_path = Path(wheel_directory) / "{wheel_path.name}"
                 Path("{wheel_path}").rename(target_path)
                 return "{wheel_path.name}"
-            """
+            """,
         )
         return pyproject_with_backend(be_content)
 

@@ -135,8 +135,8 @@ def setuptools_project(pyproject):
             [build-system]
             requires = ["setuptools>=70.1.0"]
             build-backend = "setuptools.build_meta"
-            """
-        )
+            """,
+        ),
     )
     (pyproject_path / "setup.cfg").write_text(
         textwrap.dedent(
@@ -146,8 +146,8 @@ def setuptools_project(pyproject):
             version = 1.0
             description = My package description
             license = Some license
-            """
-        )
+            """,
+        ),
     )
 
     return pyproject_path
@@ -169,8 +169,8 @@ def pdm_project(pyproject):
             license = {text = "Some license"}
 
             dependencies = []
-            """
-        )
+            """,
+        ),
     )
 
     return pyproject_path

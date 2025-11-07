@@ -55,7 +55,7 @@ def backend_object(backend, backend_path=None):
         else:
             raise ValueError(
                 "backend code must be loaded from one of backend-path, "
-                f"but loaded from {actual_bep}"
+                f"but loaded from {actual_bep}",
             )
 
     # arbitrary depth of attrs
@@ -75,7 +75,7 @@ def write_result(result_fd, result):
 
 def main_parser(prog):
     parser = argparse.ArgumentParser(
-        description="PEP517 hook caller in subprocess", prog=prog
+        description="PEP517 hook caller in subprocess", prog=prog,
     )
     parser.add_argument(
         "backend",
@@ -169,7 +169,7 @@ def main(cli_args, prog=Path(__file__).name):
         except json.JSONDecodeError:
             raise ValueError(
                 f"Invalid hook args: {args.hook_args!r}, "
-                "should be a dumped JSON"
+                "should be a dumped JSON",
             ) from None
     else:
         hook_args, hook_kwargs = [[], {}]

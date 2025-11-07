@@ -7,7 +7,7 @@ from pyproject_installer.deps_cmd import deps_command
 
 
 def test_metadata_collector_metadata_valid_deps(
-    valid_pep508_data, pyproject_metadata, depsconfig
+    valid_pep508_data, pyproject_metadata, depsconfig,
 ):
     """
     Collection of core metadata's valid PEP508 dependencies via
@@ -34,7 +34,7 @@ def test_metadata_collector_metadata_valid_deps(
 
 
 def test_metadata_collector_metadata_invalid_deps(
-    invalid_pep508_data, pyproject_metadata, depsconfig
+    invalid_pep508_data, pyproject_metadata, depsconfig,
 ):
     """
     Collection of core metadata's invalid PEP508 dependencies via
@@ -62,7 +62,7 @@ def test_metadata_collector_metadata_invalid_deps(
 
 
 def test_metadata_collector_wheel_valid_deps(
-    valid_pep508_data, pyproject_metadata_wheel, depsconfig
+    valid_pep508_data, pyproject_metadata_wheel, depsconfig,
 ):
     """
     Collection of core metadata's valid PEP508 dependencies via
@@ -89,7 +89,7 @@ def test_metadata_collector_wheel_valid_deps(
 
 
 def test_metadata_collector_wheel_invalid_deps(
-    invalid_pep508_data, pyproject_metadata_wheel, depsconfig
+    invalid_pep508_data, pyproject_metadata_wheel, depsconfig,
 ):
     """
     Collection of core metadata's invalid PEP508 dependencies via

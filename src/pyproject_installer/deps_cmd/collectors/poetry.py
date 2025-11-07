@@ -31,7 +31,7 @@ class PoetryCollector(Collector):
             poetry_data = pyproject_data["tool"]["poetry"]
         except KeyError:
             raise ValueError(
-                "Poetry is not configured: missing tool.poetry"
+                "Poetry is not configured: missing tool.poetry",
             ) from None
 
         if "group" in poetry_data and self.group in poetry_data["group"]:
@@ -39,7 +39,7 @@ class PoetryCollector(Collector):
             if "dependencies" not in poetry_data["group"][self.group]:
                 raise ValueError(
                     f"Dependencies are not configured for {self.group}: "
-                    f"missing tool.poetry.group.{self.group}.dependencies"
+                    f"missing tool.poetry.group.{self.group}.dependencies",
                 )
             dependencies = poetry_data["group"][self.group]["dependencies"]
         elif self.group == "dev":
@@ -48,7 +48,7 @@ class PoetryCollector(Collector):
         else:
             raise ValueError(
                 f"{self.group} is not configured: "
-                f"missing tool.poetry.group.{self.group}"
+                f"missing tool.poetry.group.{self.group}",
             )
 
         for req_name, req_spec in dependencies.items():

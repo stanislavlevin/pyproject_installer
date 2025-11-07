@@ -3,7 +3,7 @@ import subprocess
 
 
 def test_config_settings_setuptools(
-    virt_env_installer, setuptools_project, install_build_deps, wheeldir
+    virt_env_installer, setuptools_project, install_build_deps, wheeldir,
 ):
     """
     1. Create virtual environment with installed pyproject_installer
@@ -27,7 +27,7 @@ def test_config_settings_setuptools(
                     "--build-number=123",
                     "--plat-name=test_plat",
                 ],
-            }
+            },
         ),
         "--outdir",
         wheeldir,
@@ -41,7 +41,7 @@ def test_config_settings_setuptools(
 
 
 def test_config_settings_pdm(
-    virt_env_installer, pdm_project, install_build_deps, wheeldir
+    virt_env_installer, pdm_project, install_build_deps, wheeldir,
 ):
     """
     1. Create virtual environment with installed pyproject_installer
@@ -62,7 +62,7 @@ def test_config_settings_pdm(
             {
                 "--python-tag": "test_tag",
                 "--plat-name": "test_plat",
-            }
+            },
         ),
         "--outdir",
         wheeldir,

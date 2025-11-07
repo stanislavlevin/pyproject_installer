@@ -58,7 +58,7 @@ class WheelFile:
             self._zipfile = ZipFile(wheel_path)
         except BadZipFile as e:
             raise WheelFileError(
-                f"Error reading wheel {wheel_path}: {e}"
+                f"Error reading wheel {wheel_path}: {e}",
             ) from None
         self.name = Path(wheel_path).name
         self.dist_name, self.dist_version = self.parse_name()
@@ -113,11 +113,11 @@ class WheelFile:
         distr = PathDistribution(self.dist_info)
         for ep_group in ("console_scripts", "gui_scripts"):
             for _, ep_value, ep_module, ep_attr in parse_entry_points(
-                distr, ep_group
+                distr, ep_group,
             ):
                 if not ep_module or not ep_attr:
                     raise ValueError(
-                        f"Invalid entry_points specification: {ep_value}"
+                        f"Invalid entry_points specification: {ep_value}",
                     )
 
     def validate_data(self):
@@ -136,7 +136,7 @@ class WheelFile:
         data_files = [f.name for f in self.data.iterdir() if f.is_file()]
         if data_files:
             raise ValueError(
-                f"Optional .data cannot contain files: {', '.join(data_files)}"
+                f"Optional .data cannot contain files: {', '.join(data_files)}",
             )
 
         # and those dirs should be a subset of known installation paths
@@ -146,7 +146,7 @@ class WheelFile:
         if data_subpath_diff:
             raise ValueError(
                 "Optional .data contains unsupported scheme keys: "
-                f"{', '.join(data_subpath_diff)}"
+                f"{', '.join(data_subpath_diff)}",
             )
 
     def validate_record(self):
@@ -163,7 +163,7 @@ class WheelFile:
                 # path, hash and size
                 if len(row) != 3:
                     raise ValueError(
-                        f"Invalid number of fields in RECORD row: {row}"
+                        f"Invalid number of fields in RECORD row: {row}",
                     )
 
                 recorded_file, hash_info, _ = row
@@ -173,7 +173,7 @@ class WheelFile:
                 if recorded_file not in self.memberlist:
                     raise ValueError(
                         "Not packaged file but recorded in RECORD: "
-                        f"{recorded_file}"
+                        f"{recorded_file}",
                     )
 
                 # RECORD doesn't have hash
@@ -208,15 +208,15 @@ class WheelFile:
         # specifically, md5 and sha1 are not permitted
         if hash_name in ("md5", "sha1"):
             raise ValueError(
-                f"Too weak hash algorithm for records: {hash_name}"
+                f"Too weak hash algorithm for records: {hash_name}",
             )
 
         digest = digest_for_record(
-            hash_name, (self.root / recorded_file).read_bytes()
+            hash_name, (self.root / recorded_file).read_bytes(),
         )
         if digest != hash_value:
             raise ValueError(
-                f"Incorrect hash for recorded file: {recorded_file}"
+                f"Incorrect hash for recorded file: {recorded_file}",
             )
 
     def extraction_root(self, scheme):
@@ -250,13 +250,13 @@ class WheelFile:
             )
         except ValueError:
             raise ValueError(
-                f"Invalid version number of Wheel spec: {wheel_version}"
+                f"Invalid version number of Wheel spec: {wheel_version}",
             ) from None
 
         if wheel_version_tuple[0] > WHEEL_SPECIFICATION_VERSION[0]:
             raise ValueError(
                 f"Incompatible version of Wheel spec: {wheel_version}, supported: "
-                f"{'.'.join([str(i) for i in WHEEL_SPECIFICATION_VERSION])}"
+                f"{'.'.join([str(i) for i in WHEEL_SPECIFICATION_VERSION])}",
             )
 
         if wheel_version_tuple > WHEEL_SPECIFICATION_VERSION:
@@ -270,14 +270,14 @@ class WheelFile:
     def validate_dist_info(self):
         if not self.dist_info.exists() or not self.dist_info.is_dir():
             raise ValueError(
-                f"Missing mandatory dist-info directory: {self.dist_info}"
+                f"Missing mandatory dist-info directory: {self.dist_info}",
             )
 
         for f in ("METADATA", "WHEEL", "RECORD"):
             f_path = self.dist_info / f
             if not f_path.exists() or not f_path.is_file():
                 raise ValueError(
-                    f"Missing mandatory {f} in dist-info directory"
+                    f"Missing mandatory {f} in dist-info directory",
                 )
 
     def parse_wheel_metadata(self):

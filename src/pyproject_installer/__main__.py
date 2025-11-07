@@ -83,7 +83,7 @@ def deps(action_name):
 
 class RunnerResult:
     def __init__(
-        self, status, message, log, *, exception=None, print_traceback=False
+        self, status, message, log, *, exception=None, print_traceback=False,
     ):
         self.status = status
         self.message = message
@@ -96,7 +96,7 @@ class RunnerResult:
         if self.message is not None:
             status_msg += " (%(message)s)"
         self.log(
-            status_msg, {"status": self.status.name, "message": self.message}
+            status_msg, {"status": self.status.name, "message": self.message},
         )
 
         if self.exception is not None:
@@ -164,7 +164,7 @@ def default_built_wheel():
         )
     except FileNotFoundError:
         raise ValueError(
-            "Missing wheel tracker, re-run build steps or specify wheel"
+            "Missing wheel tracker, re-run build steps or specify wheel",
         ) from None
 
     return default_wheel_dir / wheel_filename

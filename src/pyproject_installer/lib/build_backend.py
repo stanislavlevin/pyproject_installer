@@ -86,26 +86,26 @@ def parse_build_system_spec(srcdir):
         requires = build_system["requires"]
     except KeyError:
         raise KeyError(
-            f"Missing mandatory build-system.requires in {pyproject_file}"
+            f"Missing mandatory build-system.requires in {pyproject_file}",
         ) from None
 
     # requires: list of strings
     if not isinstance(requires, list):
         raise TypeError(
-            f"requires should be a list of strings, given: {requires!r}"
+            f"requires should be a list of strings, given: {requires!r}",
         )
 
     for req in requires:
         if not isinstance(req, str):
             raise TypeError(
-                f"requires should be a list of strings, given: {requires!r}"
+                f"requires should be a list of strings, given: {requires!r}",
             )
 
     try:
         build_backend = build_system["build-backend"]
     except KeyError:
         logger.info(
-            "build-system.build-backend was not found, using default backend"
+            "build-system.build-backend was not found, using default backend",
         )
         # preserve 'requires' according to PEP518
         return {
@@ -116,7 +116,7 @@ def parse_build_system_spec(srcdir):
     # build-backend: a string naming a Python object
     if not isinstance(build_backend, str):
         raise TypeError(
-            f"build-backend should be a string, given: {build_backend!r}"
+            f"build-backend should be a string, given: {build_backend!r}",
         )
 
     bs = {
@@ -145,27 +145,27 @@ def parse_build_system_spec(srcdir):
         if not isinstance(backend_path, list):
             raise TypeError(
                 "backend-path should be a list of strings, "
-                f"given: {backend_path!r}"
+                f"given: {backend_path!r}",
             )
 
         for path in backend_path:
             if not isinstance(path, str):
                 raise TypeError(
                     "backend-path should be a list of strings, "
-                    f"given: {backend_path!r}"
+                    f"given: {backend_path!r}",
                 )
             path_p = Path(path)
             if path_p.is_absolute():
                 raise ValueError(
                     f"Invalid absolute backend-path: {path}, "
-                    "should be relative to source root"
+                    "should be relative to source root",
                 )
 
             try:
                 bep = (srcdir / path_p).resolve(strict=True)
             except (FileNotFoundError, RuntimeError):
                 raise ValueError(
-                    f"Unable to resolve backend-path: {path}"
+                    f"Unable to resolve backend-path: {path}",
                 ) from None
             try:
                 bep.relative_to(srcdir)
@@ -173,7 +173,7 @@ def parse_build_system_spec(srcdir):
                 raise ValueError(
                     "Invalid backend-path, "
                     "path should refer to location within source tree, "
-                    f"given {path} is resolved to {bep}"
+                    f"given {path} is resolved to {bep}",
                 ) from None
 
         bs["backend-path"] = backend_path
@@ -182,7 +182,7 @@ def parse_build_system_spec(srcdir):
 
 
 def make_helper_args(
-    *, python, result_fd, verbose, build_system, hook, hook_args
+    *, python, result_fd, verbose, build_system, hook, hook_args,
 ):
     args = [
         python,
@@ -210,7 +210,7 @@ def validate_source_dir(srcdir):
         srcdir = srcdir.resolve(strict=True)
     except (FileNotFoundError, RuntimeError):
         raise ValueError(
-            f"Unable to resolve path for source directory: {srcdir}"
+            f"Unable to resolve path for source directory: {srcdir}",
         ) from None
 
     if not srcdir.is_dir():
@@ -288,7 +288,7 @@ def backend_hook(python, srcdir, verbose, hook, hook_args=[(), {}]):
         except json.JSONDecodeError:
             raise RuntimeError(
                 "Received invalid JSON data from backend helper: "
-                f"{read.decode('utf-8')!r}"
+                f"{read.decode('utf-8')!r}",
             ) from None
     finally:
         # already closed

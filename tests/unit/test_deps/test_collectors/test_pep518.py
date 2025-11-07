@@ -17,7 +17,7 @@ def pyproject_pep518(pyproject, monkeypatch):
             [build-system]
             build-backend = "be"
             requires = {reqs}
-            """
+            """,
         )
         pyproject_path = pyproject(toml_content)
         monkeypatch.chdir(pyproject_path)
@@ -27,7 +27,7 @@ def pyproject_pep518(pyproject, monkeypatch):
 
 
 def test_pep518_collector_missing_pyproject_toml(
-    tmpdir, depsconfig, monkeypatch
+    tmpdir, depsconfig, monkeypatch,
 ):
     """Collection of pep518 reqs with missing pyproject.toml"""
     # prepare source config
@@ -48,7 +48,7 @@ def test_pep518_collector_missing_pyproject_toml(
 
 
 def test_pep518_collector_missing_build_system(
-    pyproject, depsconfig, monkeypatch
+    pyproject, depsconfig, monkeypatch,
 ):
     """Collection of pep518 reqs with missing build-system"""
     # prepare source config
@@ -69,7 +69,7 @@ def test_pep518_collector_missing_build_system(
 
 
 def test_pep518_collector_valid_deps(
-    valid_pep508_data, pyproject_pep518, depsconfig
+    valid_pep508_data, pyproject_pep518, depsconfig,
 ):
     """Collection of PEP518 (valid PEP508) dependencies"""
     # prepare source config
@@ -91,7 +91,7 @@ def test_pep518_collector_valid_deps(
 
 
 def test_pep518_collector_invalid_deps(
-    invalid_pep508_data, pyproject_pep518, depsconfig
+    invalid_pep508_data, pyproject_pep518, depsconfig,
 ):
     """Collection of PEP518 (invalid PEP508) dependencies"""
     # prepare source config
