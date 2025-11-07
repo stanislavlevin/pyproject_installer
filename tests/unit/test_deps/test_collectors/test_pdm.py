@@ -41,7 +41,7 @@ def test_pdm_collector_valid_deps(valid_pep508_data, pdm_deps, depsconfig):
                 "srctype": collector,
                 "srcargs": [group],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -70,7 +70,7 @@ def test_pdm_collector_invalid_deps(invalid_pep508_data, pdm_deps, depsconfig):
                 "srctype": collector,
                 "srcargs": [group],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -85,7 +85,7 @@ def test_pdm_collector_invalid_deps(invalid_pep508_data, pdm_deps, depsconfig):
 
 @pytest.mark.parametrize("pdm_config", ("", "[tool]", "[tool.pdm]"))
 def test_pdm_collector_missing_configuration(
-    pdm_config, tmpdir, depsconfig, monkeypatch
+    pdm_config, tmpdir, depsconfig, monkeypatch,
 ):
     """Collection of pdm with missing configuration"""
     # prepare source config
@@ -101,7 +101,7 @@ def test_pdm_collector_missing_configuration(
                 "srctype": collector,
                 "srcargs": [group],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -133,7 +133,7 @@ def test_pdm_collector_missing_deps(pdm_deps, depsconfig):
                 "srctype": collector,
                 "srcargs": [group],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 

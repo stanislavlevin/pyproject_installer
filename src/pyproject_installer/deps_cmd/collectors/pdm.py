@@ -30,14 +30,14 @@ class PdmCollector(Collector):
         except KeyError:
             raise ValueError(
                 "Pdm: missing tool.pdm.dev-dependencies table in "
-                f"{pyproject_file.name}"
+                f"{pyproject_file.name}",
             ) from None
 
         try:
             deps = deps_data[self.group]
         except KeyError:
             raise ValueError(
-                f"Pdm dependencies are not configured for group: {self.group}"
+                f"Pdm dependencies are not configured for group: {self.group}",
             ) from None
 
         for line in deps:

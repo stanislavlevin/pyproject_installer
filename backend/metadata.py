@@ -69,7 +69,7 @@ def parse_pep621_metadata(path, backend_config):
     extra_fields = project.keys() - set(supported_fields)
     if extra_fields:
         raise ValueError(
-            f"Unexpected fields in project table: {', '.join(extra_fields)}"
+            f"Unexpected fields in project table: {', '.join(extra_fields)}",
         )
 
     for attr in supported_fields:
@@ -80,13 +80,13 @@ def parse_pep621_metadata(path, backend_config):
 
     if "version" in metadata and dynamic and "version" in dynamic:
         raise ValueError(
-            "version cannot be specified as static and dynamic simultaneously"
+            "version cannot be specified as static and dynamic simultaneously",
         )
 
     if "version" in metadata and backend_config["version_file"] is not None:
         raise ValueError(
             "version cannot be specified as static and version_file "
-            "simultaneously"
+            "simultaneously",
         )
 
     if "version" not in metadata:
@@ -94,7 +94,7 @@ def parse_pep621_metadata(path, backend_config):
             raise KeyError("Missing version of project")
 
         metadata["version"] = parse_version_from_file(
-            backend_config["version_file"]
+            backend_config["version_file"],
         )
 
     return metadata
@@ -162,13 +162,13 @@ class CoreMetadata(Metadata):
             if license.keys() not in ({"file"}, {"text"}):
                 raise ValueError(
                     "keys of license field should be either file or text, "
-                    f"given: {', '.join(license.keys())}"
+                    f"given: {', '.join(license.keys())}",
                 )
 
             if "file" in license:
                 filename = license["file"]
                 self._metadata["License"] = Path(filename).read_text(
-                    encoding="utf-8"
+                    encoding="utf-8",
                 )
                 self.required_files.add(filename)
             else:
@@ -216,7 +216,7 @@ class CoreMetadata(Metadata):
 
                 self._metadata["Description-Content-Type"] = content_type
                 self._metadata.set_payload(
-                    Path(readme).read_text(encoding="utf-8")
+                    Path(readme).read_text(encoding="utf-8"),
                 )
                 self.required_files.add(readme)
 
@@ -227,7 +227,7 @@ class CoreMetadata(Metadata):
                 ):
                     raise ValueError(
                         "keys of readme field should be (file or text) "
-                        f"and content-type, given: {', '.join(readme.keys())}"
+                        f"and content-type, given: {', '.join(readme.keys())}",
                     )
 
                 self._metadata["Description-Content-Type"] = readme[
@@ -237,7 +237,7 @@ class CoreMetadata(Metadata):
                 if "file" in readme:
                     filename = readme["file"]
                     self._metadata.set_payload(
-                        Path(filename).read_text(encoding="utf-8")
+                        Path(filename).read_text(encoding="utf-8"),
                     )
                     self.required_files.add(filename)
                 else:
@@ -245,7 +245,7 @@ class CoreMetadata(Metadata):
 
             else:
                 raise TypeError(
-                    f"readme should be string or dictionary, given: {readme!r}"
+                    f"readme should be string or dictionary, given: {readme!r}",
                 )
 
     def _parse_authors(self, authors):
@@ -254,7 +254,7 @@ class CoreMetadata(Metadata):
             if unknown_keys:
                 raise ValueError(
                     "Unexpected keys in authors table: "
-                    f"{', '.join(unknown_keys)}"
+                    f"{', '.join(unknown_keys)}",
                 )
 
             msg_authors = []
@@ -265,7 +265,7 @@ class CoreMetadata(Metadata):
                 msg_emails.append(author["email"])
             else:
                 msg_emails.append(
-                    str(Address(author["name"], addr_spec=author["email"]))
+                    str(Address(author["name"], addr_spec=author["email"])),
                 )
 
         return msg_authors, msg_emails

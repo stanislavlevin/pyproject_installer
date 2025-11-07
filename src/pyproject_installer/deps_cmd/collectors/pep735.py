@@ -30,13 +30,13 @@ class Pep735Collector(Collector):
             self._groups_data = pyproject_data[table_name]
         except KeyError:
             raise ValueError(
-                f"pep735: missing {table_name} table in {pyproject_file.name}"
+                f"pep735: missing {table_name} table in {pyproject_file.name}",
             ) from None
 
         if not isinstance(self._groups_data, dict):
             raise TypeError(
                 "pep735: Dependency Groups is not a dict: "
-                f"{self._groups_data!r}"
+                f"{self._groups_data!r}",
             )
 
         return self._resolve_dep_group(group_name=self.group)
@@ -50,21 +50,21 @@ class Pep735Collector(Collector):
                 gp_name
                 for gp_name in self._groups_data
                 if pep503_normalized_name(gp_name) == group_nname
-            )
+            ),
         )
 
         if not actual_group_names:
             raise ValueError(
                 "pep735: group dependencies are not configured ("
                 f"group: {group_name}, "
-                f"include chain: {'->'.join(include_chain)})"
+                f"include chain: {'->'.join(include_chain)})",
             )
         if len(actual_group_names) > 1:
             raise ValueError(
                 "pep735: duplicate group names ("
                 f"group: {group_name}, "
                 f"include chain: {'->'.join(include_chain)}"
-                f"): {', '.join(actual_group_names)}"
+                f"): {', '.join(actual_group_names)}",
             )
 
         (group_cname,) = actual_group_names
@@ -85,7 +85,7 @@ class Pep735Collector(Collector):
             raise ValueError(
                 "pep735: include cycle detected ("
                 f"group: {resolved_group_name}, "
-                f"include chain: {'->'.join(include_chain)})"
+                f"include chain: {'->'.join(include_chain)})",
             )
 
         deps_data = self._groups_data[resolved_group_name]
@@ -94,7 +94,7 @@ class Pep735Collector(Collector):
                 "pep735: dependencies format is not a list ("
                 f"group: {resolved_group_name}, "
                 f"include chain: {'->'.join(include_chain)}"
-                f"): {deps_data!r}"
+                f"): {deps_data!r}",
             )
 
         for dep in deps_data:

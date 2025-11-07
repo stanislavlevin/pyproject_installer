@@ -21,7 +21,7 @@ def test_pyproject_missing_requires(pyproject, wheeldir):
     pyproject_path = pyproject("[build-system]\n")
 
     with pytest.raises(
-        KeyError, match="Missing mandatory build-system.requires"
+        KeyError, match="Missing mandatory build-system.requires",
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
@@ -38,7 +38,7 @@ def test_pyproject_invalid_requires(requires, pyproject, wheeldir):
             [build-system]
             requires={}
             build-backend="be"
-            """
+            """,
         ).format(requires),
     )
     with pytest.raises(TypeError, match="requires should be a list of strings"):
@@ -57,7 +57,7 @@ def test_pyproject_invalid_build_backend(build_backend, pyproject, wheeldir):
             [build-system]
             requires=[]
             build-backend={}
-            """
+            """,
         ).format(build_backend),
     )
     with pytest.raises(TypeError, match="build-backend should be a string"):
@@ -77,11 +77,11 @@ def test_pyproject_invalid_backend_path(backend_path, pyproject, wheeldir):
             requires=[]
             build-backend="be"
             backend-path={}
-            """
+            """,
         ).format(backend_path),
     )
     with pytest.raises(
-        TypeError, match="backend-path should be a list of strings"
+        TypeError, match="backend-path should be a list of strings",
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
@@ -99,11 +99,11 @@ def test_pyproject_absolute_backend_path(backend_paths, pyproject, wheeldir):
             requires=[]
             build-backend="foo.bar"
             backend-path=[{backend_paths}]
-            """
+            """,
         ).format(backend_paths=backend_paths),
     )
     with pytest.raises(
-        ValueError, match="Invalid absolute backend-path: /foo,"
+        ValueError, match="Invalid absolute backend-path: /foo,",
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
@@ -121,11 +121,11 @@ def test_pyproject_nonexistent_backend_path(backend_paths, pyproject, wheeldir):
             requires=[]
             build-backend="foo.bar"
             backend-path=[{backend_paths}]
-            """
+            """,
         ).format(backend_paths=backend_paths),
     )
     with pytest.raises(
-        ValueError, match="Unable to resolve backend-path: ./foo"
+        ValueError, match="Unable to resolve backend-path: ./foo",
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
@@ -143,7 +143,7 @@ def test_pyproject_outside_backend_path(backend_paths, pyproject, wheeldir):
             requires=[]
             build-backend="foo.bar"
             backend-path=[{backend_paths}]
-            """
+            """,
         ).format(backend_paths=backend_paths),
     )
 
@@ -194,7 +194,7 @@ def test_pyproject_missing_build_backend(mock_build, pyproject):
             """\
             [build-system]
             requires=[]
-            """
+            """,
         ),
     )
     outdir = pyproject_path / "dist"
@@ -252,7 +252,7 @@ def test_pyproject_build_backend(mock_build, pyproject):
     ids=["one_path", "multiple_paths"],
 )
 def test_pyproject_build_backend_path(
-    backend_paths, expected_beps, mock_build, pyproject
+    backend_paths, expected_beps, mock_build, pyproject,
 ):
     """Check in-tree backend paths"""
     pyproject_path = pyproject(
@@ -262,7 +262,7 @@ def test_pyproject_build_backend_path(
             requires=[]
             build-backend="be"
             backend-path=[{backend_paths}]
-            """
+            """,
         ).format(backend_paths=backend_paths),
     )
     outdir = pyproject_path / "dist"

@@ -35,14 +35,14 @@ def build(srcdir, outdir, hook, config=None, verbose=False):
     if hook not in SUPPORTED_BUILD_HOOKS:
         raise ValueError(
             f"Unknown build hook: {hook}, "
-            f"supported: {', '.join(SUPPORTED_BUILD_HOOKS)}"
+            f"supported: {', '.join(SUPPORTED_BUILD_HOOKS)}",
         )
 
     try:
         outdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for outdir: {outdir}"
+            f"Unable to create path for outdir: {outdir}",
         ) from None
     outdir = outdir.resolve(strict=True)
 
@@ -110,7 +110,7 @@ def build_metadata(srcdir, outdir, config=None, verbose=False):
         outdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for outdir: {outdir}"
+            f"Unable to create path for outdir: {outdir}",
         ) from None
     outdir = outdir.resolve(strict=True)
 

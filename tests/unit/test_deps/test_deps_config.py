@@ -136,7 +136,7 @@ def test_config_add_new_source(depsconfig):
 
     config_data = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     expected_data = {
-        "sources": {"foo": {"srctype": srctype}, "bar": {"srctype": srctype}}
+        "sources": {"foo": {"srctype": srctype}, "bar": {"srctype": srctype}},
     }
     assert config_data == expected_data
 
@@ -217,7 +217,7 @@ def test_config_add_srcargs(depsconfig_path):
     )
     config_data = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     expected_data = {
-        "sources": {"foo": {"srctype": srctype, "srcargs": srcargs}}
+        "sources": {"foo": {"srctype": srctype, "srcargs": srcargs}},
     }
     assert config_data == expected_data
 
@@ -270,7 +270,7 @@ def test_config_show(select_data, depsconfig, capsys):
             "foo": {"srctype": "metadata"},
             "bar": {"srctype": "metadata"},
             "foobar": {"srctype": "metadata"},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -370,7 +370,7 @@ def test_config_sync_selected(select_data, depsconfig, mock_collector, capsys):
             "foo": {"srctype": "mock_collector"},
             "bar": {"srctype": "mock_collector"},
             "foobar": {"srctype": "mock_collector"},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -448,7 +448,7 @@ def test_config_sync_verify_changed(data, depsconfig, mock_collector, capsys):
     ([], ["foo"], ["bar", "foo"], ["foo", "bar"], ["foobar"]),
 )
 def test_config_sync_verify_unchanged(
-    select, depsconfig, mock_collector, capsys
+    select, depsconfig, mock_collector, capsys,
 ):
     """Sync unchanged selected source with verify"""
 
@@ -461,7 +461,7 @@ def test_config_sync_verify_unchanged(
             "foo": {"srctype": "mock_collector", "deps": sorted(reqs)},
             "bar": {"srctype": "mock_collector", "deps": sorted(reqs)},
             "foobar": {"srctype": "mock_collector", "deps": sorted(reqs)},
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -487,7 +487,7 @@ def test_config_sync_verify_unchanged(
     ),
 )
 def test_config_sync_verify_normalized_dep(
-    old_reqs, new_reqs, depsconfig, mock_collector, capsys
+    old_reqs, new_reqs, depsconfig, mock_collector, capsys,
 ):
     """Sync unchanged source with verify and dependency normalization"""
 
@@ -571,7 +571,7 @@ def test_config_sync_verify_normalized_dep(
     ),
 )
 def test_config_sync_verify_exclude_changed(
-    data, depsconfig, mock_collector, capsys
+    data, depsconfig, mock_collector, capsys,
 ):
     """Sync source with verify and exclude, check config and diff of changes"""
 
@@ -630,7 +630,7 @@ def test_config_sync_verify_exclude_changed(
     ),
 )
 def test_config_sync_verify_exclude_unchanged(
-    data, depsconfig, mock_collector, capsys
+    data, depsconfig, mock_collector, capsys,
 ):
     """
     Sync source with verify and exclude, check config and nodiff of changes
@@ -685,7 +685,7 @@ def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
 
     with pytest.raises(ValueError) as exc:
         deps_command(
-            action, depsconfig_path, srcnames=[], verify_excludes=["foo.*"]
+            action, depsconfig_path, srcnames=[], verify_excludes=["foo.*"],
         )
     expected_err = "verify_excludes must be used with verify"
     assert expected_err in str(exc.value)
@@ -767,7 +767,7 @@ def test_config_eval_select(select_data, depsconfig, capsys):
                 "srctype": "metadata",
                 "deps": ["foo1", "bar2", "foobar1"],
             },
-        }
+        },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -1042,7 +1042,7 @@ def test_config_eval_excludes(deps, depsconfig, capsys):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     deps_command(
-        action, depsconfig_path, srcnames=[], excludes=["bar", "foo-", "foob.*"]
+        action, depsconfig_path, srcnames=[], excludes=["bar", "foo-", "foob.*"],
     )
 
     expected_out = "foo\n"

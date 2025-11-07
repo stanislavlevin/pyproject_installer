@@ -38,7 +38,7 @@ class SdistBuilder:
         self.root_dir = Path(f"{distr_name}-{distr_version}")
         self.sdist_path = sdist_directory / self.filename
         self._tarfile = tarfile.open(
-            self.sdist_path, "w:gz", format=tarfile.PAX_FORMAT
+            self.sdist_path, "w:gz", format=tarfile.PAX_FORMAT,
         )
 
     def __enter__(self):
@@ -118,7 +118,7 @@ class SdistBuilder:
     def package_license_files(self, patterns):
         # supported license files from root directory only
         self.package_files(
-            (f.name for ptrn in patterns for f in self.cwd.glob(ptrn))
+            (f.name for ptrn in patterns for f in self.cwd.glob(ptrn)),
         )
 
     def package_file(self, src, filename, size, date_time):
@@ -142,7 +142,7 @@ def build_sdist(sdist_directory, config_settings=None):
     if "-" in distr_version:
         raise ValueError(
             "Normalized version numbers cannot contain -, "
-            f"given: {distr_version}"
+            f"given: {distr_version}",
         )
 
     sdist_directory = Path(sdist_directory)

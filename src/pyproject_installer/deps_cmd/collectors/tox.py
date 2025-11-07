@@ -36,7 +36,7 @@ class ToxCollector(Collector):
                 tox_data = pyproject_data["tool"]["tox"]["legacy_tox_ini"]
             except KeyError:
                 raise ValueError(
-                    "Tox is not configured: missing tool.tox.legacy_tox_ini"
+                    "Tox is not configured: missing tool.tox.legacy_tox_ini",
                 ) from None
 
             config.read_string(tox_data)
@@ -52,14 +52,14 @@ class ToxCollector(Collector):
             testenv = config[self.testenv]
         except KeyError:
             raise ValueError(
-                f"Test environment is not configured: {self.testenv}"
+                f"Test environment is not configured: {self.testenv}",
             ) from None
         try:
             deps = testenv["deps"]
         except KeyError:
             raise ValueError(
                 f"Dependencies are not configured for {self.testenv}: "
-                f"missing {self.testenv}.deps"
+                f"missing {self.testenv}.deps",
             ) from None
 
         for line in deps.splitlines():

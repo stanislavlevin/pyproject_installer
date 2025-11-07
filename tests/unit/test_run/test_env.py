@@ -50,7 +50,7 @@ def wheel_cscript(wheel, wheel_contents):
             f"""\
                 def main():
                     print("Hello, World! ({script_name})")
-            """
+            """,
         )
         contents[f"{contents.distinfo}/entry_points.txt"] = (
             f"[console_scripts]\n{script_name} = {distr}:main\n"
@@ -107,7 +107,7 @@ def idf_outs(value):
 
 def idf_console_data(value):
     return "{}_ssp_{}_usp_{}_vsp".format(
-        *(map(lambda x: "with" if x else "without", value))
+        *(map(lambda x: "with" if x else "without", value)),
     )
 
 
@@ -135,7 +135,7 @@ def test_env_has_system_sitepackages(project, wheel_no_csript):
                 }
             )
         )
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
@@ -162,7 +162,7 @@ def test_env_has_built_package(project, wheel_no_csript):
         """\
         from foo import main
         main()
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
@@ -178,7 +178,7 @@ def test_env_default_venv_name(project, wheel_no_csript):
         import sys
 
         print(str(Path(sys.prefix).name))
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
@@ -193,7 +193,7 @@ def test_env_venv_name(project, wheel_no_csript):
         import sys
 
         print(str(Path(sys.prefix).name))
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     expected_name = "test_venv"
@@ -223,7 +223,7 @@ def test_env_environ_path(env_path, project, wheel_no_csript, monkeypatch):
                 }
             )
         )
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     monkeypatch.setenv("PATH", env_path)
@@ -249,7 +249,7 @@ def test_env_environ_path_missing(project, wheel_no_csript, monkeypatch):
                 }
             )
         )
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     monkeypatch.delenv("PATH")
@@ -274,7 +274,7 @@ def test_env_environ_virtual_env(project, wheel_no_csript):
                 }
             )
         )
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=cmd, capture_output=True)
@@ -346,7 +346,7 @@ def test_env_command_failed_captured(project, wheel_no_csript, capfd, outs):
         for out in {outs!r}:
             getattr(sys, out).write(out + "\\n")
         sys.exit(1)
-        """
+        """,
     )
     command = ["python", "-c", code]
     with pytest.raises(RunCommandError) as exc:
@@ -382,7 +382,7 @@ def test_env_command_failed_notcaptured(project, wheel_no_csript, capfd, outs):
         for out in {outs!r}:
             getattr(sys, out).write(out + "\\n")
         sys.exit(1)
-        """
+        """,
     )
     command = ["python", "-c", code]
     with pytest.raises(RunCommandError) as exc:
@@ -415,7 +415,7 @@ def test_env_command_captured(project, wheel_no_csript, capfd, outs):
         for out in {outs!r}:
             getattr(sys, out).write(out + "\\n")
         sys.exit(0)
-        """
+        """,
     )
     command = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=command, capture_output=True)
@@ -448,7 +448,7 @@ def test_env_command_notcaptured(project, wheel_no_csript, capfd, outs):
         for out in {outs!r}:
             getattr(sys, out).write(out + "\\n")
         sys.exit(0)
-        """
+        """,
     )
     command = ["python", "-c", code]
     res = run_command(wheel_no_csript(), command=command, capture_output=False)
@@ -500,7 +500,7 @@ def console_scripts_data(request, mock_ssps, mock_usps):
 
 
 def test_env_console_script(
-    project, wheel_cscript, wheel_no_csript, monkeypatch, console_scripts_data
+    project, wheel_cscript, wheel_no_csript, monkeypatch, console_scripts_data,
 ):
     """
     Check the precedence of packages having console scripts
@@ -576,7 +576,7 @@ def test_env_console_script(
 
 
 def test_env_content_console_script(
-    project, wheel_cscript, mock_usps, mock_ssps, monkeypatch
+    project, wheel_cscript, mock_usps, mock_ssps, monkeypatch,
 ):
     """Check content of console scripts
 
@@ -610,7 +610,7 @@ def test_env_content_console_script(
                 {{"bin_dir": str(scp), "content": content}}
             )
         )
-        """
+        """,
     )
     cmd = ["python", "-c", code]
     res = run_command(
@@ -622,7 +622,7 @@ def test_env_content_console_script(
     # env_exec_cmd is used for shebangs and
     # is constructed as Path(sys.executable).name
     expected_shebang = build_shebang(
-        str(Path(json_data["bin_dir"]) / Path(sys.executable).name)
+        str(Path(json_data["bin_dir"]) / Path(sys.executable).name),
     )
     # build_shebang is covered by installer's tests
     for name in [usp, ssp, vsp]:

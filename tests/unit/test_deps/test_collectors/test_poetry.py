@@ -62,7 +62,7 @@ def test_poetry_collector(deps_data, notation, poetry_deps, depsconfig):
     collector = "poetry"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": ["dev"]}}
+        "sources": {srcname: {"srctype": collector, "srcargs": ["dev"]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -83,7 +83,7 @@ def test_poetry_collector(deps_data, notation, poetry_deps, depsconfig):
 
 @pytest.mark.parametrize("poetry_config", ("", "[tool]"))
 def test_poetry_collector_missing_config(
-    poetry_config, poetry_deps, depsconfig
+    poetry_config, poetry_deps, depsconfig,
 ):
     """Collection of poetry's with missing config"""
     # prepare source config
@@ -92,7 +92,7 @@ def test_poetry_collector_missing_config(
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}}
+        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -119,7 +119,7 @@ def test_poetry_collector_wrong_group(poetry_config, poetry_deps, depsconfig):
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}}
+        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -144,7 +144,7 @@ def test_poetry_collector_missing_dependencies(poetry_deps, depsconfig):
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}}
+        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
     poetry_deps(f"[tool.poetry.group.{groupname}]\n")

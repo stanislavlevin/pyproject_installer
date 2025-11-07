@@ -30,7 +30,7 @@ class PipenvCollector(Collector):
         except KeyError:
             raise ValueError(
                 "pipenv dependencies are not configured for category: "
-                f"{self.category}"
+                f"{self.category}",
             ) from None
 
         for req_name, req_spec in deps.items():

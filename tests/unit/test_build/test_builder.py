@@ -36,7 +36,7 @@ def test_srcdir_nondir(tmpdir, wheeldir):
 
 def test_srcdir_nonpython_project(tmpdir, wheeldir):
     with pytest.raises(
-        ValueError, match="Required either pyproject.toml or setup.py"
+        ValueError, match="Required either pyproject.toml or setup.py",
     ):
         build_wheel(tmpdir, outdir=wheeldir)
 
@@ -85,7 +85,7 @@ def test_verbosity(mock_build, pyproject, build_args):
     stdout, stderr = (b"stdout", b"stderr") if capture else (None, None)
 
     mock_build.side_effect = CalledProcessError(
-        1, ["command args"], output=stdout, stderr=stderr
+        1, ["command args"], output=stdout, stderr=stderr,
     )
 
     expected_err_msg = "build_wheel failed"
@@ -130,7 +130,7 @@ def test_paths_resolved(mock_build, pyproject, monkeypatch):
     wheeldir = cwd / "dist"
 
     build_wheel(
-        pyproject_path.relative_to(cwd), outdir=wheeldir.relative_to(cwd)
+        pyproject_path.relative_to(cwd), outdir=wheeldir.relative_to(cwd),
     )
     b_kwargs = {
         "args": [

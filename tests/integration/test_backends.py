@@ -92,7 +92,7 @@ def normalized_name(request):
     indirect=True,
 )
 def test_build_and_install_in_tree_backends(
-    virt_env_installer, git_tree, install_build_deps, destdir, normalized_name
+    virt_env_installer, git_tree, install_build_deps, destdir, normalized_name,
 ):
     python = virt_env_installer.env_exec_cmd
     install_build_deps(python, srcdir=git_tree)

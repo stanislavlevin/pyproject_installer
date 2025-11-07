@@ -30,7 +30,7 @@ def get_identifiers(template):
             and mo.group("escaped") is None
         ):
             raise ValueError(
-                "Unrecognized named group in pattern", template.pattern
+                "Unrecognized named group in pattern", template.pattern,
             )
     return ids
 
@@ -44,7 +44,7 @@ class DepsSourcesConfig:
         """Very basic validation of required fields"""
         if not isinstance(config, dict):
             raise DepsSourcesConfigError(
-                f"Config should be dict, given: {config!r}"
+                f"Config should be dict, given: {config!r}",
             )
 
         if "sources" not in config:
@@ -53,18 +53,18 @@ class DepsSourcesConfig:
         sources = config["sources"]
         if not isinstance(sources, dict):
             raise DepsSourcesConfigError(
-                f"'sources' field should be dict, given: {sources!r}"
+                f"'sources' field should be dict, given: {sources!r}",
             )
 
         for src in sources.values():
             if not isinstance(src, dict):
                 raise DepsSourcesConfigError(
-                    f"Source definition should be dict, given: {src!r}"
+                    f"Source definition should be dict, given: {src!r}",
                 )
 
             if "srctype" not in src:
                 raise DepsSourcesConfigError(
-                    "Missing 'srctype' field in source definition"
+                    "Missing 'srctype' field in source definition",
                 )
             self.validate_collector(src["srctype"], src.get("srcargs", ()))
 
@@ -73,7 +73,7 @@ class DepsSourcesConfig:
                     requirements.Requirement(req)
                 except requirements.InvalidRequirement:
                     raise DepsSourcesConfigError(
-                        f"Invalid stored PEP508 requirement: {req}"
+                        f"Invalid stored PEP508 requirement: {req}",
                     ) from None
 
     @property
@@ -84,7 +84,7 @@ class DepsSourcesConfig:
                     config = json.load(f)
                 except json.JSONDecodeError as e:
                     raise DepsSourcesConfigError(
-                        f"Invalid config file: {self.file}"
+                        f"Invalid config file: {self.file}",
                     ) from e
                 self.validate_config(config)
                 self._config = config
@@ -145,7 +145,7 @@ class DepsSourcesConfig:
         missing_srcnames = [x for x in srcnames if x not in self.sources]
         if missing_srcnames:
             raise ValueError(
-                "Nonexistent sources: {}".format(", ".join(missing_srcnames))
+                "Nonexistent sources: {}".format(", ".join(missing_srcnames)),
             )
 
         for srcname in srcnames or self.sources:
@@ -155,13 +155,13 @@ class DepsSourcesConfig:
         collector_cls = get_collector(srctype)
         if collector_cls is None:
             raise DepsSourcesConfigError(
-                f"Unsupported collector type: {srctype}"
+                f"Unsupported collector type: {srctype}",
             )
         try:
             return collector_cls(*srcargs)
         except TypeError as e:
             raise DepsSourcesConfigError(
-                f"Unsupported arguments of collector {srctype}: {e!s}"
+                f"Unsupported arguments of collector {srctype}: {e!s}",
             ) from None
 
     def collect(self, srctype, srcargs):
@@ -196,11 +196,11 @@ class DepsSourcesConfig:
                         source["srctype"],
                         srcargs=source.get("srcargs", ()),
                     ),
-                )
+                ),
             )
 
             stored_deps = set(
-                map(requirements.Requirement, source.get("deps", ()))
+                map(requirements.Requirement, source.get("deps", ())),
             )
 
             if stored_deps == synced_deps:
@@ -292,9 +292,9 @@ class DepsSourcesConfig:
                     deps.update(
                         set(
                             self.depformat(
-                                parsed_req, depformat, depformatextra
-                            )
-                        )
+                                parsed_req, depformat, depformatextra,
+                            ),
+                        ),
                     )
                 else:
                     deps.add(str(parsed_req))

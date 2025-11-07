@@ -66,7 +66,7 @@ def test_help():
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     assert result.returncode == 0
     assert result.stdout.rstrip().startswith(
-        b"usage: python -m pyproject_installer "
+        b"usage: python -m pyproject_installer ",
     )
     assert result.stderr == b""
 
@@ -108,7 +108,7 @@ def test_logging(verbose, logging_kwargs, mock_build_wheel, mocker):
     actual_handlers = kwargs["handlers"]
     assert len(actual_handlers) == 2
     for expected_handler, actual_handler in zip(
-        expected_handlers, actual_handlers
+        expected_handlers, actual_handlers,
     ):
         expected_type, expected_level, expected_stream = expected_handler
         assert isinstance(actual_handler, expected_type)
@@ -135,7 +135,7 @@ def test_logging_destination(level, destination):
 
             __main__.setup_logging(verbose=True)
             logging.getLogger().{level}("{level}")
-        """
+        """,
     )
     cmd = [sys.executable, "-c", code]
     result = subprocess.run(args=cmd, capture_output=True)
@@ -362,7 +362,7 @@ def test_install_cli_wheel(mocker, mock_install_wheel, mock_read_tracker):
 
 
 def test_install_cli_wheel_destdir(
-    mocker, mock_install_wheel, mock_read_tracker
+    mocker, mock_install_wheel, mock_read_tracker,
 ):
     wheel = Path("/wheel.whl")
     destdir = Path("/destdir")
@@ -417,7 +417,7 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
 
 
 def test_install_default_wheel_missing_tracker(
-    mocker, mock_read_tracker, capsys
+    mocker, mock_read_tracker, capsys,
 ):
     """Check error if wheeltracker is missing and wheel is default"""
 
@@ -789,7 +789,7 @@ def test_deps_cli_sync_verify_excludes(excludes, mock_deps_command):
 
 
 def test_deps_cli_sync_verify_excludes_without_verify(
-    mock_deps_command, capsys
+    mock_deps_command, capsys,
 ):
     """Run deps sync with verify_excludes and without verify
 
@@ -955,7 +955,7 @@ def test_deps_cli_eval_depformat_depformatextra(mock_deps_command):
 
 
 def test_deps_cli_eval_depformatextra_without_depformat(
-    mock_deps_command, capsys
+    mock_deps_command, capsys,
 ):
     """Run deps eval with depformatextra and without depformat
 

@@ -109,7 +109,7 @@ class WheelBuilder:
                 "generator": f"pyproject_installer {self.distr_version}",
                 "root-is-purelib": "true",
                 "tags": ["py3-none-any"],
-            }
+            },
         ).dump_as_bytes()
 
         with BytesIO(wheel_data) as src:
@@ -191,7 +191,7 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     if "-" in distr_version:
         raise ValueError(
             "Normalized version numbers cannot contain -, "
-            f"given: {distr_version}"
+            f"given: {distr_version}",
         )
 
     wheel_directory = Path(wheel_directory)
