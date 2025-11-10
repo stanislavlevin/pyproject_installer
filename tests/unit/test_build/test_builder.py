@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -36,7 +37,8 @@ def test_srcdir_nondir(tmpdir, wheeldir):
 
 def test_srcdir_nonpython_project(tmpdir, wheeldir):
     with pytest.raises(
-        ValueError, match="Required either pyproject.toml or setup.py",
+        ValueError,
+        match=re.escape("Required either pyproject.toml or setup.py"),
     ):
         build_wheel(tmpdir, outdir=wheeldir)
 

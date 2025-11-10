@@ -1,6 +1,7 @@
 """Tests for parser of pyproject.toml"""
 
 import json
+import re
 import sys
 import textwrap
 
@@ -13,7 +14,7 @@ from pyproject_installer.lib.build_backend import BACKEND_CALLER
 def test_pyproject_invalid_toml(pyproject, wheeldir):
     pyproject_path = pyproject("content\n")
 
-    with pytest.raises(ValueError, match="Invalid pyproject.toml"):
+    with pytest.raises(ValueError, match=re.escape("Invalid pyproject.toml")):
         build_wheel(pyproject_path, outdir=wheeldir)
 
 
@@ -21,7 +22,7 @@ def test_pyproject_missing_requires(pyproject, wheeldir):
     pyproject_path = pyproject("[build-system]\n")
 
     with pytest.raises(
-        KeyError, match="Missing mandatory build-system.requires",
+        KeyError, match=re.escape("Missing mandatory build-system.requires"),
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
@@ -125,7 +126,7 @@ def test_pyproject_nonexistent_backend_path(backend_paths, pyproject, wheeldir):
         ).format(backend_paths=backend_paths),
     )
     with pytest.raises(
-        ValueError, match="Unable to resolve backend-path: ./foo",
+        ValueError, match=re.escape("Unable to resolve backend-path: ./foo"),
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 

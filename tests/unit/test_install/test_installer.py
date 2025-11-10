@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -196,7 +197,9 @@ def test_incompatible_wheel_version(wheel_contents, wheel, installed_wheel):
     contents["foo-1.0.dist-info/WHEEL"] = "Wheel-Version: 2.0"
     with pytest.raises(
         ValueError,
-        match="Incompatible version of Wheel spec: 2.0, supported: 1.0",
+        match=re.escape(
+            "Incompatible version of Wheel spec: 2.0, supported: 1.0",
+        ),
     ):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir,
@@ -393,7 +396,7 @@ def test_data_is_not_dir(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents["foo-1.0.data"] = ""
     with pytest.raises(
-        ValueError, match="Optional .data should be a directory",
+        ValueError, match=re.escape("Optional .data should be a directory"),
     ):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir,
@@ -404,7 +407,7 @@ def test_data_contains_files(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents["foo-1.0.data/bar"] = ""
     with pytest.raises(
-        ValueError, match="Optional .data cannot contain files: bar",
+        ValueError, match=re.escape("Optional .data cannot contain files: bar"),
     ):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir,
@@ -416,7 +419,7 @@ def test_data_invalid_scheme_key(wheel_contents, wheel, installed_wheel):
     contents["foo-1.0.data/key/bar"] = ""
     with pytest.raises(
         ValueError,
-        match="Optional .data contains unsupported scheme keys: key",
+        match=re.escape("Optional .data contains unsupported scheme keys: key"),
     ):
         install_wheel(
             wheel(contents=contents), destdir=installed_wheel().destdir,
