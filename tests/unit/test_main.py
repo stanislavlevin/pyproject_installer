@@ -79,7 +79,8 @@ def test_help():
     ),
     ids=["default", "verbose"],
 )
-def test_logging(verbose, logging_kwargs, mock_build_wheel, mocker):
+@pytest.mark.usefixtures("mock_build_wheel")
+def test_logging(verbose, logging_kwargs, mocker):
     """Check format and level of logging depending on verbosity"""
     m = mocker.patch.object(project_main.logging, "basicConfig")
 
@@ -289,7 +290,8 @@ def test_build_cli_backend_settings_empty(mock_build_wheel):
     "config",
     ("key", '["val1", "val2"]'),
 )
-def test_build_cli_invalid_backend_settings(config, mock_build_wheel, capsys):
+@pytest.mark.usefixtures("mock_build_wheel")
+def test_build_cli_invalid_backend_settings(config, capsys):
     build_args = ["build", "--backend-config-settings", config]
 
     with pytest.raises(SystemExit) as exc:
@@ -305,7 +307,7 @@ def test_build_cli_invalid_backend_settings(config, mock_build_wheel, capsys):
     assert expected_err_msg in captured.err
 
 
-def test_install_cli_default(mocker, mock_install_wheel, mock_read_tracker):
+def test_install_cli_default(mock_install_wheel, mock_read_tracker):
     install_args = ["install"]
 
     destdir = Path("/")
@@ -324,7 +326,7 @@ def test_install_cli_default(mocker, mock_install_wheel, mock_read_tracker):
     mock_read_tracker.assert_called_once_with(wheel_tracker, encoding="utf-8")
 
 
-def test_install_cli_destdir(mocker, mock_install_wheel, mock_read_tracker):
+def test_install_cli_destdir(mock_install_wheel, mock_read_tracker):
     destdir = Path("/destdir")
     install_args = ["install", "--destdir", str(destdir)]
 
@@ -343,7 +345,7 @@ def test_install_cli_destdir(mocker, mock_install_wheel, mock_read_tracker):
     mock_read_tracker.assert_called_once_with(wheel_tracker, encoding="utf-8")
 
 
-def test_install_cli_wheel(mocker, mock_install_wheel, mock_read_tracker):
+def test_install_cli_wheel(mock_install_wheel, mock_read_tracker):
     wheel = Path("/wheel.whl")
     install_args = ["install", str(wheel)]
 
@@ -361,9 +363,7 @@ def test_install_cli_wheel(mocker, mock_install_wheel, mock_read_tracker):
     mock_read_tracker.assert_not_called()
 
 
-def test_install_cli_wheel_destdir(
-    mocker, mock_install_wheel, mock_read_tracker,
-):
+def test_install_cli_wheel_destdir(mock_install_wheel, mock_read_tracker):
     wheel = Path("/wheel.whl")
     destdir = Path("/destdir")
     install_args = ["install", str(wheel), "--destdir", str(destdir)]
@@ -400,7 +400,8 @@ def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
     mock_read_tracker.assert_not_called()
 
 
-def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_no_strip_dist_info(mock_install_wheel):
     install_args = ["install", "--no-strip-dist-info"]
 
     destdir = Path("/")
@@ -416,9 +417,7 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel, mock_read_tracker):
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
 
 
-def test_install_default_wheel_missing_tracker(
-    mocker, mock_read_tracker, capsys,
-):
+def test_install_default_wheel_missing_tracker(mock_read_tracker, capsys):
     """Check error if wheeltracker is missing and wheel is default"""
 
     mock_read_tracker.side_effect = FileNotFoundError
@@ -509,7 +508,8 @@ def test_run_cli_default_wheel_missing_tracker(mock_read_tracker, capsys):
     assert expected_msg in captured.err
 
 
-def test_run_cli_failed_result(mock_run_command, mock_read_tracker, caplog):
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_failed_result(mock_run_command, caplog):
     """Check error if command was failed
 
     - mock run command and wheel tracker
@@ -529,7 +529,8 @@ def test_run_cli_failed_result(mock_run_command, mock_read_tracker, caplog):
     assert f"Command's error: {exc_msg}" in caplog.text
 
 
-def test_run_cli_venv_error(mock_run_command, mock_read_tracker, caplog):
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_venv_error(mock_run_command, caplog):
     """Check error if command was failed
 
     - mock run command and wheel tracker
@@ -550,7 +551,8 @@ def test_run_cli_venv_error(mock_run_command, mock_read_tracker, caplog):
     assert exc_msg in caplog.text
 
 
-def test_run_cli_internal_error(mock_run_command, mock_read_tracker, caplog):
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_internal_error(mock_run_command, caplog):
     """Check error if internal error happened
 
     - mock run command and wheel tracker
@@ -788,9 +790,8 @@ def test_deps_cli_sync_verify_excludes(excludes, mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
-def test_deps_cli_sync_verify_excludes_without_verify(
-    mock_deps_command, capsys,
-):
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_sync_verify_excludes_without_verify(capsys):
     """Run deps sync with verify_excludes and without verify
 
     - mock deps_command
@@ -954,9 +955,8 @@ def test_deps_cli_eval_depformat_depformatextra(mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
-def test_deps_cli_eval_depformatextra_without_depformat(
-    mock_deps_command, capsys,
-):
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_eval_depformatextra_without_depformat(capsys):
     """Run deps eval with depformatextra and without depformat
 
     - mock deps_command
@@ -1091,7 +1091,8 @@ def test_deps_cli_add_depsconfig(mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
-def test_deps_cli_add_wrong_srctype(mock_deps_command, capsys):
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_add_wrong_srctype(capsys):
     """Run deps add with wrong srctype
 
     - mock deps_command

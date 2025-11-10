@@ -16,7 +16,7 @@ from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE, build_shebang
 from pyproject_installer.run_cmd import _run_command, _run_env, run_command
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def project(tmpdir, monkeypatch):
     """Prepare everything needed to run a command in project root"""
     project_path = tmpdir / "project"
@@ -111,7 +111,7 @@ def idf_console_data(value):
     )
 
 
-def test_env_has_system_sitepackages(project, wheel_no_csript):
+def test_env_has_system_sitepackages(wheel_no_csript):
     """Check if system sitepackages appended to venv's sys.path
 
     venv sitepackages => user sitepackages => system sitepackages:
@@ -156,7 +156,7 @@ def test_env_has_system_sitepackages(project, wheel_no_csript):
     assert min(ssp_indexes) > usp_index
 
 
-def test_env_has_built_package(project, wheel_no_csript):
+def test_env_has_built_package(wheel_no_csript):
     """Check if built package is installed into venv"""
     code = textwrap.dedent(
         """\
@@ -170,7 +170,7 @@ def test_env_has_built_package(project, wheel_no_csript):
     assert res.stderr == b""
 
 
-def test_env_default_venv_name(project, wheel_no_csript):
+def test_env_default_venv_name(wheel_no_csript):
     """Check default venv name"""
     code = textwrap.dedent(
         """\
@@ -185,7 +185,7 @@ def test_env_default_venv_name(project, wheel_no_csript):
     assert res.stdout.strip().decode("utf-8") == ".run_venv"
 
 
-def test_env_venv_name(project, wheel_no_csript):
+def test_env_venv_name(wheel_no_csript):
     """Check custom venv name"""
     code = textwrap.dedent(
         """\
@@ -207,7 +207,7 @@ def test_env_venv_name(project, wheel_no_csript):
 
 
 @pytest.mark.parametrize("env_path", ("path1", "path1:path2"))
-def test_env_environ_path(env_path, project, wheel_no_csript, monkeypatch):
+def test_env_environ_path(env_path, wheel_no_csript, monkeypatch):
     """Check venv's PATH environ variable"""
     code = textwrap.dedent(
         """\
@@ -233,7 +233,7 @@ def test_env_environ_path(env_path, project, wheel_no_csript, monkeypatch):
     assert json_data["env_path"] == expected_path
 
 
-def test_env_environ_path_missing(project, wheel_no_csript, monkeypatch):
+def test_env_environ_path_missing(wheel_no_csript, monkeypatch):
     """Check venv's PATH environ variable if global's one is missing"""
     code = textwrap.dedent(
         """\
@@ -258,7 +258,7 @@ def test_env_environ_path_missing(project, wheel_no_csript, monkeypatch):
     assert json_data["env_path"] == json_data["bin_dir"]
 
 
-def test_env_environ_virtual_env(project, wheel_no_csript):
+def test_env_environ_virtual_env(wheel_no_csript):
     """Check venv's VIRTUAL_ENV environ variable"""
     code = textwrap.dedent(
         """\
@@ -282,7 +282,7 @@ def test_env_environ_virtual_env(project, wheel_no_csript):
     assert json_data["env_virtual_env"] == json_data["prefix"]
 
 
-def test_env_installation_failed(project):
+def test_env_installation_failed():
     """Check the error on failed installation of built wheel"""
     command = ["any_command"]
     with pytest.raises(RunCommandEnvError) as exc:
@@ -298,7 +298,7 @@ def test_env_installation_failed(project):
     "error",
     (RunCommandEnvError, RunCommandError, Exception),
 )
-def test_env_venv_creation_error(error, project, wheel_no_csript, mocker):
+def test_env_venv_creation_error(error, wheel_no_csript, mocker):
     """Check the error on failed creation of venv"""
     err_msg = "some error"
     mocker.patch.object(
@@ -316,7 +316,7 @@ def test_env_venv_creation_error(error, project, wheel_no_csript, mocker):
         )
 
 
-def test_env_command_nonexistent(project, wheel_no_csript, monkeypatch):
+def test_env_command_nonexistent(wheel_no_csript, monkeypatch):
     """Check the error on nonexistent command"""
     # required for error message
     monkeypatch.setenv("LC_ALL", "C.utf8")
@@ -332,7 +332,7 @@ def test_env_command_nonexistent(project, wheel_no_csript, monkeypatch):
     (["stdout"], ["stderr"], ["stdout", "stderr"]),
     ids=idf_outs,
 )
-def test_env_command_failed_captured(project, wheel_no_csript, capfd, outs):
+def test_env_command_failed_captured(wheel_no_csript, capfd, outs):
     """Check the error on failed command in captured mode
 
     - there should be captured stdout/stderr in exc message
@@ -368,7 +368,7 @@ def test_env_command_failed_captured(project, wheel_no_csript, capfd, outs):
     (["stdout"], ["stderr"], ["stdout", "stderr"]),
     ids=idf_outs,
 )
-def test_env_command_failed_notcaptured(project, wheel_no_csript, capfd, outs):
+def test_env_command_failed_notcaptured(wheel_no_csript, capfd, outs):
     """Check the error on failed command in uncaptured mode
 
     - there should message on stdout/stderr
@@ -402,7 +402,7 @@ def test_env_command_failed_notcaptured(project, wheel_no_csript, capfd, outs):
     (["stdout"], ["stderr"], ["stdout", "stderr"]),
     ids=idf_outs,
 )
-def test_env_command_captured(project, wheel_no_csript, capfd, outs):
+def test_env_command_captured(wheel_no_csript, capfd, outs):
     """Check successful command in captured mode
 
     - there should be captured stdout/stderr in result
@@ -435,7 +435,7 @@ def test_env_command_captured(project, wheel_no_csript, capfd, outs):
     (["stdout"], ["stderr"], ["stdout", "stderr"]),
     ids=idf_outs,
 )
-def test_env_command_notcaptured(project, wheel_no_csript, capfd, outs):
+def test_env_command_notcaptured(wheel_no_csript, capfd, outs):
     """Check successful command in uncaptured mode
 
     - there should be no captured stdout/stderr in result
@@ -500,7 +500,7 @@ def console_scripts_data(request, mock_ssps, mock_usps):
 
 
 def test_env_console_script(
-    project, wheel_cscript, wheel_no_csript, monkeypatch, console_scripts_data,
+    wheel_cscript, wheel_no_csript, monkeypatch, console_scripts_data,
 ):
     """
     Check the precedence of packages having console scripts
@@ -575,9 +575,7 @@ def test_env_console_script(
             assert re.match(expected_ptrn, str(exc.value)) is not None
 
 
-def test_env_content_console_script(
-    project, wheel_cscript, mock_usps, mock_ssps, monkeypatch,
-):
+def test_env_content_console_script(wheel_cscript, mock_usps, mock_ssps):
     """Check content of console scripts
 
     - installed from project's wheel
