@@ -110,7 +110,7 @@ def validate_destdir(destdir):
     return destdir.resolve(strict=True)
 
 
-def filter_dist_info(dist_info, members, strip_dist_info=True):
+def filter_dist_info(dist_info, *, members, strip_dist_info=True):
     """
     If `strip_dist_info` is True then only `allow_list` is allowed in
     dist-info directory. The `deny_list` is unconditionally filtered out.
@@ -135,6 +135,7 @@ def filter_dist_info(dist_info, members, strip_dist_info=True):
 
 def install_wheel(
     wheel_path,
+    *,
     destdir,
     installer=None,
     strip_dist_info=True,

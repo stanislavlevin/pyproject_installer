@@ -118,7 +118,7 @@ def emit_less_than_warning(record):
     return record.levelno < logging.WARNING
 
 
-def setup_logging(verbose=False):
+def setup_logging(*, verbose=False):
     # emit WARNING, ERROR and CRITICAL to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
@@ -157,7 +157,7 @@ def call_hook(backend, backend_path, hook, hook_args, hook_kwargs):
 def main(cli_args, prog=Path(__file__).name):
     parser = main_parser(prog)
     args = parser.parse_args(cli_args)
-    setup_logging(args.verbose)
+    setup_logging(verbose=args.verbose)
 
     backend = args.backend
     backend_path = args.backend_path

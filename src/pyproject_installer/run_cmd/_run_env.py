@@ -158,7 +158,7 @@ class PyprojectVenv(EnvBuilder):
         env["VIRTUAL_ENV"] = self.context.env_dir
         return env
 
-    def run(self, command, capture_output=False):
+    def run(self, command, *, capture_output=False):
         """Run a command in subprocess within venv"""
         logger.info("Running command: %r", command)
         try:

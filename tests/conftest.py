@@ -13,7 +13,7 @@ from pyproject_installer.lib.wheel import digest_for_record
 
 
 class WheelContents(MutableMapping):
-    def __init__(self, distr="foo", version="1.0", purelib=True):
+    def __init__(self, *, distr="foo", version="1.0", purelib=True):
         self.distinfo = f"{distr}-{version}.dist-info"
         self.record_key = f"{self.distinfo}/RECORD"
         self._contents = {
@@ -163,8 +163,8 @@ def pyproject_toml(pyproject, monkeypatch):
 
 @pytest.fixture
 def wheel_contents():
-    def _wheel_contents(*args, **kwargs):
-        return WheelContents(*args, **kwargs)
+    def _wheel_contents(**kwargs):
+        return WheelContents(**kwargs)
 
     return _wheel_contents
 

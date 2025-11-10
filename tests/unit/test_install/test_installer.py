@@ -20,7 +20,7 @@ from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
 
 
 class InstalledWheel:
-    def __init__(self, destdir, distr="foo", version="1.0", purelib=True):
+    def __init__(self, destdir, *, distr="foo", version="1.0", purelib=True):
         self.destdir = destdir
         self.sitedir = Path(
             str(destdir)

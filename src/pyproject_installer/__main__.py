@@ -572,7 +572,7 @@ def emit_less_than_warning(record):
     return record.levelno < logging.WARNING
 
 
-def setup_logging(verbose=False):
+def setup_logging(*, verbose=False):
     # emit WARNING, ERROR and CRITICAL to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
@@ -598,7 +598,7 @@ def setup_logging(verbose=False):
 def main(cli_args, prog=f"python -m {__package__}"):
     parser = main_parser(prog)
     args = parser.parse_args(cli_args)
-    setup_logging(args.verbose)
+    setup_logging(verbose=args.verbose)
 
     args.main(args, parser)
 

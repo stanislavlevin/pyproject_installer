@@ -168,7 +168,7 @@ class DepsSourcesConfig:
         collector = self.validate_collector(srctype, srcargs)
         return collector.collect()
 
-    def sync(self, srcnames=[], verify=False, verify_excludes=[]):
+    def sync(self, *, srcnames=[], verify=False, verify_excludes=[]):
         """Sync sources
 
         verify: do sync of selected sources, but print the diff on
