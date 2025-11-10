@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 
 import pytest
@@ -103,12 +104,12 @@ def test_config_read_invalid(config_data, depsconfig_path):
     """Read invalid config"""
 
     action = "show"
-    data, error = config_data
+    data, expected_err = config_data
 
     depsconfig_path.write_text(data, encoding="utf-8")
-    with pytest.raises(DepsSourcesConfigError) as exc:
+    expected_err = f"^{re.escape(expected_err)}"
+    with pytest.raises(DepsSourcesConfigError, match=expected_err):
         deps_command(action, depsconfig_path)
-    assert error in str(exc.value)
 
 
 def test_config_add_new_config(depsconfig_path):
@@ -149,10 +150,10 @@ def test_config_add_existent_source(depsconfig):
     srctype = "metadata"
     depsconfig_path = depsconfig()
 
-    expected_err = f"Source {srcname} already exists"
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(f"Source {srcname} already exists")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcname=srcname, srctype=srctype)
-    assert expected_err in str(exc.value)
 
 
 def test_config_add_wrong_srctype(depsconfig_path):
@@ -162,10 +163,10 @@ def test_config_add_wrong_srctype(depsconfig_path):
     srcname = "foo"
     srctype = "foo"
 
-    expected_err = f"Unsupported collector type: {srctype}"
-    with pytest.raises(DepsSourcesConfigError) as exc:
+    expected_err = re.escape(f"Unsupported collector type: {srctype}")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(DepsSourcesConfigError, match=expected_err):
         deps_command(action, depsconfig_path, srcname=srcname, srctype=srctype)
-    assert expected_err in str(exc.value)
 
 
 def test_config_add_missing_srcargs(depsconfig_path):
@@ -175,10 +176,10 @@ def test_config_add_missing_srcargs(depsconfig_path):
     srcname = "foo"
     srctype = "pip_reqfile"
 
-    expected_err = f"Unsupported arguments of collector {srctype}:"
-    with pytest.raises(DepsSourcesConfigError) as exc:
+    expected_err = re.escape(f"Unsupported arguments of collector {srctype}:")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(DepsSourcesConfigError, match=expected_err):
         deps_command(action, depsconfig_path, srcname=srcname, srctype=srctype)
-    assert expected_err in str(exc.value)
 
 
 def test_config_add_extra_srcargs(depsconfig_path):
@@ -188,8 +189,9 @@ def test_config_add_extra_srcargs(depsconfig_path):
     srcname = "foo"
     srctype = "metadata"
 
-    expected_err = f"Unsupported arguments of collector {srctype}:"
-    with pytest.raises(DepsSourcesConfigError) as exc:
+    expected_err = re.escape(f"Unsupported arguments of collector {srctype}:")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(DepsSourcesConfigError, match=expected_err):
         deps_command(
             action,
             depsconfig_path,
@@ -197,7 +199,6 @@ def test_config_add_extra_srcargs(depsconfig_path):
             srctype=srctype,
             srcargs=["fooarg"],
         )
-    assert expected_err in str(exc.value)
 
 
 def test_config_add_srcargs(depsconfig_path):
@@ -242,10 +243,10 @@ def test_config_delete_nonexistent_source(depsconfig):
     srcname = "bar"
     depsconfig_path = depsconfig()
 
-    expected_err = f"Source {srcname} doesn't exist"
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(f"Source {srcname} doesn't exist")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcname=srcname)
-    assert expected_err in str(exc.value)
 
 
 @pytest.mark.parametrize(
@@ -295,15 +296,15 @@ def test_config_show_nonexistent_source(select_data, depsconfig, capsys):
     """Show nonexistent source"""
 
     action = "show"
-    select, error = select_data
+    select, expected_err = select_data
 
     # prepare source config
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcnames=select)
-    assert error in str(exc.value)
 
     captured = capsys.readouterr()
     assert not captured.err
@@ -683,12 +684,12 @@ def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape("verify_excludes must be used with verify")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(
             action, depsconfig_path, srcnames=[], verify_excludes=["foo.*"],
         )
-    expected_err = "verify_excludes must be used with verify"
-    assert expected_err in str(exc.value)
 
     captured = capsys.readouterr()
     assert not captured.err
@@ -700,7 +701,7 @@ def test_config_sync_nonexistent_source(select_data, depsconfig, capsys):
     """Sync nonexistent source"""
 
     action = "sync"
-    select, error = select_data
+    select, expected_err = select_data
 
     # prepare source config
     input_conf = {
@@ -710,9 +711,9 @@ def test_config_sync_nonexistent_source(select_data, depsconfig, capsys):
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcnames=select)
-    assert error in str(exc.value)
 
     captured = capsys.readouterr()
     assert not captured.err
@@ -785,7 +786,7 @@ def test_config_eval_nonexistent_source(select_data, depsconfig, capsys):
     """Eval nonexistent source"""
 
     action = "eval"
-    select, error = select_data
+    select, expected_err = select_data
 
     # prepare source config
     input_conf = {
@@ -795,9 +796,9 @@ def test_config_eval_nonexistent_source(select_data, depsconfig, capsys):
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcnames=select)
-    assert error in str(exc.value)
 
     captured = capsys.readouterr()
     assert not captured.err
@@ -884,10 +885,10 @@ def test_config_eval_formatting_depformatextra_only(depsconfig, capsys):
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape("depformatextra must be used with depformat")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcnames=[], depformatextra="foo")
-    expected_err = "depformatextra must be used with depformat"
-    assert expected_err in str(exc.value)
 
     captured = capsys.readouterr()
     assert not captured.err

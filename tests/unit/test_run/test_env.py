@@ -284,13 +284,14 @@ def test_env_environ_virtual_env(wheel_no_csript):
 def test_env_installation_failed():
     """Check the error on failed installation of built wheel"""
     command = ["any_command"]
-    with pytest.raises(RunCommandEnvError) as exc:
+    expected_err = re.escape("Installation of package failed")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(RunCommandEnvError, match=expected_err):
         run_command(
             "nonexistent-1.0-py3-none-any.whl",
             command=command,
             capture_output=True,
         )
-    assert "Installation of package failed" in str(exc.value)
 
 
 @pytest.mark.parametrize(
@@ -320,10 +321,9 @@ def test_env_command_nonexistent(wheel_no_csript, monkeypatch):
     # required for error message
     monkeypatch.setenv("LC_ALL", "C.utf8")
     command = ["nonexistent_cmd"]
-    with pytest.raises(RunCommandError) as exc:
+    expected_err = f"^.* No such file or directory: .*{command}.*"
+    with pytest.raises(RunCommandError, match=expected_err):
         run_command(wheel_no_csript(), command=command, capture_output=True)
-    expected_ptrn = f".* No such file or directory: .*{command}.*"
-    assert re.match(expected_ptrn, str(exc.value)) is not None
 
 
 @pytest.mark.parametrize(
@@ -564,14 +564,13 @@ def test_env_console_script(
         with monkeypatch.context() as m:
             # for error message
             m.setenv("LC_ALL", "C.utf8")
-            with pytest.raises(RunCommandError) as exc:
+            expected_err = f"^.* No such file or directory: .*{command}.*"
+            with pytest.raises(RunCommandError, match=expected_err):
                 run_command(
                     vsp_wheel,
                     command=[command],
                     capture_output=True,
                 )
-            expected_ptrn = f".* No such file or directory: .*{command}.*"
-            assert re.match(expected_ptrn, str(exc.value)) is not None
 
 
 def test_env_content_console_script(wheel_cscript, mock_usps, mock_ssps):
