@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import re
@@ -31,10 +32,8 @@ def wheel_no_csript(wheel, wheel_contents):
 
     def _build_wheel(distr="foo"):
         contents = wheel_contents(distr=distr)
-        try:
+        with contextlib.suppress(KeyError):
             del contents[f"{contents.distinfo}/entry_points.txt"]
-        except KeyError:
-            pass
         return wheel(name=f"{distr}-1.0-py3-none-any.whl", contents=contents)
 
     return _build_wheel
