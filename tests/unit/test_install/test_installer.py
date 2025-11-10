@@ -589,9 +589,7 @@ def test_data_scripts(
     expected_content = f"{expected_shebang}\nprint('Hello, World!')\n"
     assert script.read_text() == expected_content
 
-    result = subprocess.run([script], capture_output=True)
-    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
-    assert result.returncode == 0
+    result = subprocess.run([script], capture_output=True, check=True)
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""
 
@@ -623,9 +621,7 @@ def test_data_binary_scripts(
     install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
     script = dest_wheel.scripts / binary_name
 
-    result = subprocess.run([script], capture_output=True)
-    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
-    assert result.returncode == 0
+    result = subprocess.run([script], capture_output=True, check=True)
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""
 
@@ -669,8 +665,11 @@ def test_entry_points_scripts(
     new_env["PYTHONPATH"] = (
         str(dest_wheel.sitedir) + os.pathsep + new_env.get("PYTHONPATH", "")
     )
-    result = subprocess.run([script], capture_output=True, env=new_env)
-    # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
-    assert result.returncode == 0
+    result = subprocess.run(
+        [script],
+        capture_output=True,
+        env=new_env,
+        check=True,
+    )
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""
