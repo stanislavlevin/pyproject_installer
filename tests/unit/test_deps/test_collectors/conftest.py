@@ -36,7 +36,7 @@ def valid_pep508_data(request):
     first item of them is actual valid PEP508 data (supposed to be collected),
     the second one is data expected to be read from deps config after `sync`.
     """
-    yield request.param
+    return request.param
 
 
 @pytest.fixture(params=INVALID_PEP508_DEPS_DATA)
@@ -47,4 +47,4 @@ def invalid_pep508_data(request):
     the second one is data expected to be read from deps config after `sync` if
     invalid dependency specifiers are allowed by a collector.
     """
-    yield request.param
+    return request.param

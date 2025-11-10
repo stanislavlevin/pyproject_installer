@@ -468,7 +468,7 @@ def test_env_command_notcaptured(wheel_no_csript, capfd, outs):
 )
 def console_scripts_data(request, mock_ssps, mock_usps):
     ssps, usps, vsp = request.param
-    yield {
+    return {
         # system site package
         "ssps": {
             "install": ssps,
