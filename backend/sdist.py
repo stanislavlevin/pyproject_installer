@@ -149,6 +149,8 @@ def build_sdist(sdist_directory, config_settings=None):
     sdist_directory.mkdir(parents=True, exist_ok=True)
     sdist_directory = sdist_directory.resolve(strict=True)
 
+    if config_settings is not None:
+        logger.warning("build_sdist: 'config_settings' argument is ignored")
     logger.info("Building sdist in %s", cwd)
     logger.info("Sdist directory: %s", sdist_directory)
 

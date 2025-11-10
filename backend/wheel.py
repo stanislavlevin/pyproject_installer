@@ -198,6 +198,10 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     wheel_directory.mkdir(parents=True, exist_ok=True)
     wheel_directory = wheel_directory.resolve(strict=True)
 
+    if config_settings is not None:
+        logger.warning("build_wheel: 'config_settings' argument is ignored")
+    if metadata_directory is not None:
+        logger.warning("build_wheel: 'metadata_directory' argument is ignored")
     logger.info("Building wheel in %s", cwd)
     logger.info("Wheel directory: %s", wheel_directory)
 

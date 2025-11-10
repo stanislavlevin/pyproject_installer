@@ -179,7 +179,8 @@ def test_build_backend_config_settings(mock_build, pyproject):
     mock_build.assert_called_once_with(**b_kwargs)
 
 
-def test_nonexistent_outdir(mock_build, pyproject):
+@pytest.mark.usefixtures("mock_build")
+def test_nonexistent_outdir(pyproject):
     """Check if outdir is created when it's missing"""
     pyproject_path = pyproject()
 
@@ -191,7 +192,8 @@ def test_nonexistent_outdir(mock_build, pyproject):
     assert outdir.exists()
 
 
-def test_existent_outdir(mock_build, pyproject):
+@pytest.mark.usefixtures("mock_build")
+def test_existent_outdir(pyproject):
     """Check if build_wheel doesn't fail on existent outdir"""
     pyproject_path = pyproject()
 
@@ -206,7 +208,8 @@ def test_existent_outdir(mock_build, pyproject):
     os.geteuid() == 0,
     reason="Requires unprivileged user",
 )
-def test_uncreatable_outdir(mock_build, pyproject):
+@pytest.mark.usefixtures("mock_build")
+def test_uncreatable_outdir(pyproject):
     """Check error if outdir is uncreatable(e.g. not enough permissions)"""
     pyproject_path = pyproject()
 
@@ -218,7 +221,8 @@ def test_uncreatable_outdir(mock_build, pyproject):
         build_wheel(pyproject_path, outdir=outdir)
 
 
-def test_wheeltracker(mock_build, pyproject):
+@pytest.mark.usefixtures("mock_build")
+def test_wheeltracker(pyproject):
     """Check if .wheeltracker is written on build"""
     pyproject_path = pyproject()
     outdir = pyproject_path / "dist"
@@ -232,7 +236,8 @@ def test_wheeltracker(mock_build, pyproject):
     assert tracker.read_text().rstrip() == "foo.whl"
 
 
-def test_sdist_no_wheeltracker(mock_build, pyproject):
+@pytest.mark.usefixtures("mock_build")
+def test_sdist_no_wheeltracker(pyproject):
     """Check if .wheeltracker is not created on sdist build"""
     pyproject_path = pyproject()
     outdir = pyproject_path / "dist"
@@ -287,7 +292,8 @@ def test_supported_build_hooks(hook, mock_build, pyproject):
     mock_build.assert_called_once_with(**b_kwargs)
 
 
-def test_raisable_thread(mock_build, pyproject, mocker):
+@pytest.mark.usefixtures("mock_build")
+def test_raisable_thread(pyproject, mocker):
     """Check if build fails on raised thread"""
     pyproject_path = pyproject()
     outdir = pyproject_path / "dist"
@@ -302,7 +308,8 @@ def test_raisable_thread(mock_build, pyproject, mocker):
         build_wheel(pyproject_path, outdir=outdir)
 
 
-def test_received_invalid_data(mock_build, pyproject, mocker):
+@pytest.mark.usefixtures("mock_build")
+def test_received_invalid_data(pyproject, mocker):
     """Check if build fails on invalid data"""
     pyproject_path = pyproject()
     outdir = pyproject_path / "dist"

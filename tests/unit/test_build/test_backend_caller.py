@@ -13,14 +13,6 @@ BACKEND_CALLER_MOD = "pyproject_installer.lib.backend_helper.backend_caller"
 
 
 @pytest.fixture
-def project(tmpdir, monkeypatch):
-    project_path = tmpdir / "project"
-    project_path.mkdir()
-    monkeypatch.chdir(project_path)
-    return project_path
-
-
-@pytest.fixture
 def build_backend_src(tmpdir):
     def _build_backend_src(be_module="be", be_object=None, hooks=None):
         backend_path = tmpdir / be_module
@@ -66,7 +58,10 @@ def build_backend_src(tmpdir):
 
 
 @pytest.fixture
-def build_backend(project, build_backend_src, monkeypatch):
+def build_backend(tmpdir, build_backend_src, monkeypatch):
+    project_path = tmpdir / "project"
+    project_path.mkdir()
+    monkeypatch.chdir(project_path)
     module = None
 
     def _build_backend(*args, **kwargs):
@@ -164,7 +159,8 @@ def test_invalid_hook_args():
     ),
     ids=["default", "verbose"],
 )
-def test_logging(verbose, logging_kwargs, mocker, mock_call_hook):
+@pytest.mark.usefixtures("mock_call_hook")
+def test_logging(verbose, logging_kwargs, mocker):
     """Check format and level of logging depending on verbosity"""
     m = mocker.patch.object(backend_caller.logging, "basicConfig")
     build_args = [
