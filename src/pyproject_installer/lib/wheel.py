@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 # current Wheel spec by PEP427 is 1.0
 WHEEL_SPECIFICATION_VERSION = (1, 0)
+# https://packaging.python.org/en/latest/specifications/recording-installed-packages/#the-record-file
+RECORD_FIELDS_NUMBER = 3
 
 
 def digest_for_record(name, data):
@@ -161,7 +163,7 @@ class WheelFile:
             reader = csv.reader(csvf)
             for row in reader:
                 # path, hash and size
-                if len(row) != 3:
+                if len(row) != RECORD_FIELDS_NUMBER:
                     raise ValueError(
                         f"Invalid number of fields in RECORD row: {row}",
                     )

@@ -16,6 +16,7 @@ from {module} import {attr}
 if __name__ == "__main__":
     sys.exit({main}())
 """
+SHEBANG_LENGTH_LIMIT = 127
 
 
 def build_shebang(executable):
@@ -26,7 +27,7 @@ def build_shebang(executable):
     Before Linux 5.1, the limit is 127 characters.  Since Linux 5.1,  the  limit
     is 255 characters.
     """
-    if " " not in executable and len(executable) <= 127:
+    if " " not in executable and len(executable) <= SHEBANG_LENGTH_LIMIT:
         return f"#!{executable}"
 
     # originally taken from distlib.scripts; how it works:
