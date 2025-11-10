@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 
 import pytest
@@ -190,13 +191,13 @@ def test_hatch_collector_missing_configuration_pyproject(
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     monkeypatch.chdir(tmpdir)
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
+    expected_err = re.escape(
         f"Hatch: missing tool.hatch.envs.{hatchenv} table in "
-        f"{hatch_config_path.name}"
+        f"{hatch_config_path.name}",
     )
-    assert str(exc.value) == expected_err
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=(expected_err)):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -225,12 +226,12 @@ def test_hatch_collector_missing_configuration_hatch(
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     monkeypatch.chdir(tmpdir)
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
-        f"Hatch: missing envs.{hatchenv} table in {hatch_config_path.name}"
+    expected_err = re.escape(
+        f"Hatch: missing envs.{hatchenv} table in {hatch_config_path.name}",
     )
-    assert str(exc.value) == expected_err
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -256,13 +257,13 @@ def test_hatch_collector_missing_deps(config, hatch_deps, depsconfig):
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
+    expected_err = re.escape(
         f"Hatch dependencies are not configured for {hatchenv}: "
-        f"missing {hatchenv}.dependencies and {hatchenv}.extra-dependencies"
+        f"missing {hatchenv}.dependencies and {hatchenv}.extra-dependencies",
     )
-    assert str(exc.value) == expected_err
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf

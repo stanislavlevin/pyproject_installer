@@ -1,4 +1,5 @@
 import json
+import re
 import textwrap
 from copy import deepcopy
 
@@ -104,11 +105,12 @@ def test_pep518_collector_invalid_deps(
 
     pyproject_pep518(in_reqs)
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        f"{collector}: invalid PEP508 Dependency Specifier: ",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"{collector}: invalid PEP508 Dependency Specifier: "
-    assert str(exc.value).startswith(expected_err)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf

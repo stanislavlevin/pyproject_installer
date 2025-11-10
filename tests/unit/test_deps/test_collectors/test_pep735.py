@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 
 import pytest
@@ -101,11 +102,12 @@ def test_pep735_collector_missing_depgroups(pyproject_toml, pep735_depsconfig):
     pyproject_toml("")
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        "pep735: missing dependency-groups table in pyproject.toml",
+    )
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = "pep735: missing dependency-groups table in pyproject.toml"
-    assert str(exc.value) == expected_err
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -120,11 +122,10 @@ def test_pep735_collector_invalid_type_depgroups(
     pyproject_toml('dependency-groups = "test"\n')
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(TypeError) as exc:
+    expected_err = re.escape("pep735: Dependency Groups is not a dict: ")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = "pep735: Dependency Groups is not a dict: "
-    assert str(exc.value).startswith(expected_err)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -137,14 +138,13 @@ def test_pep735_collector_no_groups(pep735_deps, pep735_depsconfig):
     pep735_deps({})
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = (
+    expected_err = re.escape(
         "pep735: group dependencies are not configured ("
-        "group: test, include chain: )"
+        "group: test, include chain: )",
     )
-    assert str(exc.value) == expected_err
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -177,11 +177,12 @@ def test_pep735_collector_missing_group(
     pep735_deps(group_config)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        f"pep735: group dependencies are not configured ({err_msg})",
+    )
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"pep735: group dependencies are not configured ({err_msg})"
-    assert str(exc.value) == expected_err
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -219,11 +220,10 @@ def test_pep735_collector_duplicate_names(
     pep735_deps(group_config)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(f"pep735: duplicate group names {err_msg}")
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"pep735: duplicate group names {err_msg}"
-    assert str(exc.value) == expected_err
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -257,11 +257,12 @@ def test_pep735_collector_invalid_type_groupdeps(
     pyproject_toml("\n".join(["[dependency-groups]"] + group_config) + "\n")
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(TypeError) as exc:
+    expected_err = re.escape(
+        f"pep735: dependencies format is not a list ({err_msg}): ",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"pep735: dependencies format is not a list ({err_msg}): "
-    assert str(exc.value).startswith(expected_err)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -300,13 +301,13 @@ def test_pep735_collector_invalid_type_depslist(
     pep735_deps(group_config)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(TypeError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = (
-        f"pep735: dependencies lists may contain strings or dicts ({err_msg}): "
+    expected_err = re.escape(
+        "pep735: dependencies lists may contain strings or dicts "
+        f"({err_msg}): ",
     )
-    assert str(exc.value).startswith(expected_err)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(TypeError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -369,11 +370,12 @@ def test_pep735_collector_invalid_pep508_deps(
     pep735_deps(group_config | {group: [f'"{x}"' for x in in_reqs]})
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        f"pep735: invalid PEP508 Dependency Specifier ({err_msg}): ",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"pep735: invalid PEP508 Dependency Specifier ({err_msg}): "
-    assert str(exc.value).startswith(expected_err)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -467,14 +469,13 @@ def test_pep735_collector_invalid_dep_object_specifiers(
     pep735_deps({group: invalid_deps})
     depsconfig_path, input_conf = pep735_depsconfig(group)
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = (
+    expected_err = re.escape(
         "pep735: invalid Dependency Object Specifier ("
-        f"group: {group}, include chain: ): "
+        f"group: {group}, include chain: ): ",
     )
-    assert str(exc.value).startswith(expected_err)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -502,14 +503,13 @@ def test_pep735_collector_invalid_dep_group_include(
     pep735_deps({group: invalid_deps})
     depsconfig_path, input_conf = pep735_depsconfig(group)
 
-    with pytest.raises(TypeError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = (
+    expected_err = re.escape(
         "pep735: Dependency Group Include's value is not a string ("
-        f"group: {group}, include chain: ): "
+        f"group: {group}, include chain: ): ",
     )
-    assert str(exc.value).startswith(expected_err)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(TypeError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -557,11 +557,12 @@ def test_pep735_collector_include_cycle(
     pep735_deps(group_config)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        f"pep735: include cycle detected ({err_msg})",
+    )
+    expected_err = f"^{expected_err}$"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-
-    expected_err = f"pep735: include cycle detected ({err_msg})"
-    assert str(exc.value) == expected_err
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf

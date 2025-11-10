@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 
 import pytest
@@ -98,10 +99,12 @@ def test_poetry_collector_missing_config(
 
     poetry_deps(poetry_config + "\n")
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        "Poetry is not configured: missing tool.poetry",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = "Poetry is not configured: missing tool.poetry"
-    assert expected_err in str(exc.value)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -125,12 +128,12 @@ def test_poetry_collector_wrong_group(poetry_config, poetry_deps, depsconfig):
 
     poetry_deps(poetry_config + "\n")
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
-        f"{groupname} is not configured: missing tool.poetry.group.{groupname}"
+    expected_err = re.escape(
+        f"{groupname} is not configured: missing tool.poetry.group.{groupname}",
     )
-    assert expected_err in str(exc.value)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -149,13 +152,13 @@ def test_poetry_collector_missing_dependencies(poetry_deps, depsconfig):
     depsconfig_path = depsconfig(json.dumps(input_conf))
     poetry_deps(f"[tool.poetry.group.{groupname}]\n")
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
+    expected_err = re.escape(
         f"Dependencies are not configured for {groupname}: "
-        f"missing tool.poetry.group.{groupname}.dependencies"
+        f"missing tool.poetry.group.{groupname}.dependencies",
     )
-    assert expected_err in str(exc.value)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf

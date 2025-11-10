@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 
 import pytest
@@ -162,10 +163,12 @@ def test_tox_collector_missing_configuration(
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     monkeypatch.chdir(tmpdir)
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        "Tox is not configured: missing tool.tox.legacy_tox_ini",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = "Tox is not configured: missing tool.tox.legacy_tox_ini"
-    assert expected_err in str(exc.value)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -191,10 +194,12 @@ def test_tox_collector_missing_testenv(config_type, tox_deps, depsconfig):
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
+    expected_err = re.escape(
+        f"Test environment is not configured: {testenv}",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = f"Test environment is not configured: {testenv}"
-    assert expected_err in str(exc.value)
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
@@ -220,12 +225,12 @@ def test_tox_collector_missing_deps(config_type, tox_deps, depsconfig):
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    with pytest.raises(ValueError) as exc:
-        deps_command("sync", depsconfig_path, srcnames=[])
-    expected_err = (
-        f"Dependencies are not configured for {testenv}: missing {testenv}.deps"
+    expected_err = re.escape(
+        f"Dependencies are not configured for {testenv}: missing {testenv}.deps",
     )
-    assert expected_err in str(exc.value)
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
