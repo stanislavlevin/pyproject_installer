@@ -7,7 +7,7 @@ import subprocess
 from pyproject_installer import __version__ as installer_version
 
 
-def install_pkg(context, pkg, ignore_installed=True):
+def install_pkg(context, *, pkg, ignore_installed=True):
     install_args = [
         context.env_exec_cmd,
         "-Im",
@@ -33,7 +33,7 @@ def upgrade_pkg(context, pkg):
 
 
 def test_build_with_build(virt_env, wheeldir):
-    install_pkg(virt_env, "build")
+    install_pkg(virt_env, pkg="build")
 
     build_args = [
         virt_env.env_exec_cmd,

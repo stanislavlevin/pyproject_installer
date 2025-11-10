@@ -26,7 +26,7 @@ SUPPORTED_BUILD_HOOKS = (
 )
 
 
-def build(srcdir, outdir, hook, config=None, verbose=False):
+def build(srcdir, *, outdir, hook, config=None, verbose=False):
     logger.info("Source tree: %s", srcdir)
     logger.info("Output dir: %s", outdir)
     if config is not None:
@@ -56,7 +56,7 @@ def build(srcdir, outdir, hook, config=None, verbose=False):
     return hook_result["result"]
 
 
-def build_wheel(srcdir, outdir, config=None, verbose=False):
+def build_wheel(srcdir, *, outdir, config=None, verbose=False):
     logger.info("Building wheel")
     wheel_filename = build(
         srcdir,
@@ -71,7 +71,7 @@ def build_wheel(srcdir, outdir, config=None, verbose=False):
     logger.info("Built wheel: %s", wheel_filename)
 
 
-def build_sdist(srcdir, outdir, config=None, verbose=False):
+def build_sdist(srcdir, *, outdir, config=None, verbose=False):
     logger.info("Building sdist")
     sdist_filename = build(
         srcdir,
@@ -100,7 +100,7 @@ def build_out_tmpdir(srcdir, hook, config, verbose):
         tmpdir.cleanup()
 
 
-def build_metadata(srcdir, outdir, config=None, verbose=False):
+def build_metadata(srcdir, *, outdir, config=None, verbose=False):
     """Build core metadata and put it on outdir"""
     logger.info("Building metadata")
     metadata_filename = "METADATA"
