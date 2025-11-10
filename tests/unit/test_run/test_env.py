@@ -107,7 +107,7 @@ def idf_outs(value):
 
 def idf_console_data(value):
     return "{}_ssp_{}_usp_{}_vsp".format(
-        *(map(lambda x: "with" if x else "without", value)),
+        *("with" if x else "without" for x in value),
     )
 
 
