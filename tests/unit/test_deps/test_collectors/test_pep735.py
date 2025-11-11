@@ -254,7 +254,7 @@ def test_pep735_collector_invalid_type_groupdeps(
     Collection of PEP735 dependencies with invalid type of group's value
     """
     group_config, err_msg = group_data
-    pyproject_toml("\n".join(["[dependency-groups]"] + group_config) + "\n")
+    pyproject_toml("\n".join(("[dependency-groups]", *group_config)) + "\n")
     depsconfig_path, input_conf = pep735_depsconfig()
 
     expected_err = re.escape(

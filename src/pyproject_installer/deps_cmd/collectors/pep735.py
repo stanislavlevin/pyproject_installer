@@ -74,10 +74,10 @@ class Pep735Collector(Collector):
         """Recursively resolve Dependency Group's dependencies"""
         resolved_group_name = self._resolve_group_name(
             group_name,
-            visited_groups + (group_name,) if visited_groups else [],
+            (*visited_groups, group_name) if visited_groups else (),
         )
         include_chain = (
-            visited_groups + (resolved_group_name,) if visited_groups else []
+            (*visited_groups, resolved_group_name) if visited_groups else ()
         )
 
         group_nname = pep503_normalized_name(group_name)
@@ -134,7 +134,7 @@ class Pep735Collector(Collector):
 
                 yield from self._resolve_dep_group(
                     group_name=include_group,
-                    visited_groups=visited_groups + (resolved_group_name,),
+                    visited_groups=(*visited_groups, resolved_group_name),
                 )
             else:
                 err_msg = (
