@@ -6,7 +6,7 @@ def parse_entry_points(distr, group):
     distr_eps = distr.entry_points
     try:
         # since Python3.10
-        distr_eps.select
+        _ = distr_eps.select
     except AttributeError:
         eps = (ep for ep in distr_eps if ep.group == group)
     else:
