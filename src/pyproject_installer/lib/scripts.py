@@ -22,10 +22,10 @@ SHEBANG_LENGTH_LIMIT = 127
 def build_shebang(executable):
     """
     man 2 execve
-    The kernel imposes a maximum length on the text that follows the "#!" char‐
-    acters  at  the  start of a script; characters beyond the limit are ignored.
-    Before Linux 5.1, the limit is 127 characters.  Since Linux 5.1,  the  limit
-    is 255 characters.
+    The kernel imposes a maximum length on the text that follows the
+    "#!" characters at the start of a script; characters beyond the
+    limit are ignored. Before Linux 5.1, the limit is 127 characters.
+    Since Linux 5.1, the limit is 255 characters.
     """
     if " " not in executable and len(executable) <= SHEBANG_LENGTH_LIMIT:
         return f"#!{executable}"
