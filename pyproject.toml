@@ -46,6 +46,7 @@ coverage = [
 lint = [
     "black",
     "pylint",
+    "ruff",
     {include-group = "test"},
 ]
 
@@ -151,3 +152,38 @@ source = [
 filterwarnings = [
     "error",
 ]
+
+[tool.ruff]
+line-length = 80
+extend-exclude = [
+    "src/pyproject_installer/_vendor/*",
+    "backend/_vendor/*",
+]
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "ANN",  # flake8-annotations
+    "EM",  # flake8-errmsg
+    "D",  # pydocstyle
+    "PYI",  # flake8-pyi
+    "TID252",  # relative-imports
+    "S603",  # subprocess-without-shell-equals-true
+    "TRY003",  # raise-vanilla-args
+    "PLR0912",  # too-many-branches
+    "PLR0913",  # too-many-arguments
+    "PLR0915",  # too-many-statements
+    "C901",  # complex-structure
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = [
+    "S101",  # assert
+    "PLR2004",  # magic-value-comparison
+]
+
+[tool.ruff.lint.flake8-pytest-style]
+parametrize-values-type = "tuple"
+parametrize-names-type = "csv"
