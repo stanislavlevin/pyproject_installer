@@ -257,7 +257,8 @@ class WheelFile:
 
         if wheel_version_tuple[0] > WHEEL_SPECIFICATION_VERSION[0]:
             raise ValueError(
-                f"Incompatible version of Wheel spec: {wheel_version}, supported: "
+                f"Incompatible version of Wheel spec: {wheel_version}, "
+                "supported: "
                 f"{'.'.join([str(i) for i in WHEEL_SPECIFICATION_VERSION])}",
             )
 
@@ -288,8 +289,8 @@ class WheelFile:
         METADATA and WHEEL are Metadata version 1.1 or greater format metadata.
 
         PEP314:
-        The PKG-INFO file format is a single set of RFC 822 headers parseable by the
-        rfc822.py module.
+        The PKG-INFO file format is a single set of RFC 822 headers parseable
+        by the rfc822.py module.
         """
         logger.debug("Parsing wheel spec metadata")
         wheel_text = (self.dist_info / "WHEEL").read_text(encoding="utf-8")

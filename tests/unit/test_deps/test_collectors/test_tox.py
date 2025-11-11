@@ -226,7 +226,8 @@ def test_tox_collector_missing_deps(config_type, tox_deps, depsconfig):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     expected_err = re.escape(
-        f"Dependencies are not configured for {testenv}: missing {testenv}.deps",
+        f"Dependencies are not configured for {testenv}: "
+        f"missing {testenv}.deps",
     )
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):

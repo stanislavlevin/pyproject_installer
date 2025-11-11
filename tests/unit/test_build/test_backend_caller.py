@@ -376,7 +376,8 @@ def test_in_tree_backend_not_used(build_backend, build_backend_path):
     """Check if backend was not loaded from backend path"""
     be = build_backend("be")
     with pytest.raises(
-        ValueError, match="backend code must be loaded from one of backend-path",
+        ValueError,
+        match="backend code must be loaded from one of backend-path",
     ):
         backend_caller.main(
             [be.name, "build_wheel", "--backend-path", build_backend_path],

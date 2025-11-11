@@ -429,7 +429,8 @@ def test_pep735_collector_not_eagerly_validating(
     """
     Collection of PEP735 dependencies should ignore other (not requested) groups
 
-    Tools SHOULD NOT eagerly validate the list contents of all Dependency Groups.
+    Tools SHOULD NOT eagerly validate the list contents of all Dependency
+    Groups.
     """
     in_groups, out_reqs = group_data
 

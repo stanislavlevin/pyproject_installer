@@ -449,7 +449,9 @@ def test_extraction_root(purelib, wheel_contents, wheel, installed_wheel):
 
 
 @pytest.mark.parametrize(
-    "strip_dist_info", (None, True, False), ids=("default", "strip", "no_strip"),
+    "strip_dist_info",
+    (None, True, False),
+    ids=("default", "strip", "no_strip"),
 )
 def test_record_not_installed(
     strip_dist_info, wheel_contents, wheel, installed_wheel,
@@ -499,7 +501,9 @@ def test_data_removed(wheel_contents, wheel, installed_wheel):
 
 
 @pytest.mark.parametrize(
-    "strip_dist_info", (None, True, False), ids=("default", "strip", "no_strip"),
+    "strip_dist_info",
+    (None, True, False),
+    ids=("default", "strip", "no_strip"),
 )
 def test_installation_filelist(
     strip_dist_info, wheel_contents, wheel, installed_wheel,
@@ -545,18 +549,19 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
     install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
 
     expected_filelist = {
-        dest_wheel.sitedir / f
-        for f in (
-            "foo-1.0.dist-info/METADATA",
-            "foo/__init__.py",
-        )
-    }
-    expected_filelist.add(
+        *{
+            dest_wheel.sitedir / f
+            for f in (
+                "foo-1.0.dist-info/METADATA",
+                "foo/__init__.py",
+            )
+        },
         Path(
-            str(dest_wheel.destdir) + get_installation_scheme("foo")[scheme_key],
+            str(dest_wheel.destdir)
+            + get_installation_scheme("foo")[scheme_key],
         )
         / data_subpath_name,
-    )
+    }
 
     assert dest_wheel.filelist() == expected_filelist
 
