@@ -37,7 +37,7 @@ class SdistBuilder:
         self.filename = f"{distr_name}-{distr_version}.tar.gz"
         self.root_dir = Path(f"{distr_name}-{distr_version}")
         self.sdist_path = sdist_directory / self.filename
-        self._tarfile = tarfile.open(
+        self._tarfile = tarfile.open(  # noqa: SIM115
             self.sdist_path, "w:gz", format=tarfile.PAX_FORMAT,
         )
 
