@@ -268,7 +268,7 @@ def pyproject_metadata_wheel(pyproject_with_backend, wheel_contents, wheel):
     def _core_metadata(headers=default_content_fields, reqs=[]):
         contents = wheel_contents()
         content_fields = list(headers)
-        content_fields.extend((f"Requires-Dist: {x}" for x in reqs))
+        content_fields.extend(f"Requires-Dist: {x}" for x in reqs)
         metadata_content = "\n".join(content_fields) + "\n"
         contents["foo-1.0.dist-info/METADATA"] = metadata_content
         wheel_path = wheel(contents=contents)

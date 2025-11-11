@@ -17,7 +17,7 @@ def tox_deps(tmpdir, monkeypatch):
             contents = ["[tool.tox]", "legacy_tox_ini = '''", f"[{testenv}]"]
             if deps is not None:
                 contents.append("deps =")
-                contents.extend((f"    {x}" for x in deps))
+                contents.extend(f"    {x}" for x in deps)
             contents.append("'''")
 
         elif config_type == "ini":
@@ -25,7 +25,7 @@ def tox_deps(tmpdir, monkeypatch):
             contents = [f"[{testenv}]"]
             if deps is not None:
                 contents.append("deps =")
-                contents.extend((f"    {x}" for x in deps))
+                contents.extend(f"    {x}" for x in deps)
         else:
             raise ValueError(f"Unsupported tox config type: {config_type}")
 

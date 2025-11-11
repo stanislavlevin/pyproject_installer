@@ -15,7 +15,7 @@ def pdm_deps(tmpdir, monkeypatch):
         contents = ["[tool.pdm.dev-dependencies]"]
         if deps is not None:
             contents.append(f"{group} = [")
-            contents.extend((f'"{x}",' for x in deps))
+            contents.extend(f'"{x}",' for x in deps)
             contents.append("]")
 
         config_path = tmpdir / "pyproject.toml"
