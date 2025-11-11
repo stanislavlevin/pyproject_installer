@@ -29,8 +29,6 @@ def get_installation_scheme(dist_name):
     # there is no headers in sysconfig for now
     # https://bugs.python.org/issue44445
     if "headers" not in scheme_dict:
-        # distutils.command.install defines headers as:
-        # '{base}/include/{implementation_lower}{py_version_short}{abiflags}/{dist_name}'
         installed_base = sysconfig.get_config_var("base")
 
         scheme_dict["headers"] = str(

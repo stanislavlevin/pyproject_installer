@@ -1043,7 +1043,10 @@ def test_config_eval_excludes(deps, depsconfig, capsys):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     deps_command(
-        action, depsconfig_path, srcnames=[], excludes=["bar", "foo-", "foob.*"],
+        action,
+        depsconfig_path,
+        srcnames=[],
+        excludes=["bar", "foo-", "foob.*"],
     )
 
     expected_out = "foo\n"
