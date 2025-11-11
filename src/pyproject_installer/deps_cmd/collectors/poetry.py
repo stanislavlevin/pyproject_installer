@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ...lib import markers, requirements, tomllib
+from ...lib import is_pep508_requirement, markers, tomllib
 from .collector import Collector
 
 
@@ -52,9 +52,7 @@ class PoetryCollector(Collector):
             )
 
         for req_name, req_spec in dependencies.items():
-            try:
-                requirements.Requirement(req_name)
-            except requirements.InvalidRequirement:
+            if not is_pep508_requirement(req_name):
                 continue
             req_line = req_name
 
@@ -69,5 +67,10 @@ class PoetryCollector(Collector):
                         req_line += ";" + req_markers
 
             # make sure that produced req line is correct PEP508 requirement
-            requirements.Requirement(req_line)
+            if not is_pep508_requirement(req_line):
+                err_msg = (
+                    f"{self.name}: invalid PEP508 Dependency Specifier: "
+                    f"{req_line}"
+                )
+                raise ValueError(err_msg) from None
             yield req_line

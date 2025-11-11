@@ -1,7 +1,7 @@
 from configparser import ConfigParser
 from pathlib import Path
 
-from ...lib import requirements, tomllib
+from ...lib import is_pep508_requirement, tomllib
 from .collector import Collector
 
 
@@ -62,10 +62,7 @@ class ToxCollector(Collector):
                 f"missing {self.testenv}.deps",
             ) from None
 
-        for line in map(str.strip, deps.splitlines()):
-            try:
-                requirements.Requirement(line)
-            except requirements.InvalidRequirement:
-                continue
-            else:
-                yield line
+        yield from filter(
+            is_pep508_requirement,
+            map(str.strip, deps.splitlines()),
+        )

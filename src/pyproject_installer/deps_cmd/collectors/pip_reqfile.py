@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from ...lib import requirements
+from ...lib import is_pep508_requirement
 from .collector import Collector
 
 
@@ -24,13 +24,9 @@ class PipReqFileCollector(Collector):
     def collect(self):
         # see pip._internal.req.req_file.ignore_comments
         comment_re = re.compile(r"(^|\s+)#.*$")
+
+        def _parse_pip_reqline(line):
+            return comment_re.sub("", line).strip()
+
         with self.reqfile.open(encoding="utf-8") as f:
-            for rl in f:
-                line = comment_re.sub("", rl)
-                line = line.strip()
-                try:
-                    requirements.Requirement(line)
-                except requirements.InvalidRequirement:
-                    continue
-                else:
-                    yield line
+            yield from filter(is_pep508_requirement, map(_parse_pip_reqline, f))
