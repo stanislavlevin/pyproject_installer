@@ -225,9 +225,10 @@ def pyproject_metadata(pyproject_with_backend):
     ]
 
     def _core_metadata(headers=default_content_fields, reqs=()):
-        content_fields = list(headers)
-        for req in reqs:
-            content_fields.append(f"Requires-Dist: {req}")
+        content_fields = [
+            *headers,
+            *(f"Requires-Dist: {req}" for req in reqs),
+        ]
 
         be_content = textwrap.dedent(
             """\
