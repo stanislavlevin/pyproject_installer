@@ -173,7 +173,9 @@ def wheel_contents():
 def wheel(tmpdir):
     """Prepares wheel file"""
 
-    def _wheel(name="foo-1.0-py3-none-any.whl", contents={}):
+    def _wheel(name="foo-1.0-py3-none-any.whl", contents=None):
+        if contents is None:
+            contents = {}
         # make it possible to rebuild wheel during a test
         wheeldir = Path(mkdtemp(dir=tmpdir))
         wheel = wheeldir / name
@@ -222,7 +224,7 @@ def pyproject_metadata(pyproject_with_backend):
         "Version: 1.0",
     ]
 
-    def _core_metadata(headers=default_content_fields, reqs=[]):
+    def _core_metadata(headers=default_content_fields, reqs=()):
         content_fields = list(headers)
         for req in reqs:
             content_fields.append(f"Requires-Dist: {req}")
@@ -265,7 +267,7 @@ def pyproject_metadata_wheel(pyproject_with_backend, wheel_contents, wheel):
         "Version: 1.0",
     ]
 
-    def _core_metadata(headers=default_content_fields, reqs=[]):
+    def _core_metadata(headers=default_content_fields, reqs=()):
         contents = wheel_contents()
         content_fields = list(headers)
         content_fields.extend(f"Requires-Dist: {x}" for x in reqs)

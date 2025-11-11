@@ -105,7 +105,7 @@ class DepsSourcesConfig:
         json_config = self._to_json(self.config)
         self.file.write_text(json_config, encoding="utf-8")
 
-    def show(self, srcnames=[]):
+    def show(self, srcnames=()):
         show_conf = {"sources": {}}
         for srcname, source in self.iter_sources(srcnames):
             show_conf["sources"][srcname] = source
@@ -121,7 +121,7 @@ class DepsSourcesConfig:
     def sources(self):
         return self.config["sources"]
 
-    def add(self, srcname, srctype, srcargs=[]):
+    def add(self, srcname, srctype, srcargs=()):
         if not self.file.is_file():
             # allow new file
             self.set_default()
@@ -141,7 +141,7 @@ class DepsSourcesConfig:
         del self.sources[srcname]
         self.save()
 
-    def iter_sources(self, srcnames=[]):
+    def iter_sources(self, srcnames=()):
         missing_srcnames = [x for x in srcnames if x not in self.sources]
         if missing_srcnames:
             raise ValueError(
@@ -168,7 +168,7 @@ class DepsSourcesConfig:
         collector = self.validate_collector(srctype, srcargs)
         return collector.collect()
 
-    def sync(self, *, srcnames=[], verify=False, verify_excludes=[]):
+    def sync(self, *, srcnames=(), verify=False, verify_excludes=()):
         """Sync sources
 
         verify: do sync of selected sources, but print the diff on
@@ -257,11 +257,11 @@ class DepsSourcesConfig:
     def eval(
         self,
         *,
-        srcnames=[],
+        srcnames=(),
         depformat=None,
         depformatextra=None,
         extra=None,
-        excludes=[],
+        excludes=(),
     ):
         if depformatextra is not None and depformat is None:
             raise ValueError("depformatextra must be used with depformat")
