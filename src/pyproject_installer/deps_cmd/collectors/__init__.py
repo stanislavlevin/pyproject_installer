@@ -9,7 +9,7 @@ from .pipenv import PipenvCollector
 from .poetry import PoetryCollector
 from .tox import ToxCollector
 
-__all__ = ["get_collector", "SUPPORTED_COLLECTORS"]
+__all__ = ["SUPPORTED_COLLECTORS", "get_collector"]
 
 SUPPORTED_COLLECTORS = {
     cls.name: cls

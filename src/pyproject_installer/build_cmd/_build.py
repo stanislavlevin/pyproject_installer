@@ -9,10 +9,10 @@ from ..lib.build_backend import backend_hook
 from ..lib.wheel import WheelFile
 
 __all__ = [
-    "build_wheel",
-    "build_sdist",
-    "build_metadata",
     "WHEEL_TRACKER",
+    "build_metadata",
+    "build_sdist",
+    "build_wheel",
 ]
 
 logger = logging.getLogger(__name__)
