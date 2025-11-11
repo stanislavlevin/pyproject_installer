@@ -40,8 +40,7 @@ class PdmCollector(Collector):
                 f"Pdm dependencies are not configured for group: {self.group}",
             ) from None
 
-        for line in deps:
-            line = line.strip()
+        for line in map(str.strip, deps):
             try:
                 requirements.Requirement(line)
             except requirements.InvalidRequirement:

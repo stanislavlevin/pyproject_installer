@@ -62,8 +62,7 @@ class ToxCollector(Collector):
                 f"missing {self.testenv}.deps",
             ) from None
 
-        for line in deps.splitlines():
-            line = line.strip()
+        for line in map(str.strip, deps.splitlines()):
             try:
                 requirements.Requirement(line)
             except requirements.InvalidRequirement:

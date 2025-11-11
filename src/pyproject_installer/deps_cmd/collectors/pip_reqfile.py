@@ -22,11 +22,11 @@ class PipReqFileCollector(Collector):
         self.reqfile = Path(reqfile)
 
     def collect(self):
+        # see pip._internal.req.req_file.ignore_comments
+        comment_re = re.compile(r"(^|\s+)#.*$")
         with self.reqfile.open(encoding="utf-8") as f:
-            for line in f:
-                # see pip._internal.req.req_file.ignore_comments
-                comment_re = re.compile(r"(^|\s+)#.*$")
-                line = comment_re.sub("", line)
+            for rl in f:
+                line = comment_re.sub("", rl)
                 line = line.strip()
                 try:
                     requirements.Requirement(line)
