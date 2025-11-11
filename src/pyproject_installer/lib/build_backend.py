@@ -226,7 +226,7 @@ def validate_source_dir(srcdir):
     return srcdir
 
 
-def backend_hook(python, srcdir, verbose, hook, hook_args=[(), {}]):
+def backend_hook(python, srcdir, verbose, hook, hook_args=((), {})):
     srcdir = validate_source_dir(srcdir)
     build_system = parse_build_system_spec(srcdir)
     read = b""
