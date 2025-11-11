@@ -13,10 +13,7 @@ def git_tree(tmpdir, request, monkeypatch):
         ["git", "clone", "--depth", "1", url, name],
         cwd=tmpdir,
     )
-    if subdir is None:
-        project = tmpdir / name
-    else:
-        project = tmpdir / name / subdir
+    project = tmpdir / name / subdir if subdir else tmpdir / name
     monkeypatch.chdir(project)
     return project
 
