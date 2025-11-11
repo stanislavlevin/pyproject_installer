@@ -33,7 +33,7 @@ def build(args, parser):
     outdir = args.srcdir / "dist" if args.outdir is None else args.outdir
     try:
         config_settings = convert_config_settings(args.backend_config_settings)
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         parser.error(str(e))
 
     build_func = build_sdist if args.sdist else build_wheel
@@ -184,7 +184,7 @@ def convert_config_settings(value):
         raise ValueError(err_msg) from None
 
     if not isinstance(config_settings, dict):
-        raise ValueError(err_msg) from None
+        raise TypeError(err_msg) from None
 
     return config_settings
 
