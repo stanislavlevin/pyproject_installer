@@ -16,8 +16,7 @@ def pep735_deps(pyproject_toml):
         for group, deps in groups_data.items():
             contents.append(f"{group} = [{', '.join(deps)}]")
 
-        parent_path = pyproject_toml("\n".join(contents) + "\n")
-        return parent_path
+        return pyproject_toml("\n".join(contents) + "\n")
 
     return _pep735_deps
 

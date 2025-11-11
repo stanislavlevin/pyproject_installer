@@ -155,7 +155,7 @@ def setuptools_project(pyproject):
 
 @pytest.fixture
 def pdm_project(pyproject):
-    pyproject_path = pyproject(
+    return pyproject(
         textwrap.dedent(
             """\
             [build-system]
@@ -172,5 +172,3 @@ def pdm_project(pyproject):
             """,
         ),
     )
-
-    return pyproject_path
