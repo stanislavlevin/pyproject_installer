@@ -215,14 +215,16 @@ class DepsSourcesConfig:
                 ("new_deps", synced_deps - stored_deps),
                 ("extra_deps", stored_deps - synced_deps),
             ):
-                diff_deps = set(filter(filter_verify_excludes, diff_deps))
+                filtered_diff_deps = set(
+                    filter(filter_verify_excludes, diff_deps),
+                )
 
-                if not diff_deps:
+                if not filtered_diff_deps:
                     continue
 
                 if srcname not in diff:
                     diff[srcname] = {}
-                diff[srcname][field_name] = sorted(map(str, diff_deps))
+                diff[srcname][field_name] = sorted(map(str, filtered_diff_deps))
 
         self.save()
 

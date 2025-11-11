@@ -61,8 +61,7 @@ class HatchCollector(Collector):
                     f"{self.hatchenv}.extra-dependencies",
                 ) from None
 
-        for line in deps:
-            line = line.strip()
+        for line in map(str.strip, deps):
             try:
                 requirements.Requirement(line)
             except requirements.InvalidRequirement:
