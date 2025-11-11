@@ -1,6 +1,7 @@
 import re
 import subprocess
 from pathlib import Path
+from shutil import which
 
 import pytest
 
@@ -9,8 +10,11 @@ import pytest
 def git_tree(tmpdir, request, monkeypatch):
     """Clone project and chdir into it"""
     name, url, subdir = request.param
+    if (git := which("git")) is None:
+        pytest.fail("missing required git util")
+
     subprocess.check_call(
-        ["git", "clone", "--depth", "1", url, name],
+        [git, "clone", "--depth", "1", url, name],
         cwd=tmpdir,
     )
     project = tmpdir / name / subdir if subdir else tmpdir / name
