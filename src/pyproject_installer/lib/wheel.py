@@ -129,7 +129,7 @@ class WheelFile:
         distribution-1.0.data/(purelib|platlib|headers|scripts|data). The
         initially supported paths are taken from distutils.command.install.
         """
-        INSTALL_PATHS = {"purelib", "platlib", "headers", "scripts", "data"}
+        install_paths = {"purelib", "platlib", "headers", "scripts", "data"}
 
         if not self.data.is_dir():
             raise ValueError("Optional .data should be a directory")
@@ -144,7 +144,7 @@ class WheelFile:
         # and those dirs should be a subset of known installation paths
         data_paths = {f.name for f in self.data.iterdir() if f.is_dir()}
 
-        data_subpath_diff = data_paths - INSTALL_PATHS
+        data_subpath_diff = data_paths - install_paths
         if data_subpath_diff:
             raise ValueError(
                 "Optional .data contains unsupported scheme keys: "
@@ -189,11 +189,11 @@ class WheelFile:
 
         packaged_files = set(self.memberlist)
         # not recorded signatures from dist-info
-        UNRECORDED_FILES = {
+        unrecorded_files = {
             (self.dist_info / f).at for f in ("RECORD.jws", "RECORD.p7s")
         }
 
-        extra_packaged = packaged_files - recorded_files - UNRECORDED_FILES
+        extra_packaged = packaged_files - recorded_files - unrecorded_files
         if extra_packaged:
             raise ValueError(
                 "Extra packaged files not recorded in RECORD: "
