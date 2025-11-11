@@ -36,8 +36,10 @@ def get_identifiers(template):
 
 
 class DepsSourcesConfig:
-    def __init__(self, file=Path.cwd() / DEFAULT_CONFIG_NAME):
-        self.file = Path(file)
+    def __init__(self, file=None):
+        self.file = (
+            Path.cwd() / DEFAULT_CONFIG_NAME if file is None else Path(file)
+        )
         self._config = None
 
     def validate_config(self, config):
