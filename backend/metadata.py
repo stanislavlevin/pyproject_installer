@@ -21,8 +21,7 @@ def parse_version_from_file(version_file):
     """
     err_msg = f"missing version in: {version_file}"
 
-    with open(version_file, encoding="utf-8") as f:
-        node = ast.parse(f.read())
+    node = ast.parse(Path(version_file).read_text(encoding="utf-8"))
 
     if len(node.body) != 1:
         raise ValueError(err_msg)
