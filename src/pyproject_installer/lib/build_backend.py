@@ -27,7 +27,7 @@ class RaisingThread(threading.Thread):
         self._exc = None
         try:
             super().run(*args, **kwargs)
-        except BaseException as e:
+        except BaseException as e:  # noqa: BLE001
             self._exc = e
 
     def join(self, *args, **kwargs):

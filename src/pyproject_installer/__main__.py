@@ -131,7 +131,7 @@ def run(args, parser):
             exception=e,
             print_traceback=False,
         )
-    except BaseException as e:
+    except BaseException as e:  # noqa: BLE001
         result = RunnerResult(
             status=ExitCodes.INTERNAL_ERROR,
             message="internal error happened",
