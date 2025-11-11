@@ -155,24 +155,24 @@ class CoreMetadata(Metadata):
                 self._metadata["Maintainer-email"] = ",".join(_m_emails)
 
         try:
-            license = metadata["license"]
+            license_data = metadata["license"]
         except KeyError:
             pass
         else:
-            if license.keys() not in ({"file"}, {"text"}):
+            if license_data.keys() not in ({"file"}, {"text"}):
                 raise ValueError(
                     "keys of license field should be either file or text, "
-                    f"given: {', '.join(license.keys())}",
+                    f"given: {', '.join(license_data.keys())}",
                 )
 
-            if "file" in license:
-                filename = license["file"]
+            if "file" in license_data:
+                filename = license_data["file"]
                 self._metadata["License"] = Path(filename).read_text(
                     encoding="utf-8",
                 )
                 self.required_files.add(filename)
             else:
-                self._metadata["License"] = license["text"]
+                self._metadata["License"] = license_data["text"]
 
         try:
             urls = metadata["urls"]
