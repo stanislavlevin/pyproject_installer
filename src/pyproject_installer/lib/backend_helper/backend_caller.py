@@ -148,7 +148,9 @@ def call_hook(backend, backend_path, hook, hook_args, hook_kwargs):
     except AttributeError:
         fallback = SUPPORTED_HOOKS[hook]
         if fallback is None:
-            raise ValueError(f"Missing mandatory hook in build backend: {hook}")
+            raise ValueError(
+                f"Missing mandatory hook in build backend: {hook}",
+            ) from None
         return fallback
 
     return hook_func(*hook_args, **hook_kwargs)
