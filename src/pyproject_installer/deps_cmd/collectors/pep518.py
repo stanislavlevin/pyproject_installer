@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ...lib import requirements
+from ...lib import is_pep508_requirement
 from ...lib.build_backend import parse_build_system_spec
 from .collector import Collector
 
@@ -18,11 +18,9 @@ class Pep518Collector(Collector):
         build_system = parse_build_system_spec(Path.cwd())
 
         for req in build_system["requires"]:
-            try:
-                requirements.Requirement(req)
-            except requirements.InvalidRequirement as e:
+            if not is_pep508_requirement(req):
                 err_msg = (
-                    f"{self.name}: invalid PEP508 Dependency Specifier: {e}"
+                    f"{self.name}: invalid PEP508 Dependency Specifier: {req}"
                 )
                 raise ValueError(err_msg) from None
             yield req

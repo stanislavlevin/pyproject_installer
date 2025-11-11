@@ -6,7 +6,7 @@ from pathlib import Path
 from string import Template
 
 from ..errors import DepsSourcesConfigError, DepsUnsyncedError
-from ..lib import requirements
+from ..lib import is_pep508_requirement, requirements
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
 
@@ -69,9 +69,7 @@ class DepsSourcesConfig:
             self.validate_collector(src["srctype"], src.get("srcargs", ()))
 
             for req in src.get("deps", ()):
-                try:
-                    requirements.Requirement(req)
-                except requirements.InvalidRequirement:
+                if not is_pep508_requirement(req):
                     raise DepsSourcesConfigError(
                         f"Invalid stored PEP508 requirement: {req}",
                     ) from None

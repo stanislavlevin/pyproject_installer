@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from ...lib import requirements
+from ...lib import is_pep508_requirement
 from ...lib.build_backend import backend_hook
 from .collector import Collector
 
@@ -23,11 +23,9 @@ class Pep517Collector(Collector):
             verbose=False,
             hook="get_requires_for_build_wheel",
         )["result"]:
-            try:
-                requirements.Requirement(req)
-            except requirements.InvalidRequirement as e:
+            if not is_pep508_requirement(req):
                 err_msg = (
-                    f"{self.name}: invalid PEP508 Dependency Specifier: {e}"
+                    f"{self.name}: invalid PEP508 Dependency Specifier: {req}"
                 )
                 raise ValueError(err_msg) from None
             yield req

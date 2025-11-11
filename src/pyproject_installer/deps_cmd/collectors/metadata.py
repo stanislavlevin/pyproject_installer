@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ...build_cmd import build_metadata
-from ...lib import requirements
+from ...lib import is_pep508_requirement
 from .collector import Collector
 
 
@@ -29,11 +29,9 @@ class MetadataCollector(Collector):
         metadata_email = email.message_from_string(metadata_text)
         requires = metadata_email.get_all("Requires-Dist", [])
         for req in requires:
-            try:
-                requirements.Requirement(req)
-            except requirements.InvalidRequirement as e:
+            if not is_pep508_requirement(req):
                 err_msg = (
-                    f"{self.name}: invalid PEP508 Dependency Specifier: {e}"
+                    f"{self.name}: invalid PEP508 Dependency Specifier: {req}"
                 )
                 raise ValueError(err_msg) from None
             yield req

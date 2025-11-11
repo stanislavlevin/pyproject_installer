@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ...lib import requirements, tomllib
+from ...lib import is_pep508_requirement, tomllib
 from ...lib.normalization import pep503_normalized_name
 from .collector import Collector
 
@@ -100,14 +100,12 @@ class Pep735Collector(Collector):
         for dep in deps_data:
             if isinstance(dep, str):
                 # must be a valid PEP508 Dependency Specifier
-                try:
-                    requirements.Requirement(dep)
-                except requirements.InvalidRequirement as e:
+                if not is_pep508_requirement(dep):
                     err_msg = (
                         "pep735: invalid PEP508 Dependency Specifier ("
                         f"group: {resolved_group_name}, "
                         f"include chain: {'->'.join(include_chain)}"
-                        f"): {e}"
+                        f"): {dep}"
                     )
                     raise ValueError(err_msg) from None
                 yield dep
