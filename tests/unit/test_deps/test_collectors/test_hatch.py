@@ -19,11 +19,11 @@ def hatch_deps(tmpdir, monkeypatch):
         config_path = tmpdir / config
         if deps is not None:
             contents.append("dependencies = [")
-            contents.extend((f'"{x}",' for x in deps))
+            contents.extend(f'"{x}",' for x in deps)
             contents.append("]")
         if extra_deps is not None:
             contents.append("extra-dependencies = [")
-            contents.extend((f'"{x}",' for x in extra_deps))
+            contents.extend(f'"{x}",' for x in extra_deps)
             contents.append("]")
 
         config_path.write_text("\n".join(contents) + "\n", encoding="utf-8")
