@@ -40,7 +40,7 @@ test = [
     "pytest-mock",
 ]
 coverage = [
-    "pytest-cov",
+    "pytest-cov >= 7.0.0",
     {include-group = "test"},
 ]
 lint = [
@@ -131,6 +131,7 @@ disable = [
 output-format = "colorized"
 
 [tool.coverage.run]
+patch = ["subprocess"]
 source = [
     "pyproject_installer",
 ]
