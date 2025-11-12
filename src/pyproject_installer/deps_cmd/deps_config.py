@@ -143,10 +143,9 @@ class DepsSourcesConfig:
         self.save()
 
     def iter_sources(self, srcnames=()):
-        missing_srcnames = [x for x in srcnames if x not in self.sources]
-        if missing_srcnames:
+        if missing_srcnames := [x for x in srcnames if x not in self.sources]:
             raise ValueError(
-                "Nonexistent sources: {}".format(", ".join(missing_srcnames)),
+                f"Nonexistent sources: {', '.join(missing_srcnames)}",
             )
 
         for srcname in srcnames or self.sources:

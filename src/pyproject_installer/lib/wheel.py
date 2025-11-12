@@ -194,8 +194,7 @@ class WheelFile:
             (self.dist_info / f).at for f in ("RECORD.jws", "RECORD.p7s")
         }
 
-        extra_packaged = packaged_files - recorded_files - unrecorded_files
-        if extra_packaged:
+        if extra_packaged := packaged_files - recorded_files - unrecorded_files:
             raise ValueError(
                 "Extra packaged files not recorded in RECORD: "
                 f"{', '.join(extra_packaged)}",
