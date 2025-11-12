@@ -30,7 +30,8 @@ def get_identifiers(template):
             and mo.group("escaped") is None
         ):
             raise ValueError(
-                "Unrecognized named group in pattern", template.pattern,
+                "Unrecognized named group in pattern",
+                template.pattern,
             )
     return ids
 
@@ -294,7 +295,9 @@ class DepsSourcesConfig:
                     deps.update(
                         set(
                             self.depformat(
-                                parsed_req, depformat, depformatextra,
+                                parsed_req,
+                                depformat,
+                                depformatextra,
                             ),
                         ),
                     )

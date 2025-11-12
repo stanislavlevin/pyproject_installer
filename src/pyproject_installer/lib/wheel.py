@@ -115,7 +115,8 @@ class WheelFile:
         distr = PathDistribution(self.dist_info)
         for ep_group in ("console_scripts", "gui_scripts"):
             for _, ep_value, ep_module, ep_attr in parse_entry_points(
-                distr, ep_group,
+                distr,
+                ep_group,
             ):
                 if not ep_module or not ep_attr:
                     raise ValueError(
@@ -214,7 +215,8 @@ class WheelFile:
             )
 
         digest = digest_for_record(
-            hash_name, (self.root / recorded_file).read_bytes(),
+            hash_name,
+            (self.root / recorded_file).read_bytes(),
         )
         if digest != hash_value:
             raise ValueError(

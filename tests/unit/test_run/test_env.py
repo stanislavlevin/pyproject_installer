@@ -499,7 +499,10 @@ def console_scripts_data(request, mock_ssps, mock_usps):
 
 
 def test_env_console_script(
-    wheel_cscript, wheel_no_csript, monkeypatch, console_scripts_data,
+    wheel_cscript,
+    wheel_no_csript,
+    monkeypatch,
+    console_scripts_data,
 ):
     """
     Check the precedence of packages having console scripts

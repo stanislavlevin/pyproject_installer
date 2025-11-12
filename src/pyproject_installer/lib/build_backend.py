@@ -182,7 +182,13 @@ def parse_build_system_spec(srcdir):
 
 
 def make_helper_args(
-    *, python, result_fd, verbose, build_system, hook, hook_args,
+    *,
+    python,
+    result_fd,
+    verbose,
+    build_system,
+    hook,
+    hook_args,
 ):
     args = [
         python,

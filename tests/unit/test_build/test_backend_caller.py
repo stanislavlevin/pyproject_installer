@@ -193,7 +193,8 @@ def test_logging(verbose, logging_kwargs, mocker):
     actual_handlers = kwargs["handlers"]
     assert len(actual_handlers) == 2
     for expected_handler, actual_handler in zip(
-        expected_handlers, actual_handlers,
+        expected_handlers,
+        actual_handlers,
     ):
         expected_type, expected_level, expected_stream = expected_handler
         assert isinstance(actual_handler, expected_type)
@@ -367,7 +368,8 @@ def test_missing_backend_object(build_backend):
     be_object = "nonexistent_backend_object"
 
     with pytest.raises(
-        AttributeError, match=f"module 'be' has no attribute '{be_object}'",
+        AttributeError,
+        match=f"module 'be' has no attribute '{be_object}'",
     ):
         backend_caller.main([f"{be.name}:{be_object}", "build_wheel"])
 
@@ -390,7 +392,8 @@ def test_missing_mandatory_hook(hook, build_backend):
     hooks.remove(hook)
     be = build_backend("be", hooks=hooks)
     with pytest.raises(
-        ValueError, match=f"Missing mandatory hook in build backend: {hook}",
+        ValueError,
+        match=f"Missing mandatory hook in build backend: {hook}",
     ):
         backend_caller.main([be.name, hook])
 
@@ -418,7 +421,11 @@ def test_missing_get_requires_for_build_wheel(build_backend):
     hooks.remove(hook)
     be = build_backend("be", hooks=hooks)
     hook_result = backend_caller.call_hook(
-        be.name, backend_path=None, hook=hook, hook_args=[], hook_kwargs={},
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[],
+        hook_kwargs={},
     )
     assert hook_result == []
 
@@ -427,7 +434,11 @@ def test_get_requires_for_build_wheel(build_backend):
     be = build_backend("be")
     hook = "get_requires_for_build_wheel"
     hook_result = backend_caller.call_hook(
-        be.name, backend_path=None, hook=hook, hook_args=[], hook_kwargs={},
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[],
+        hook_kwargs={},
     )
     assert hook_result == ["build_wheel_dep"]
 
@@ -438,7 +449,11 @@ def test_missing_get_requires_for_build_sdist(build_backend):
     hooks.remove(hook)
     be = build_backend("be", hooks=hooks)
     hook_result = backend_caller.call_hook(
-        be.name, backend_path=None, hook=hook, hook_args=[], hook_kwargs={},
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[],
+        hook_kwargs={},
     )
     assert hook_result == []
 
@@ -447,7 +462,11 @@ def test_get_requires_for_build_sdist(build_backend):
     be = build_backend("be")
     hook = "get_requires_for_build_sdist"
     hook_result = backend_caller.call_hook(
-        be.name, backend_path=None, hook=hook, hook_args=[], hook_kwargs={},
+        be.name,
+        backend_path=None,
+        hook=hook,
+        hook_args=[],
+        hook_kwargs={},
     )
     assert hook_result == ["build_sdist_dep"]
 
@@ -482,7 +501,9 @@ def test_prepare_metadata_for_build_wheel(build_backend, wheeldir):
 
 
 @pytest.mark.parametrize(
-    "be_object", (("be",), ("be", "obj")), ids=["module", "module:object"],
+    "be_object",
+    (("be",), ("be", "obj")),
+    ids=["module", "module:object"],
 )
 def test_backend_object(be_object, build_backend, wheeldir):
     build_backend(*be_object)
@@ -497,10 +518,15 @@ def test_backend_object(be_object, build_backend, wheeldir):
 
 
 @pytest.mark.parametrize(
-    "be_object", (("be",), ("be", "obj")), ids=["module", "module:object"],
+    "be_object",
+    (("be",), ("be", "obj")),
+    ids=["module", "module:object"],
 )
 def test_in_tree_backend_object(
-    be_object, in_tree_build_backend, wheeldir, build_backend_path,
+    be_object,
+    in_tree_build_backend,
+    wheeldir,
+    build_backend_path,
 ):
     in_tree_build_backend(*be_object)
 
@@ -518,7 +544,9 @@ def test_write_result(mocker, build_backend, wheeldir):
     be = build_backend("be")
     expected_result = json.dumps({"result": "foo-1.0.whl"}).encode("utf-8")
     m = mocker.patch.object(
-        backend_caller.os, "write", return_value=len(expected_result),
+        backend_caller.os,
+        "write",
+        return_value=len(expected_result),
     )
     backend_caller.main(
         [

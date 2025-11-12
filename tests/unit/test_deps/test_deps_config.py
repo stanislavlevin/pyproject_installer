@@ -449,7 +449,10 @@ def test_config_sync_verify_changed(data, depsconfig, mock_collector, capsys):
     ([], ["foo"], ["bar", "foo"], ["foo", "bar"], ["foobar"]),
 )
 def test_config_sync_verify_unchanged(
-    select, depsconfig, mock_collector, capsys,
+    select,
+    depsconfig,
+    mock_collector,
+    capsys,
 ):
     """Sync unchanged selected source with verify"""
 
@@ -488,7 +491,11 @@ def test_config_sync_verify_unchanged(
     ),
 )
 def test_config_sync_verify_normalized_dep(
-    old_reqs, new_reqs, depsconfig, mock_collector, capsys,
+    old_reqs,
+    new_reqs,
+    depsconfig,
+    mock_collector,
+    capsys,
 ):
     """Sync unchanged source with verify and dependency normalization"""
 
@@ -572,7 +579,10 @@ def test_config_sync_verify_normalized_dep(
     ),
 )
 def test_config_sync_verify_exclude_changed(
-    data, depsconfig, mock_collector, capsys,
+    data,
+    depsconfig,
+    mock_collector,
+    capsys,
 ):
     """Sync source with verify and exclude, check config and diff of changes"""
 
@@ -631,7 +641,10 @@ def test_config_sync_verify_exclude_changed(
     ),
 )
 def test_config_sync_verify_exclude_unchanged(
-    data, depsconfig, mock_collector, capsys,
+    data,
+    depsconfig,
+    mock_collector,
+    capsys,
 ):
     """
     Sync source with verify and exclude, check config and nodiff of changes
@@ -688,7 +701,10 @@ def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
-            action, depsconfig_path, srcnames=[], verify_excludes=["foo.*"],
+            action,
+            depsconfig_path,
+            srcnames=[],
+            verify_excludes=["foo.*"],
         )
 
     captured = capsys.readouterr()

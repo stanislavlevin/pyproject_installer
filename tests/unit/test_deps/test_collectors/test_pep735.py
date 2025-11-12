@@ -113,7 +113,8 @@ def test_pep735_collector_missing_depgroups(pyproject_toml, pep735_depsconfig):
 
 
 def test_pep735_collector_invalid_type_depgroups(
-    pyproject_toml, pep735_depsconfig,
+    pyproject_toml,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 dependencies with invalid type of 'dependency-groups'
@@ -167,7 +168,9 @@ def test_pep735_collector_no_groups(pep735_deps, pep735_depsconfig):
     ),
 )
 def test_pep735_collector_missing_group(
-    pep735_deps, pep735_depsconfig, group_data,
+    pep735_deps,
+    pep735_depsconfig,
+    group_data,
 ):
     """
     Collection of PEP735 dependencies with missing group
@@ -210,7 +213,9 @@ def test_pep735_collector_missing_group(
     ),
 )
 def test_pep735_collector_duplicate_names(
-    pep735_deps, pep735_depsconfig, group_data,
+    pep735_deps,
+    pep735_depsconfig,
+    group_data,
 ):
     """
     Collection of PEP735 dependencies with duplicate group names
@@ -247,7 +252,9 @@ def test_pep735_collector_duplicate_names(
     ),
 )
 def test_pep735_collector_invalid_type_groupdeps(
-    pyproject_toml, pep735_depsconfig, group_data,
+    pyproject_toml,
+    pep735_depsconfig,
+    group_data,
 ):
     """
     Collection of PEP735 dependencies with invalid type of group's value
@@ -287,7 +294,9 @@ def test_pep735_collector_invalid_type_groupdeps(
     ),
 )
 def test_pep735_collector_invalid_type_depslist(
-    group_data, pep735_deps, pep735_depsconfig,
+    group_data,
+    pep735_deps,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 dependencies with invalid type of requirement lists
@@ -313,7 +322,9 @@ def test_pep735_collector_invalid_type_depslist(
 
 
 def test_pep735_collector_valid_pep508_deps(
-    valid_pep508_data, pep735_deps, pep735_depsconfig,
+    valid_pep508_data,
+    pep735_deps,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 (valid PEP508) dependencies
@@ -355,7 +366,10 @@ def test_pep735_collector_valid_pep508_deps(
     ),
 )
 def test_pep735_collector_invalid_pep508_deps(
-    pep735_deps, pep735_depsconfig, invalid_pep508_data, group_data,
+    pep735_deps,
+    pep735_depsconfig,
+    invalid_pep508_data,
+    group_data,
 ):
     """
     Collection of PEP735 (invalid PEP508) dependencies
@@ -424,7 +438,9 @@ def test_pep735_collector_no_deps(pep735_deps, pep735_depsconfig, group_data):
     ),
 )
 def test_pep735_collector_not_eagerly_validating(
-    group_data, pep735_deps, pep735_depsconfig,
+    group_data,
+    pep735_deps,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 dependencies should ignore other (not requested) groups
@@ -454,7 +470,9 @@ def test_pep735_collector_not_eagerly_validating(
     ),
 )
 def test_pep735_collector_invalid_dep_object_specifiers(
-    invalid_deps, pep735_deps, pep735_depsconfig,
+    invalid_deps,
+    pep735_deps,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 invalid Dependency Object Specifiers dependencies
@@ -490,7 +508,9 @@ def test_pep735_collector_invalid_dep_object_specifiers(
     ),
 )
 def test_pep735_collector_invalid_dep_group_include(
-    invalid_deps, pep735_deps, pep735_depsconfig,
+    invalid_deps,
+    pep735_deps,
+    pep735_depsconfig,
 ):
     """
     Collection of PEP735 invalid Dependency Group Include's dependencies
@@ -548,7 +568,9 @@ def test_pep735_collector_invalid_dep_group_include(
     ),
 )
 def test_pep735_collector_include_cycle(
-    pep735_deps, pep735_depsconfig, group_data,
+    pep735_deps,
+    pep735_depsconfig,
+    group_data,
 ):
     """
     Collection of PEP735 dependencies with include cycle
@@ -570,7 +592,9 @@ def test_pep735_collector_include_cycle(
 
 @pytest.mark.parametrize("group_data", VALID_INCLUDE_PEP735_DATA)
 def test_pep735_collector_valid_dep_group_include(
-    pep735_deps, pep735_depsconfig, group_data,
+    pep735_deps,
+    pep735_depsconfig,
+    group_data,
 ):
     """
     Collection of PEP735 valid Dependency Group Include's dependencies

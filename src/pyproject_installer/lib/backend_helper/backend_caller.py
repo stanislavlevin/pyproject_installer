@@ -75,7 +75,8 @@ def write_result(result_fd, result):
 
 def main_parser(prog):
     parser = argparse.ArgumentParser(
-        description="PEP517 hook caller in subprocess", prog=prog,
+        description="PEP517 hook caller in subprocess",
+        prog=prog,
     )
     parser.add_argument(
         "backend",

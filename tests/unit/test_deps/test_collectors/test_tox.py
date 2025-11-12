@@ -38,7 +38,10 @@ def tox_deps(tmpdir, monkeypatch):
 
 @pytest.mark.parametrize("config_type", ("toml", "ini"))
 def test_tox_collector_valid_deps(
-    valid_pep508_data, config_type, tox_deps, depsconfig,
+    valid_pep508_data,
+    config_type,
+    tox_deps,
+    depsconfig,
 ):
     """Collection of tox (valid PEP508) dependencies"""
     # prepare source config
@@ -70,7 +73,10 @@ def test_tox_collector_valid_deps(
 
 @pytest.mark.parametrize("config_type", ("toml", "ini"))
 def test_tox_collector_invalid_deps(
-    invalid_pep508_data, config_type, tox_deps, depsconfig,
+    invalid_pep508_data,
+    config_type,
+    tox_deps,
+    depsconfig,
 ):
     """Collection of tox (invalid PEP508) dependencies"""
     # prepare source config
@@ -111,7 +117,10 @@ def test_tox_collector_invalid_deps(
 )
 @pytest.mark.parametrize("config_type", ("toml", "ini"))
 def test_tox_collector_unsupported(
-    valid_tox_deps, config_type, tox_deps, depsconfig,
+    valid_tox_deps,
+    config_type,
+    tox_deps,
+    depsconfig,
 ):
     """Collection of unsupported tox formats"""
     # prepare source config
@@ -143,7 +152,10 @@ def test_tox_collector_unsupported(
 
 @pytest.mark.parametrize("tox_config", ("", "[tool]", "[tool.tox]"))
 def test_tox_collector_missing_configuration(
-    tox_config, tmpdir, depsconfig, monkeypatch,
+    tox_config,
+    tmpdir,
+    depsconfig,
+    monkeypatch,
 ):
     """Collection of tox with missing configuration"""
     # prepare source config

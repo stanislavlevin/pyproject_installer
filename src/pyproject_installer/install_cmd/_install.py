@@ -34,7 +34,8 @@ def get_installation_scheme(dist_name):
         scheme_dict["headers"] = str(
             Path(
                 sysconfig.get_path(
-                    "include", vars={"installed_base": installed_base},
+                    "include",
+                    vars={"installed_base": installed_base},
                 ),
             )
             / dist_name,
@@ -156,7 +157,9 @@ def install_wheel(
 
         dist_info = f"{dist_name}-{dist_version}.dist-info"
         members = filter_dist_info(
-            dist_info, members=whl.memberlist, strip_dist_info=strip_dist_info,
+            dist_info,
+            members=whl.memberlist,
+            strip_dist_info=strip_dist_info,
         )
 
         logger.info("Extracting wheel")

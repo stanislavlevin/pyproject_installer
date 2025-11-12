@@ -42,7 +42,8 @@ def generate_entrypoints_scripts(distr, python, scriptsdir, destdir):
     """
     for ep_group in ("console_scripts", "gui_scripts"):
         for ep_name, _, ep_module, ep_attr in parse_entry_points(
-            distr, ep_group,
+            distr,
+            ep_group,
         ):
             logger.debug("Installing console script: %s", ep_name)
             script_text = SCRIPT_TEMPLATE.format(

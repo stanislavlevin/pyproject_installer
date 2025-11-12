@@ -174,7 +174,8 @@ class PyprojectVenv(EnvBuilder):
                 out_bytes = getattr(e, out_src)
                 if out_bytes:
                     out_text = out_bytes.decode(
-                        encoding="utf-8", errors="replace",
+                        encoding="utf-8",
+                        errors="replace",
                     )
                     err_msg += f"\n\nCommand's {out_src}:\n{out_text}"
             raise RunCommandError(err_msg) from None
