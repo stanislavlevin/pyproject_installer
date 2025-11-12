@@ -107,7 +107,8 @@ def test_logging(verbose, logging_kwargs, mocker):
     actual_handlers = kwargs["handlers"]
     assert len(actual_handlers) == 2
     for expected_handler, actual_handler in zip(
-        expected_handlers, actual_handlers,
+        expected_handlers,
+        actual_handlers,
     ):
         expected_type, expected_level, expected_stream = expected_handler
         assert isinstance(actual_handler, expected_type)

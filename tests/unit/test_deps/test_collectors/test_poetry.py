@@ -84,7 +84,9 @@ def test_poetry_collector(deps_data, notation, poetry_deps, depsconfig):
 
 @pytest.mark.parametrize("poetry_config", ("", "[tool]"))
 def test_poetry_collector_missing_config(
-    poetry_config, poetry_deps, depsconfig,
+    poetry_config,
+    poetry_deps,
+    depsconfig,
 ):
     """Collection of poetry's with missing config"""
     # prepare source config

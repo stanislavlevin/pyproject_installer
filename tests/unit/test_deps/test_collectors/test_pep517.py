@@ -25,7 +25,9 @@ def pyproject_pep517_wheel(pyproject_with_backend):
 
 
 def test_pep517_collector_valid_deps(
-    valid_pep508_data, pyproject_pep517_wheel, depsconfig,
+    valid_pep508_data,
+    pyproject_pep517_wheel,
+    depsconfig,
 ):
     """Collection of PEP517 (valid PEP508) wheel dependencies"""
     # prepare source config
@@ -49,7 +51,9 @@ def test_pep517_collector_valid_deps(
 
 
 def test_pep517_collector_invalid_deps(
-    invalid_pep508_data, pyproject_pep517_wheel, depsconfig,
+    invalid_pep508_data,
+    pyproject_pep517_wheel,
+    depsconfig,
 ):
     """Collection of PEP517 (invalid PEP508) wheel dependencies"""
     # prepare source config

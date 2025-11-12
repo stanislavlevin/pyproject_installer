@@ -104,7 +104,8 @@ def wheel_dir(tmpdir):
 def test_nonexistent_wheel(installed_wheel):
     with pytest.raises(ValueError, match="Unable to resolve path for wheel"):
         install_wheel(
-            Path("/nonexistent/wheel.file"), destdir=installed_wheel().destdir,
+            Path("/nonexistent/wheel.file"),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -112,7 +113,8 @@ def test_bad_wheel(tmpdir, destdir):
     bad_whl = tmpdir / "wheel.whl"
     bad_whl.touch(exist_ok=False)
     with pytest.raises(
-        WheelFileError, match=f"Error reading wheel {bad_whl}: ",
+        WheelFileError,
+        match=f"Error reading wheel {bad_whl}: ",
     ):
         install_wheel(bad_whl, destdir=destdir)
 
@@ -148,14 +150,18 @@ def test_invalid_wheel_name(wheel_name, wheel, installed_wheel):
 
 def test_missing_dist_info(wheel, installed_wheel):
     with pytest.raises(
-        ValueError, match="Missing mandatory dist-info directory",
+        ValueError,
+        match="Missing mandatory dist-info directory",
     ):
         install_wheel(wheel(), destdir=installed_wheel().destdir)
 
 
 @pytest.mark.parametrize("missing_file", ("METADATA", "WHEEL", "RECORD"))
 def test_missing_files_in_dist_info(
-    missing_file, wheel_contents, wheel, installed_wheel,
+    missing_file,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     contents = wheel_contents()
     del contents[f"foo-1.0.dist-info/{missing_file}"]
@@ -165,7 +171,8 @@ def test_missing_files_in_dist_info(
         match=f"Missing mandatory {missing_file} in dist-info directory",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -174,10 +181,12 @@ def test_missing_wheel_version(wheel_contents, wheel, installed_wheel):
     contents["foo-1.0.dist-info/WHEEL"] = ""
 
     with pytest.raises(
-        ValueError, match="Missing version number of Wheel spec",
+        ValueError,
+        match="Missing version number of Wheel spec",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -185,10 +194,12 @@ def test_unparseable_wheel_version(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents["foo-1.0.dist-info/WHEEL"] = "Wheel-Version: foo"
     with pytest.raises(
-        ValueError, match="Invalid version number of Wheel spec: foo",
+        ValueError,
+        match="Invalid version number of Wheel spec: foo",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -202,7 +213,8 @@ def test_incompatible_wheel_version(wheel_contents, wheel, installed_wheel):
         ),
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -231,7 +243,8 @@ def test_empty_record(wheel_contents, wheel, installed_wheel):
     contents.record = ""
     with pytest.raises(ValueError, match="Empty RECORD file"):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -239,22 +252,28 @@ def test_invalid_number_record(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents.record = ",,,"
     with pytest.raises(
-        ValueError, match="Invalid number of fields in RECORD row:",
+        ValueError,
+        match="Invalid number of fields in RECORD row:",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
 @pytest.mark.parametrize("hash_value", ("", "sha256="))
 def test_invalid_hash_record(
-    hash_value, wheel_contents, wheel, installed_wheel,
+    hash_value,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     contents = wheel_contents()
     contents.record = f"foo-1.0.dist-info/METADATA,{hash_value},0"
     with pytest.raises(ValueError, match="Invalid hash record"):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -264,7 +283,8 @@ def test_recorded_twice(wheel_contents, wheel, installed_wheel):
     contents.record += f"{metadata},sha256=123456,0"
     with pytest.raises(ValueError, match=f"Multiple records for: {metadata}"):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -290,7 +310,8 @@ def test_weak_hash_record(hashes, wheel_contents, wheel, installed_wheel):
         match=f"Too weak hash algorithm for records: {hash_name}",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -307,7 +328,8 @@ def test_incorrect_hash_record(wheel_contents, wheel, installed_wheel):
         match=f"Incorrect hash for recorded file: {extra_content}",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -323,7 +345,8 @@ def test_not_recorded_files(wheel_contents, wheel, installed_wheel):
         match=f"Extra packaged files not recorded in RECORD: {extra_content}",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -388,7 +411,8 @@ def test_extra_recorded_files(wheel_contents, wheel, installed_wheel):
         match=f"Not packaged file but recorded in RECORD: {non_content}",
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -396,10 +420,12 @@ def test_data_is_not_dir(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents["foo-1.0.data"] = ""
     with pytest.raises(
-        ValueError, match=re.escape("Optional .data should be a directory"),
+        ValueError,
+        match=re.escape("Optional .data should be a directory"),
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -407,10 +433,12 @@ def test_data_contains_files(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     contents["foo-1.0.data/bar"] = ""
     with pytest.raises(
-        ValueError, match=re.escape("Optional .data cannot contain files: bar"),
+        ValueError,
+        match=re.escape("Optional .data cannot contain files: bar"),
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -422,7 +450,8 @@ def test_data_invalid_scheme_key(wheel_contents, wheel, installed_wheel):
         match=re.escape("Optional .data contains unsupported scheme keys: key"),
     ):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -434,7 +463,8 @@ def test_invalid_entry_points(ep_spec, wheel_contents, wheel, installed_wheel):
     )
     with pytest.raises(ValueError, match="Invalid entry_points specification"):
         install_wheel(
-            wheel(contents=contents), destdir=installed_wheel().destdir,
+            wheel(contents=contents),
+            destdir=installed_wheel().destdir,
         )
 
 
@@ -454,7 +484,10 @@ def test_extraction_root(purelib, wheel_contents, wheel, installed_wheel):
     ids=("default", "strip", "no_strip"),
 )
 def test_record_not_installed(
-    strip_dist_info, wheel_contents, wheel, installed_wheel,
+    strip_dist_info,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     """Check RECORD is not installed"""
     contents = wheel_contents()
@@ -480,7 +513,9 @@ def test_installer_tool_custom(wheel_contents, wheel, installed_wheel):
     contents = wheel_contents()
     dest_wheel = installed_wheel()
     install_wheel(
-        wheel(contents=contents), destdir=dest_wheel.destdir, installer="rpm",
+        wheel(contents=contents),
+        destdir=dest_wheel.destdir,
+        installer="rpm",
     )
 
     assert (dest_wheel.distinfo / "INSTALLER").read_text() == "rpm\n"
@@ -506,7 +541,10 @@ def test_data_removed(wheel_contents, wheel, installed_wheel):
     ids=("default", "strip", "no_strip"),
 )
 def test_installation_filelist(
-    strip_dist_info, wheel_contents, wheel, installed_wheel,
+    strip_dist_info,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     contents = wheel_contents()
     contents["foo-1.0.dist-info/entry_points.txt"] = (
@@ -580,11 +618,16 @@ def test_data_scheme_keys(scheme_key, wheel_contents, wheel, installed_wheel):
     ids=["regular_shebang", "long_shebang"],
 )
 def test_data_scripts(
-    mocker, sub_execs, wheel_contents, wheel, installed_wheel,
+    mocker,
+    sub_execs,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     sys_exec, expected_shebang = sub_execs
     mocker.patch(
-        "pyproject_installer.install_cmd._install.sys.executable", sys_exec,
+        "pyproject_installer.install_cmd._install.sys.executable",
+        sys_exec,
     )
     contents = wheel_contents()
     contents["foo-1.0.data/scripts/bar"] = "#!python\nprint('Hello, World!')\n"
@@ -603,7 +646,10 @@ def test_data_scripts(
 
 
 def test_data_binary_scripts(
-    compiled_binary, wheel_contents, wheel, installed_wheel,
+    compiled_binary,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     """
     Test that compiled binary can be executed on installation
@@ -648,11 +694,16 @@ def test_data_binary_scripts(
     ids=["regular_shebang", "long_shebang"],
 )
 def test_entry_points_scripts(
-    mocker, sub_execs, wheel_contents, wheel, installed_wheel,
+    mocker,
+    sub_execs,
+    wheel_contents,
+    wheel,
+    installed_wheel,
 ):
     sys_exec, expected_shebang = sub_execs
     mocker.patch(
-        "pyproject_installer.install_cmd._install.sys.executable", sys_exec,
+        "pyproject_installer.install_cmd._install.sys.executable",
+        sys_exec,
     )
     contents = wheel_contents()
     contents["foo-1.0.dist-info/entry_points.txt"] = (
@@ -665,7 +716,10 @@ def test_entry_points_scripts(
     script = dest_wheel.scripts / "bar"
 
     expected_content = SCRIPT_TEMPLATE.format(
-        shebang=expected_shebang, module="foo", attr="main", main="main",
+        shebang=expected_shebang,
+        module="foo",
+        attr="main",
+        main="main",
     )
     assert script.read_text() == expected_content
 

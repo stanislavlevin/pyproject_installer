@@ -86,7 +86,10 @@ def test_pdm_collector_invalid_deps(invalid_pep508_data, pdm_deps, depsconfig):
 
 @pytest.mark.parametrize("pdm_config", ("", "[tool]", "[tool.pdm]"))
 def test_pdm_collector_missing_configuration(
-    pdm_config, tmpdir, depsconfig, monkeypatch,
+    pdm_config,
+    tmpdir,
+    depsconfig,
+    monkeypatch,
 ):
     """Collection of pdm with missing configuration"""
     # prepare source config

@@ -83,7 +83,13 @@ def deps(action_name):
 
 class RunnerResult:
     def __init__(
-        self, status, message, log, *, exception=None, print_traceback=False,
+        self,
+        status,
+        message,
+        log,
+        *,
+        exception=None,
+        print_traceback=False,
     ):
         self.status = status
         self.message = message
@@ -96,7 +102,8 @@ class RunnerResult:
         if self.message is not None:
             status_msg += " (%(message)s)"
         self.log(
-            status_msg, {"status": self.status.name, "message": self.message},
+            status_msg,
+            {"status": self.status.name, "message": self.message},
         )
 
         if self.exception is not None:
