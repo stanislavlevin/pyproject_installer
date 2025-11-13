@@ -6,6 +6,8 @@ import pytest
 
 from pyproject_installer.deps_cmd import deps_command
 
+COLLECTOR = "poetry"
+
 
 @pytest.fixture
 def poetry_deps(tmpdir, monkeypatch):
@@ -60,10 +62,9 @@ def test_poetry_collector(deps_data, notation, poetry_deps, depsconfig):
     """Collection of poetry deps"""
     # prepare source config
     srcname = "foo"
-    collector = "poetry"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": ["dev"]}},
+        "sources": {srcname: {"srctype": COLLECTOR, "srcargs": ["dev"]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -91,11 +92,10 @@ def test_poetry_collector_missing_config(
     """Collection of poetry's with missing config"""
     # prepare source config
     srcname = "foo"
-    collector = "poetry"
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
+        "sources": {srcname: {"srctype": COLLECTOR, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -120,11 +120,10 @@ def test_poetry_collector_wrong_group(poetry_config, poetry_deps, depsconfig):
     """Collection of poetry's wrong group"""
     # prepare source config
     srcname = "foo"
-    collector = "poetry"
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
+        "sources": {srcname: {"srctype": COLLECTOR, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
@@ -145,11 +144,10 @@ def test_poetry_collector_missing_dependencies(poetry_deps, depsconfig):
     """Collection of poetry's missing dependencies"""
     # prepare source config
     srcname = "foo"
-    collector = "poetry"
     groupname = "bar"
 
     input_conf = {
-        "sources": {srcname: {"srctype": collector, "srcargs": [groupname]}},
+        "sources": {srcname: {"srctype": COLLECTOR, "srcargs": [groupname]}},
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
     poetry_deps(f"[tool.poetry.group.{groupname}]\n")
@@ -159,6 +157,42 @@ def test_poetry_collector_missing_dependencies(poetry_deps, depsconfig):
         f"missing tool.poetry.group.{groupname}.dependencies",
     )
     expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == input_conf
+
+
+def test_poetry_collector_invalid_sep(poetry_deps, depsconfig, mocker):
+    """
+    Collection of poetry's deps with no longer valid PEP508 marker separator
+    """
+    invalid_sep = "INVALID_SEP"
+    mocker.patch(
+        "pyproject_installer.deps_cmd.collectors.poetry.PEP508_ENV_MARK_SEP",
+        invalid_sep,
+    )
+    # prepare source config
+    srcname = "foo"
+    groupname = "bar"
+
+    input_conf = {
+        "sources": {srcname: {"srctype": COLLECTOR, "srcargs": [groupname]}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    poetry_content = (
+        f"[tool.poetry.group.{groupname}.dependencies]\n"
+        'foo = {version = "1.0", markers = "python_version <= \'3.4\'"}\n'
+    )
+    poetry_deps(poetry_content)
+
+    expected_err = re.escape(
+        f"{COLLECTOR}: invalid PEP508 Dependency Specifier: "
+        f"foo{invalid_sep}python_version <= '3.4'",
+    )
+    expected_err = f"^{expected_err}$"
     with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 

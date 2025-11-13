@@ -3,6 +3,8 @@ from pathlib import Path
 from ...lib import is_pep508_requirement, markers, tomllib
 from .collector import Collector
 
+PEP508_ENV_MARK_SEP = ";"
+
 
 class PoetryCollector(Collector):
     """Collect poetry dependencies in cwd/pyproject.toml
@@ -64,7 +66,7 @@ class PoetryCollector(Collector):
                     except markers.InvalidMarker:
                         pass
                     else:
-                        req_line += ";" + req_markers
+                        req_line += PEP508_ENV_MARK_SEP + req_markers
 
             # make sure that produced req line is correct PEP508 requirement
             if not is_pep508_requirement(req_line):
