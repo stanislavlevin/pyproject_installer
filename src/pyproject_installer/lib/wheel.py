@@ -10,7 +10,6 @@ from zipfile import BadZipFile, ZipFile
 from zipfile import Path as ZipPath
 
 from ..errors import WheelFileError
-from .entry_points import parse_entry_points
 
 logger = logging.getLogger(__name__)
 
@@ -114,13 +113,10 @@ class WheelFile:
         """
         distr = PathDistribution(self.dist_info)
         for ep_group in ("console_scripts", "gui_scripts"):
-            for _, ep_value, ep_module, ep_attr in parse_entry_points(
-                distr,
-                ep_group,
-            ):
-                if not ep_module or not ep_attr:
+            for ep in distr.entry_points.select(group=ep_group):
+                if not ep.module or not ep.attr:
                     raise ValueError(
-                        f"Invalid entry_points specification: {ep_value}",
+                        f"Invalid entry_points specification: {ep.value}",
                     )
 
     def validate_data(self):

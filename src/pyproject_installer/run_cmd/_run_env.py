@@ -67,20 +67,13 @@ class PyprojectVenv(EnvBuilder):
         ssp_paths = site.getsitepackages([sys.base_prefix])
         ssds = distributions(path=ssp_paths)
 
-        def distr_name(distr):
-            """`name` added in importlib.metadata 3.3.0 and Python 3.10"""
-            try:
-                return distr.name
-            except AttributeError:
-                return distr.metadata["Name"]
-
-        ssds_norm = {pep503_normalized_name(distr_name(x)): x for x in ssds}
+        ssds_norm = {pep503_normalized_name(x.name): x for x in ssds}
 
         # user site packages can be either a string or None
         usp_path = site.getusersitepackages()
         usp_paths = [] if usp_path is None else [usp_path]
         usds = distributions(path=usp_paths)
-        usds_norm = {pep503_normalized_name(distr_name(x)): x for x in usds}
+        usds_norm = {pep503_normalized_name(x.name): x for x in usds}
 
         wd_name, _ = parse_name(str(self.wheel.name))
         wd_norm_name = pep503_normalized_name(wd_name)
