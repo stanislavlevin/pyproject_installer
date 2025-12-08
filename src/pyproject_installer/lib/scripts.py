@@ -1,7 +1,5 @@
 import logging
 
-from .entry_points import parse_entry_points
-
 logger = logging.getLogger(__name__)
 
 
@@ -41,19 +39,16 @@ def generate_entrypoints_scripts(distr, python, scriptsdir, destdir):
     https://packaging.python.org/en/latest/specifications/entry-points/
     """
     for ep_group in ("console_scripts", "gui_scripts"):
-        for ep_name, _, ep_module, ep_attr in parse_entry_points(
-            distr,
-            ep_group,
-        ):
-            logger.debug("Installing console script: %s", ep_name)
+        for ep in distr.entry_points.select(group=ep_group):
+            logger.debug("Installing console script: %s", ep.name)
             script_text = SCRIPT_TEMPLATE.format(
                 shebang=build_shebang(python),
-                module=ep_module,
-                attr=ep_attr.split(".", maxsplit=1)[0],
-                main=ep_attr,
+                module=ep.module,
+                attr=ep.attr.split(".", maxsplit=1)[0],
+                main=ep.attr,
             )
             rootdir = destdir / scriptsdir.relative_to(scriptsdir.root)
             rootdir.mkdir(parents=True, exist_ok=True)
-            script_path = rootdir / ep_name
+            script_path = rootdir / ep.name
             script_path.write_text(script_text, encoding="utf-8")
             script_path.chmod(script_path.stat().st_mode | 0o555)
