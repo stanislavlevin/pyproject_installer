@@ -6,7 +6,7 @@ VALID_PEP508_DEPS_DATA = (
     (["foo == 1.0"], ["foo==1.0"]),
     (
         ["foo @ https://example.com/foo.zip"],
-        ["foo@ https://example.com/foo.zip"],
+        ["foo @ https://example.com/foo.zip"],
     ),
     (["foo [test]"], ["foo[test]"]),
     (["foo [test] > 1.0"], ["foo[test]>1.0"]),
