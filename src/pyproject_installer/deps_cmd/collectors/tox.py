@@ -28,7 +28,7 @@ class ToxCollector(Collector):
 
     def _tox_config(self):
         config = ConfigParser(interpolation=None)
-        if self.toxconfig.suffix in (".toml",):
+        if self.toxconfig.suffix == ".toml":
             # pyproject.toml
             with self.toxconfig.open("rb") as f:
                 pyproject_data = tomllib.load(f)
