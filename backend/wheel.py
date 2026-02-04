@@ -78,7 +78,7 @@ class WheelBuilder:
                     continue
 
                 # allow only Python modules for now
-                if fp.suffix not in (".py",):
+                if fp.suffix != ".py":
                     continue
 
                 fp_rel = fp.relative_to(package_dir)
