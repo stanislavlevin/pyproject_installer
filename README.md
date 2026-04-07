@@ -415,17 +415,22 @@ python -m pyproject_installer install --destdir=/rootdir
 ```
 
 ## Tests
-- install tests dependencies (requires `pip 25.1+`):
+Tests are run from an installed venv, matching CI:
+- create a venv and install the project with its test dependencies
+  (requires `pip 25.1+`):
   ```
-  python -m pip install --group test
+  python -m venv .venv
+  .venv/bin/python -m pip install --upgrade pip
+  .venv/bin/python -m pip install --group test
+  .venv/bin/python -m pip install .
   ```
 - unit tests can be run as:
   ```
-  pytest tests/unit
+  .venv/bin/pytest tests/unit
   ```
 - integration tests (require internet connection and `git` tool) can be run as:
   ```
-  pytest tests/integration
+  .venv/bin/pytest tests/integration
   ```
 
 ## License
