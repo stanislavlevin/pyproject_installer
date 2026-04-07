@@ -20,12 +20,13 @@ jobs:
     - name: Install dependencies
       run: |
         python --version
-        python -m pip install --upgrade pip
-        python -m pip install validate-pyproject[all]
+        python -m venv .venv
+        .venv/bin/python -m pip install --upgrade pip
+        .venv/bin/python -m pip install validate-pyproject[all]
 
     - name: Validate pyproject.toml
       run: |
-        python -m validate_pyproject -vv pyproject.toml
+        .venv/bin/python -m validate_pyproject -vv pyproject.toml
 
   lint:
     name: Lint code base
@@ -44,17 +45,18 @@ jobs:
     - name: Install dependencies
       run: |
         python --version
-        python -m pip install --upgrade pip
-        python -m pip install --group lint
+        python -m venv .venv
+        .venv/bin/python -m pip install --upgrade pip
+        .venv/bin/python -m pip install --group lint
     - name: Ruff
       run: |
-        python -m ruff check .
+        .venv/bin/python -m ruff check .
     - name: Pylint
       run: |
-        python -m pylint -v --rcfile=pyproject.toml .
+        .venv/bin/python -m pylint -v --rcfile=pyproject.toml .
     - name: Black
       run: |
-        python -m black -v --check --diff .
+        .venv/bin/python -m black -v --check --diff .
 
   unit_tests:
     name: Run unit tests
@@ -70,17 +72,18 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
-    - name: Install dependencies and project
+    - name: Create venv and install dependencies and project
       run: |
         python --version
-        python -m pip install --upgrade pip
-        python -m pip install --group coverage
-        python -m pip install .
+        python -m venv .venv
+        .venv/bin/python -m pip install --upgrade pip
+        .venv/bin/python -m pip install --group coverage
+        .venv/bin/python -m pip install .
 
     - name: Unit tests with coverage
       run: |
         export COVERAGE_PROCESS_START="$(pwd)/pyproject.toml"
-        pytest -vra --cov --cov-config=pyproject.toml tests/unit
+        .venv/bin/pytest -vra --cov --cov-config=pyproject.toml tests/unit
 
   unit_tests_self_run:
     name: Run unit tests via pyproject_installer
@@ -99,6 +102,7 @@ jobs:
     - name: Install dependencies and project
       run: |
         python --version
+        # nested venvs are not supported
         python -m pip install --upgrade pip
         python -m pip install --group test
         python -m pip install .
@@ -121,13 +125,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
-    - name: Install dependencies and project
+    - name: Create venv and install dependencies and project
       run: |
         python --version
-        python -m pip install --upgrade pip
-        python -m pip install --group test
-        python -m pip install .
+        python -m venv .venv
+        .venv/bin/python -m pip install --upgrade pip
+        .venv/bin/python -m pip install --group test
+        .venv/bin/python -m pip install .
 
     - name: integration tests
       run: |
-        pytest -vra tests/integration
+        .venv/bin/pytest -vra tests/integration

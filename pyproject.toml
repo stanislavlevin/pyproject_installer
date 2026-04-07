@@ -58,6 +58,8 @@ include_dirs_sdist = ["backend", "tests"]
 line-length = 80
 extend-exclude = '''
     .*/_vendor/.*
+    | .*/.venv/.*
+    | .*/.run_venv/.*
 '''
 
 [tool.pylint."master"]
@@ -70,6 +72,8 @@ ignore-paths = [
     '^.tox/.*',  # dot escaping doesn't work, see pylint#5398
     '.*/\.run_venv/.*',
     '^.run_venv/.*',  # dot escaping doesn't work, see pylint#5398
+    '.*/\.venv/.*',
+    '^.venv/.*',  # dot escaping doesn't work, see pylint#5398
 ]
 persistent="no"
 
@@ -146,6 +150,7 @@ show_missing = true
 source = [
     "src/pyproject_installer",
     "*/src/pyproject_installer",
+    "*/site-packages/pyproject_installer",
 ]
 
 [tool.pytest.ini_options]
@@ -158,6 +163,8 @@ line-length = 80
 extend-exclude = [
     "src/pyproject_installer/_vendor/*",
     "backend/_vendor/*",
+    ".venv/*",
+    ".run_venv/*",
 ]
 
 [tool.ruff.lint]

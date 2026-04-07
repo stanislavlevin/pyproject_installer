@@ -11,6 +11,7 @@ from sysconfig import get_path, get_paths
 
 import pytest
 
+import pyproject_installer
 from pyproject_installer.errors import RunCommandEnvError, RunCommandError
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE, build_shebang
@@ -98,6 +99,19 @@ def mock_usps(destdir, mocker):
         return_value=str(usps_dir),
     )
     return usps_path, str(usps_dir)
+
+
+@pytest.fixture(autouse=True)
+def venv_pyproject_installer(monkeypatch):
+    """
+    Inject pyproject_installer installed into current venv into PYTHONPATH for
+    subprocess to be able to install wheels via run_command.
+    """
+    monkeypatch.setenv(
+        "PYTHONPATH",
+        str(Path(pyproject_installer.__file__).parent.parent),
+        prepend=os.pathsep,
+    )
 
 
 def idf_outs(value):
@@ -618,10 +632,13 @@ def test_env_content_console_script(wheel_cscript, mock_usps, mock_ssps):
         capture_output=True,
     )
     json_data = json.loads(res.stdout.decode("utf-8"))
-    # env_exec_cmd is used for shebangs and
-    # is constructed as Path(sys.executable).name
+    # env_exec_cmd is used for shebangs and is derived from
+    # Path(sys._base_executable).name of the process that created the venv
     expected_shebang = build_shebang(
-        str(Path(json_data["bin_dir"]) / Path(sys.executable).name),
+        str(
+            Path(json_data["bin_dir"])
+            / Path(sys._base_executable).name,  # noqa: SLF001
+        ),
     )
     # build_shebang is covered by installer's tests
     for name in [usp, ssp, vsp]:
