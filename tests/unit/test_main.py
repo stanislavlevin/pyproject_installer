@@ -47,6 +47,30 @@ def mock_read_tracker(mocker):
     )
 
 
+@pytest.fixture
+def preserve_cwd(monkeypatch):
+    """Snapshot and restore the process cwd around a test."""
+    monkeypatch.chdir(Path.cwd())
+
+
+@pytest.fixture
+def record_cwd():
+    """Patch a mocked command to record its cwd"""
+    command_cwd = []
+
+    def _patch_mocked_cmd(mocked_cmd):
+        def _record_cwd():
+            command_cwd[:] = [Path.cwd()]
+
+        def _cwd():
+            return command_cwd[0] if command_cwd else None
+
+        mocked_cmd.side_effect = lambda *_a, **_k: _record_cwd()
+        return _cwd
+
+    return _patch_mocked_cmd
+
+
 def test_version():
     result = subprocess.run(
         args=[sys.executable, "-m", "pyproject_installer", "--version"],
@@ -735,6 +759,329 @@ def test_deps_cli_sync_selected(mock_deps_command, srcnames):
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_chdir_on_valid_dir(mock_build_wheel, record_cwd, tmp_path):
+    """
+    Pass -C with absolute path to valid directory and check if cwd is changed.
+    """
+    cwd = tmp_path.resolve()
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", str(cwd), "build"])
+    assert actual_cwd() == cwd
+    mock_build_wheel.assert_called_once()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_relative_path_resolves_against_original_cwd(
+    mock_build_wheel,
+    tmp_path,
+    monkeypatch,
+    record_cwd,
+):
+    """
+    Pass -C with relative path to valid directory and check if cwd is changed.
+    """
+    rel_dirname = "pkg"
+    cwd = tmp_path / rel_dirname
+    cwd.mkdir()
+    monkeypatch.chdir(tmp_path)
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", rel_dirname, "build"])
+    assert actual_cwd() == cwd
+    mock_build_wheel.assert_called_once()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_missing_dir_errors(mock_build_wheel, tmp_path, capsys):
+    """Pass -C with nonexistent directory and check the error"""
+    cwd = tmp_path / "does_not_exist"
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["-C", str(cwd), "build"])
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    captured = capsys.readouterr()
+
+    # actual error message is controlled by cpython
+    expected_err_msg = "-C: "
+    assert expected_err_msg in captured.err
+    mock_build_wheel.assert_not_called()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_non_dir_errors(mock_build_wheel, tmp_path, capsys):
+    """Pass -C with file (not directory) and check the error"""
+    (cwd := tmp_path / "some_file").touch()
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["-C", str(cwd), "build"])
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    captured = capsys.readouterr()
+
+    # actual error message is controlled by cpython
+    expected_err_msg = "-C: "
+    assert expected_err_msg in captured.err
+    mock_build_wheel.assert_not_called()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_empty_string_no_change(mock_build_wheel, record_cwd):
+    """Pass -C "" and check if cwd is left unchanged"""
+    cwd = ""
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", str(cwd), "build"])
+    assert actual_cwd() == Path.cwd()
+    mock_build_wheel.assert_called_once()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_unchanged_without_flag(mock_build_wheel, record_cwd):
+    """Don't pass -C and check if cwd is left unchanged"""
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["build"])
+    assert actual_cwd() == Path.cwd()
+    mock_build_wheel.assert_called_once()
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_default_srcdir_build(mock_build_wheel, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if default srcdir changed
+    for build command.
+    """
+    cwd = tmp_path.resolve()
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", str(cwd), "build"])
+    assert actual_cwd() == cwd
+    call_args, call_kwargs = mock_build_wheel.call_args
+    assert call_args[0] == cwd
+    assert call_kwargs["outdir"] == cwd / "dist"
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_rel_srcdir_build(mock_build_wheel, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if relative srcdir is not
+    changed for build command.
+    """
+    cwd = tmp_path.resolve()
+    srcdir = Path("srcdir")
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", str(cwd), "build", str(srcdir)])
+    assert actual_cwd() == cwd
+    call_args, call_kwargs = mock_build_wheel.call_args
+    assert call_args[0] == srcdir
+    assert call_kwargs["outdir"] == srcdir / "dist"
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_abs_srcdir_build(mock_build_wheel, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if absolute srcdir is not
+    changed for build command.
+    """
+    cwd = tmp_path.resolve()
+    srcdir = Path("/srcdir")
+    actual_cwd = record_cwd(mock_build_wheel)
+    project_main.main(["-C", str(cwd), "build", str(srcdir)])
+    assert actual_cwd() == cwd
+    call_args, call_kwargs = mock_build_wheel.call_args
+    assert call_args[0] == srcdir
+    assert call_kwargs["outdir"] == srcdir / "dist"
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_default_depsconfig_deps(mock_deps_command, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if default depsconfig
+    changed for deps command.
+    """
+    cwd = tmp_path.resolve()
+    actual_cwd = record_cwd(mock_deps_command)
+    project_main.main(["-C", str(cwd), "deps", "show"])
+    assert actual_cwd() == cwd
+    call_args, _ = mock_deps_command.call_args
+    assert call_args[1] == cwd / project_main.DEFAULT_CONFIG_NAME
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_rel_depsconfig_deps(mock_deps_command, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if relative depsconfig
+    is not changed for deps command.
+    """
+    cwd = tmp_path.resolve()
+    depsconfig = Path("depsconfig")
+    actual_cwd = record_cwd(mock_deps_command)
+    project_main.main(
+        ["-C", str(cwd), "deps", "--depsconfig", str(depsconfig), "show"],
+    )
+    assert actual_cwd() == cwd
+    call_args, _ = mock_deps_command.call_args
+    assert call_args[1] == depsconfig
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_abs_depsconfig_deps(mock_deps_command, tmp_path, record_cwd):
+    """
+    Pass -C with valid absolute directory and check if absolute depsconfig
+    is not changed for deps command.
+    """
+    cwd = tmp_path.resolve()
+    depsconfig = Path("/depsconfig")
+    actual_cwd = record_cwd(mock_deps_command)
+    project_main.main(
+        ["-C", str(cwd), "deps", "--depsconfig", str(depsconfig), "show"],
+    )
+    assert actual_cwd() == cwd
+    call_args, _ = mock_deps_command.call_args
+    assert call_args[1] == depsconfig
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_default_wheel_install(
+    mock_install_wheel,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check default wheel for install
+    command.
+    """
+    cwd = tmp_path.resolve()
+    expected_wheel = cwd / "dist" / "foo.whl"
+    expected_tracker = cwd / "dist" / project_main.WHEEL_TRACKER
+    actual_cwd = record_cwd(mock_install_wheel)
+    project_main.main(["-C", str(cwd), "install"])
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_called_once_with(
+        expected_tracker,
+        encoding="utf-8",
+    )
+    call_args, _ = mock_install_wheel.call_args
+    assert call_args[0] == expected_wheel
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_rel_wheel_install(
+    mock_install_wheel,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check relative wheel for install
+    command.
+    """
+    cwd = tmp_path.resolve()
+    wheel = Path("wheel")
+    actual_cwd = record_cwd(mock_install_wheel)
+    project_main.main(["-C", str(cwd), "install", str(wheel)])
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_not_called()
+    call_args, _ = mock_install_wheel.call_args
+    assert call_args[0] == wheel
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_abs_wheel_install(
+    mock_install_wheel,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check absolute wheel for install
+    command.
+    """
+    cwd = tmp_path.resolve()
+    wheel = Path("/wheel")
+    actual_cwd = record_cwd(mock_install_wheel)
+    project_main.main(["-C", str(cwd), "install", str(wheel)])
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_not_called()
+    call_args, _ = mock_install_wheel.call_args
+    assert call_args[0] == wheel
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_default_wheel_run(
+    mock_run_command,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check default wheel for run
+    command.
+    """
+
+    cwd = tmp_path.resolve()
+    expected_wheel = cwd / "dist" / "foo.whl"
+    expected_tracker = cwd / "dist" / project_main.WHEEL_TRACKER
+    actual_cwd = record_cwd(mock_run_command)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["-C", str(cwd), "run", "--", "true"])
+    assert exc.value.code == ExitCodes.OK
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_called_once_with(
+        expected_tracker,
+        encoding="utf-8",
+    )
+    call_args, _ = mock_run_command.call_args
+    assert call_args[0] == expected_wheel
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_rel_wheel_run(
+    mock_run_command,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check relative wheel for run
+    command.
+    """
+
+    cwd = tmp_path.resolve()
+    wheel = Path("wheel")
+    actual_cwd = record_cwd(mock_run_command)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(
+            ["-C", str(cwd), "run", "--wheel", str(wheel), "--", "true"],
+        )
+    assert exc.value.code == ExitCodes.OK
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_not_called()
+    call_args, _ = mock_run_command.call_args
+    assert call_args[0] == wheel
+
+
+@pytest.mark.usefixtures("preserve_cwd")
+def test_cwd_abs_wheel_run(
+    mock_run_command,
+    mock_read_tracker,
+    tmp_path,
+    record_cwd,
+):
+    """
+    Pass -C with valid absolute directory and check absolute wheel for run
+    command.
+    """
+
+    cwd = tmp_path.resolve()
+    wheel = Path("/wheel")
+    actual_cwd = record_cwd(mock_run_command)
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(
+            ["-C", str(cwd), "run", "--wheel", str(wheel), "--", "true"],
+        )
+    assert exc.value.code == ExitCodes.OK
+    assert actual_cwd() == cwd
+    mock_read_tracker.assert_not_called()
+    call_args, _ = mock_run_command.call_args
+    assert call_args[0] == wheel
 
 
 def test_deps_cli_sync_verify(mock_deps_command):

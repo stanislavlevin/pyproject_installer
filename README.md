@@ -114,6 +114,20 @@
 
 ## Usage
 
+### Global options
+
+These options are accepted by the top-level command and must appear
+**before** the subcommand token.
+
+> **`-C DIR`**
+> Change to `DIR` before running the subcommand. Matches the semantics
+> of `make -C`, `git -C`, and `tar -C`: after the flag takes effect,
+> defaults such as `{cwd}/dist` and `{cwd}/pyproject_deps.json`
+> resolve against the new directory.
+> *Default:* current working directory (no change)
+> Empty `DIR` (e.g. `-C ""`) is treated the same as omitting the flag.
+> *Example:* `python -m pyproject_installer -C /path/to/project build`
+
 ### Build
 
 Build project from source tree in current Python environment according to

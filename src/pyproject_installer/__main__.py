@@ -15,6 +15,7 @@ Install features:
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -30,7 +31,8 @@ logger = logging.getLogger(Path(__file__).parent.name)
 
 
 def build(args, parser):
-    outdir = args.srcdir / "dist" if args.outdir is None else args.outdir
+    srcdir = args.srcdir or Path.cwd()
+    outdir = srcdir / "dist" if args.outdir is None else args.outdir
     try:
         config_settings = convert_config_settings(args.backend_config_settings)
     except (ValueError, TypeError) as e:
@@ -38,7 +40,7 @@ def build(args, parser):
 
     build_func = build_sdist if args.sdist else build_wheel
     build_func(
-        args.srcdir,
+        srcdir,
         outdir=outdir,
         config=config_settings,
         verbose=args.verbose,
@@ -61,6 +63,8 @@ def install(args, parser):
 
 def deps(action_name):
     def wrapped(args, parser):
+        depsconfig = args.depsconfig or Path.cwd() / DEFAULT_CONFIG_NAME
+
         if (
             hasattr(args, "depformatextra")
             and args.depformatextra is not None
@@ -73,7 +77,7 @@ def deps(action_name):
 
         kwargs = {x: getattr(args, x) for x in args.main_args}
         try:
-            deps_command(action_name, args.depsconfig, **kwargs)
+            deps_command(action_name, depsconfig, **kwargs)
         except DepsUnsyncedError:
             # sync --verify error
             sys.exit(ExitCodes.SYNC_VERIFY_ERROR)
@@ -425,6 +429,16 @@ def main_parser(prog):
         action="version",
         version=project_version,
     )
+    parser.add_argument(
+        "-C",
+        dest="cwd",
+        default=None,
+        metavar="DIR",
+        help=(
+            "change to DIR before running subcommand "
+            "(default: current working directory)%(default).0s"
+        ),
+    )
 
     subparsers = parser.add_subparsers(
         title="subcommands",
@@ -445,8 +459,11 @@ def main_parser(prog):
         "srcdir",
         type=Path,
         nargs="?",
-        default=Path.cwd(),
-        help="source directory (default: current working directory)",
+        default=None,
+        help=(
+            "source directory "
+            "(default: current working directory)%(default).0s"
+        ),
     )
     parser_build.add_argument(
         "--outdir",
@@ -563,10 +580,10 @@ def main_parser(prog):
     parser_deps.add_argument(
         "--depsconfig",
         type=Path,
-        default=Path.cwd() / DEFAULT_CONFIG_NAME,
+        default=None,
         help=(
             "configuration file to use "
-            f"(default: {{cwd}}/{DEFAULT_CONFIG_NAME})"
+            f"(default: {{cwd}}/{DEFAULT_CONFIG_NAME})%(default).0s"
         ),
     )
 
@@ -606,6 +623,13 @@ def main(cli_args, prog=f"python -m {__package__}"):
     parser = main_parser(prog)
     args = parser.parse_args(cli_args)
     setup_logging(verbose=args.verbose)
+
+    if args.cwd:
+        try:
+            os.chdir(args.cwd)
+        except OSError as e:
+            parser.error(f"-C: {e}")
+        logger.debug("changed working directory to %s", args.cwd)
 
     args.main(args, parser)
 
