@@ -49,6 +49,18 @@ def parse_backend_config(cwd, path):
         ]
     backend_config["include_dirs_sdist"] = include_dirs_sdist
 
+    include_files_sdist = parsed_config.get("include_files_sdist")
+    if include_files_sdist is not None:
+        if not isinstance(include_files_sdist, list):
+            raise TypeError(
+                "include_files_sdist should be a list, "
+                f"given: {include_files_sdist!r}",
+            )
+        include_files_sdist = [
+            str(validate_path(cwd, Path(x))) for x in include_files_sdist
+        ]
+    backend_config["include_files_sdist"] = include_files_sdist
+
     # pre-PEP639 support for inclusion of license files
     # https://peps.python.org/pep-0639/#add-license-files-key
     default_license_files = ["LICEN[CS]E*", "COPYING*", "NOTICE*", "AUTHORS*"]

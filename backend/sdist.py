@@ -9,6 +9,7 @@ build_sdist:
    - search in `package_dir` and `include_dirs_sdist`
    - include *.py for now
    - exclude __pycache__ and .pyc
+   - bundle top-level files listed in `include_files_sdist`
 """
 
 import logging
@@ -171,5 +172,12 @@ def build_sdist(sdist_directory, config_settings=None):
         required_files.update(coremetadata.required_files)
         sdist.package_files(required_files)
         sdist.package_license_files(backend_config["license_files"])
+
+        # config stores validated absolute paths; package_files expects relative
+        include_files_sdist = backend_config["include_files_sdist"]
+        if include_files_sdist:
+            sdist.package_files(
+                str(Path(f).relative_to(cwd)) for f in include_files_sdist
+            )
 
     return sdist.filename

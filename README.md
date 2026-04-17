@@ -28,6 +28,7 @@
 - [Comparison with other tools](#comparison-with-other-tools)
 - [Bootstrap](#bootstrap)
 - [Tests](#tests)
+- [Changelog](#changelog)
 - [License](#license)
 
 ## Description
@@ -439,6 +440,10 @@ Tests are run from an installed venv, matching CI:
   ```console
   .venv/bin/pytest tests/integration
   ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

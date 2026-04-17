@@ -53,6 +53,7 @@ lint = [
 package_dir = "src"
 version_file = "src/pyproject_installer/version.py"
 include_dirs_sdist = ["backend", "tests"]
+include_files_sdist = ["CHANGELOG.md"]
 
 [tool.black]
 line-length = 80
