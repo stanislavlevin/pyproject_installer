@@ -121,12 +121,15 @@ These options are accepted by the top-level command and must appear
 **before** the subcommand token.
 
 > **`-C DIR`**
+>
 > Change to `DIR` before running the subcommand. Matches the semantics
 > of `make -C`, `git -C`, and `tar -C`: after the flag takes effect,
 > defaults such as `{cwd}/dist` and `{cwd}/pyproject_deps.json`
 > resolve against the new directory.
-> *Default:* current working directory (no change)
-> Empty `DIR` (e.g. `-C ""`) is treated the same as omitting the flag.
+>
+> *Default:* current working directory (no change). Empty `DIR`
+> (e.g. `-C ""`) is treated the same as omitting the flag.
+>
 > *Example:* `python -m pyproject_installer -C /path/to/project build`
 
 ### Build
@@ -141,28 +144,40 @@ python -m pyproject_installer build
 **Positional arguments:**
 
 > **`srcdir`** (positional)
+>
 > Source directory.
+>
 > *Default:* current working directory
+>
 > *Example:* `python -m pyproject_installer build .`
 
 **Options:**
 
 > **`--outdir OUTDIR, -o OUTDIR`**
+>
 > Output directory for built wheel.
+>
 > *Default:* `{srcdir}/dist`
+>
 > *Example:* `python -m pyproject_installer build --outdir ~/outdir`
 
 Upon successful build `pyproject_installer` dumps wheel filename into
 `{OUTDIR}/.wheeltracker`.
 
 > **`--sdist`**
+>
 > Build source distribution (sdist) instead of binary one (wheel).
+>
 > *Note:* installer supports only wheel format.
+>
 > *Default:* build wheel
+>
 > *Example:* `python -m pyproject_installer build --sdist`
 
 > **`--backend-config-settings BACKEND_CONFIG_SETTINGS`**
+>
 > Ad-hoc configuration for build backend as dumped JSON dictionary.
+>
 > *Default:* `None`
 
 Examples of passing `config_settings`:
@@ -190,26 +205,39 @@ python -m pyproject_installer install
 **Positional arguments:**
 
 > **`wheel`** (positional)
+>
 > Wheel file to install.
+>
 > *Default:* constructed as directory `{cwd}/dist` and wheel filename read from `{cwd}/dist/.wheeltracker`
+>
 > *Example:* `python -m pyproject_installer install wheel.whl`
 
 **Options:**
 
 > **`--destdir DESTDIR, -d DESTDIR`**
+>
 > Wheel installation root will be prepended with destdir.
+>
 > *Default:* `/`
+>
 > *Example:* `python -m pyproject_installer install --destdir ~/destdir`
 
 > **`--installer INSTALLER`**
+>
 > Name of installer to be recorded in `dist-info/INSTALLER`.
+>
 > *Default:* `None`, `INSTALLER` will be omitted
+>
 > *Example:* `python -m pyproject_installer install --installer custom_installer`
 
 > **`--no-strip-dist-info`**
+>
 > Don't strip dist-info. By default only `METADATA` and `entry_points.txt` files are allowed in `dist-info` directory.
+>
 > *Note:* `RECORD` is unconditionally filtered out.
+>
 > *Default:* `False`
+>
 > *Example:* `python -m pyproject_installer install --no-strip-dist-info`
 
 ### Run
@@ -224,7 +252,9 @@ python -m pyproject_installer run
 **Positional arguments:**
 
 > **`command`** (positional, variadic)
+>
 > Command to run within virtual environment.
+>
 > *Example:* `python -m pyproject_installer run pytest`
 
 **Dash note:**
@@ -241,8 +271,11 @@ python -m pyproject_installer run -- pytest -vra
 **Options:**
 
 > **`--wheel WHEEL`**
+>
 > Wheel file to install into virtual environment.
+>
 > *Default:* constructed as directory `{cwd}/dist` and wheel filename read from `{cwd}/dist/.wheeltracker`
+>
 > *Example:* `python -m pyproject_installer run --wheel wheel.whl pytest`
 
 Note: venv's directory name is `.run_venv`.
@@ -260,8 +293,11 @@ python -m pyproject_installer deps --help
 **Common deps options:**
 
 > **`--depsconfig`**
+>
 > Configuration file to use.
+>
 > *Default:* `{cwd}/pyproject_deps.json`
+>
 > *Example:* `python -m pyproject_installer deps --depsconfig foo.json`
 
 #### show
@@ -269,8 +305,11 @@ python -m pyproject_installer deps --help
 Show configuration and data of dependencies' sources.
 
 > **`<source names>`** (positional)
+>
 > Source names to show.
+>
 > *Default:* all
+>
 > *Example:* `python -m pyproject_installer deps show build`
 
 See `python -m pyproject_installer deps show --help` for full options.
@@ -280,13 +319,17 @@ See `python -m pyproject_installer deps show --help` for full options.
 Configure source of Python dependencies. Supported sources: standardized formats like PEP 517, PEP 518, PEP 735 or core metadata are fully supported, while tool-specific formats like pip, tox, poetry, hatch, pdm or pipenv have limited support.
 
 > **`<source name>`** (positional)
+>
 > Source name.
 
 > **`<source type>`** (positional)
+>
 > *Choices:* `pep517`, `pep518`, `pep735`, `metadata`, `pip_reqfile`, `poetry`, `tox`, `hatch`, `pdm`, `pipenv`
 
 > **`<source-specific options>`** (positional, variadic)
+>
 > Specific configuration options for source.
+>
 > *Default:* `[]`
 
 Examples:
@@ -330,18 +373,27 @@ See `python -m pyproject_installer deps add --help` for full options.
 Sync stored requirements to configured sources.
 
 > **`<source names>`** (positional)
+>
 > Source names to sync.
+>
 > *Default:* all
+>
 > *Example:* `python -m pyproject_installer deps sync build`
 
 > **`--verify`**
+>
 > Sync sources, but print diff and exit with code 4 if the sources were unsynced.
+>
 > *Default:* only sync
+>
 > *Example:* `python -m pyproject_installer deps sync --verify build`
 
 > **`--verify-exclude`**
+>
 > Regex patterns; exclude from diff requirements whose PEP 503-normalized names match one of the patterns. Requires `--verify`.
+>
 > *Default:* `[]`
+>
 > *Example:* `python -m pyproject_installer deps sync --verify build --verify-exclude 'foo.*'`
 
 See `python -m pyproject_installer deps sync --help` for full options.
@@ -351,28 +403,43 @@ See `python -m pyproject_installer deps sync --help` for full options.
 Evaluate stored requirements according to PEP 508 in current Python environment and print them to stdout in PEP 508 format (by default) or specified one.
 
 > **`<source names>`** (positional)
+>
 > Source names to evaluate.
+>
 > *Default:* all
+>
 > *Example:* `python -m pyproject_installer deps eval build`
 
 > **`--depformat`**
+>
 > Format of dependency to print. Supported substitutions: `$name` - project's name; `$nname` - PEP 503 normalized project's name; `$fextra` - project's extras (expanded first with `--depformatextra`).
+>
 > *Default:* PEP 508 format
+>
 > *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nn'`
 
 > **`--depformatextra`**
+>
 > Format of extras to print (one extra of dependencies per line). Result is expanded in the format specified by `--depformat` as `$fextra`. Supported substitutions: `$extra`.
+>
 > *Default:* `''`
+>
 > *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nn$fextra' --depformatextra='+$extra'`
 
 > **`--extra`**
+>
 > PEP 508 `extra` marker to evaluate with.
+>
 > *Default:* `None`
+>
 > *Example:* `python -m pyproject_installer deps eval build --extra tests`
 
 > **`--exclude`**
+>
 > Regex patterns; exclude requirement having PEP 503-normalized name that matches one of these patterns.
+>
 > *Default:* `[]`
+>
 > *Example:* `python -m pyproject_installer deps eval build --exclude types- pytest-cov`
 
 See `python -m pyproject_installer deps eval --help` for full options.
@@ -382,7 +449,9 @@ See `python -m pyproject_installer deps eval --help` for full options.
 Deconfigure source of Python dependencies.
 
 > **`<source name>`** (positional)
+>
 > Source name to delete.
+>
 > *Example:* `python -m pyproject_installer deps delete build`
 
 See `python -m pyproject_installer deps delete --help` for full options.
