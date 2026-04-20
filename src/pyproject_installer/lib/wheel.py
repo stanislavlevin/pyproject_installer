@@ -76,7 +76,8 @@ class WheelFile:
         self.dist_info = (
             self.root / f"{self.dist_name}-{self.dist_version}.dist-info"
         )
-        self.data = self.root / f"{self.dist_name}-{self.dist_version}.data"
+        self.data_name = f"{self.dist_name}-{self.dist_version}.data"
+        self.data = self.root / self.data_name
         self._wheel_metadata = None
         self.validate()
 

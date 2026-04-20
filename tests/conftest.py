@@ -13,15 +13,28 @@ from pyproject_installer.lib.wheel import digest_for_record
 
 
 class WheelContents(MutableMapping):
-    def __init__(self, *, distr="foo", version="1.0", purelib=True):
+    def __init__(
+        self,
+        *,
+        distr="foo",
+        version="1.0",
+        purelib=True,
+        create_init=True,
+    ):
         self.distinfo = f"{distr}-{version}.dist-info"
         self.record_key = f"{self.distinfo}/RECORD"
         self._contents = {
-            f"{distr}/__init__.py": textwrap.dedent(
-                """\
-                    def main():
-                        print("Hello, World!")
-                """,
+            **(
+                {
+                    f"{distr}/__init__.py": textwrap.dedent(
+                        """\
+                            def main():
+                                print("Hello, World!")
+                        """,
+                    ),
+                }
+                if create_init
+                else {}
             ),
             f"{self.distinfo}/METADATA": textwrap.dedent(
                 f"""\

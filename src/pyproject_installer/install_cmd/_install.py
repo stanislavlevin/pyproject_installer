@@ -5,6 +5,9 @@ import sysconfig
 from importlib.metadata import PathDistribution
 from pathlib import Path
 
+from pyproject_installer.install_cmd._rpm_filelist import (
+    write_rpm_filelist,
+)
 from pyproject_installer.lib.scripts import (
     build_shebang,
     generate_entrypoints_scripts,
@@ -44,20 +47,40 @@ def get_installation_scheme(dist_name):
     return scheme_dict
 
 
-def install_wheel_data(data_path, scheme, destdir):
+def install_wheel_data(data_path, scheme, destdir, *, installed_paths=None):
     """
     PEP427:
     Each subdirectory of distribution-1.0.data/ is a key into a dict of
     destination directories, such as
     distribution-1.0.data/(purelib|platlib|headers|scripts|data). The initially
     supported paths are taken from distutils.command.install.
+
+    If `installed_paths` is not None, each destination file's path is
+    added to it as `shutil.copytree` creates it. The hook is installed
+    via the `copy_function` parameter, so every regular file copytree
+    emits (including symlink-target copies under the default
+    `symlinks=False`) is observed exactly once.
     """
     logger.info("Installing .data")
+
+    if installed_paths is None:
+        copy_fn = shutil.copy2
+    else:
+
+        def copy_fn(src, dst):
+            shutil.copy2(src, dst)
+            installed_paths.add(Path(dst))
+
     # keys of .data dir were prechecked in `validate`
     for f in data_path.iterdir():
         path = Path(scheme[f.name]).absolute()
         rootdir = destdir / path.relative_to(path.root)
-        shutil.copytree(data_path / f, rootdir, dirs_exist_ok=True)
+        shutil.copytree(
+            data_path / f,
+            rootdir,
+            dirs_exist_ok=True,
+            copy_function=copy_fn,
+        )
 
         if f.name == "scripts":
             # PEP427
@@ -138,6 +161,7 @@ def install_wheel(
     destdir,
     installer=None,
     strip_dist_info=True,
+    rpm_filelist=None,
 ):
     wheel_path = validate_wheel_path(wheel_path)
     destdir = validate_destdir(destdir)
@@ -150,20 +174,34 @@ def install_wheel(
     with WheelFile(wheel_path) as whl:
         dist_name = whl.dist_name
         dist_version = whl.dist_version
+        data_name = whl.data_name
         scheme = get_installation_scheme(dist_name)
         extraction_root = whl.extraction_root(scheme)
         rootdir = destdir / extraction_root.relative_to(extraction_root.root)
         logger.info("Wheel installation root: %s", rootdir)
 
         dist_info = f"{dist_name}-{dist_version}.dist-info"
-        members = filter_dist_info(
-            dist_info,
-            members=whl.memberlist,
-            strip_dist_info=strip_dist_info,
+        members = tuple(
+            filter_dist_info(
+                dist_info,
+                members=whl.memberlist,
+                strip_dist_info=strip_dist_info,
+            ),
         )
+
+        installed_paths = set() if rpm_filelist is not None else None
 
         logger.info("Extracting wheel")
         whl.extract(rootdir, members=members)
+        if installed_paths is not None:
+            # Skip .data/* members: install_wheel_data relocates them
+            # to their scheme destinations below and records the final
+            # paths. Recording the pre-move paths would emit phantom
+            # entries (the .data/ tree is rmtree'd after relocation).
+            for m in members:
+                if Path(m).parts[0] == data_name:
+                    continue
+                installed_paths.add(rootdir / m)
 
     dist_info_path = rootdir / dist_info
 
@@ -174,15 +212,32 @@ def install_wheel(
             python=sys.executable,
             scriptsdir=Path(scheme["scripts"]).absolute(),
             destdir=destdir,
+            installed_paths=installed_paths,
         )
 
     if installer is not None:
         # write installer of this distribution if requested
         installer_path = dist_info_path / "INSTALLER"
         installer_path.write_text(f"{installer}\n", encoding="utf-8")
+        if installed_paths is not None:
+            installed_paths.add(installer_path)
 
-    data_path = rootdir / f"{dist_name}-{dist_version}.data"
+    data_path = rootdir / data_name
     if data_path.exists():
-        install_wheel_data(data_path, scheme=scheme, destdir=destdir)
+        install_wheel_data(
+            data_path,
+            scheme=scheme,
+            destdir=destdir,
+            installed_paths=installed_paths,
+        )
+
+    if installed_paths is not None:
+        write_rpm_filelist(
+            rpm_filelist,
+            installed_paths,
+            destdir=destdir,
+            scheme=scheme,
+            dist_info=str(extraction_root / dist_info),
+        )
 
     logger.info("Wheel was installed")

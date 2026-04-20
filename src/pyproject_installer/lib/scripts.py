@@ -33,10 +33,20 @@ def build_shebang(executable):
     return "#!/bin/sh\n'''exec' " + executable + ' "$0" "$@"\n' + "' '''"
 
 
-def generate_entrypoints_scripts(distr, python, scriptsdir, destdir):
+def generate_entrypoints_scripts(
+    distr,
+    python,
+    scriptsdir,
+    destdir,
+    *,
+    installed_paths=None,
+):
     """
     Optional entry_points
     https://packaging.python.org/en/latest/specifications/entry-points/
+
+    If `installed_paths` is not None, each generated script's
+    destination path is added to it as the script is written.
     """
     for ep_group in ("console_scripts", "gui_scripts"):
         for ep in distr.entry_points.select(group=ep_group):
@@ -52,3 +62,5 @@ def generate_entrypoints_scripts(distr, python, scriptsdir, destdir):
             script_path = rootdir / ep.name
             script_path.write_text(script_text, encoding="utf-8")
             script_path.chmod(script_path.stat().st_mode | 0o555)
+            if installed_paths is not None:
+                installed_paths.add(script_path)

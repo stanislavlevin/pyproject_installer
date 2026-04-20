@@ -340,6 +340,7 @@ def test_install_cli_default(mock_install_wheel, mock_read_tracker):
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -359,6 +360,7 @@ def test_install_cli_destdir(mock_install_wheel, mock_read_tracker):
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -377,6 +379,7 @@ def test_install_cli_wheel(mock_install_wheel, mock_read_tracker):
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -395,6 +398,7 @@ def test_install_cli_wheel_destdir(mock_install_wheel, mock_read_tracker):
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -414,6 +418,7 @@ def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
         "destdir": destdir,
         "installer": installer_tool,
         "strip_dist_info": True,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -433,6 +438,7 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel):
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": False,
+        "rpm_filelist": None,
     }
 
     project_main.main(install_args)
@@ -451,6 +457,28 @@ def test_install_default_wheel_missing_tracker(mock_read_tracker, capsys):
     assert not captured.out
     expected_msg = "Missing wheel tracker, re-run build steps or specify wheel"
     assert expected_msg in captured.err
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_rpm_filelist(mock_install_wheel, tmpdir):
+    """
+    Run install with --rpm-filelist.
+    """
+    filelist = tmpdir / "foo.files"
+    install_args = ("install", "--rpm-filelist", str(filelist))
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": filelist,
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
 
 
 def test_run_cli_default(mock_run_command, mock_read_tracker, caplog):

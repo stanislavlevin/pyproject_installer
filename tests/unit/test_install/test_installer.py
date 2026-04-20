@@ -6,6 +6,7 @@ import subprocess
 import sys
 import sysconfig
 import textwrap
+from importlib.util import cache_from_source
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -17,6 +18,10 @@ from pyproject_installer.install_cmd._install import (
     get_installation_scheme,
 )
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
+
+
+def expected_pyc_lines(path):
+    return (cache_from_source(path, optimization=opt) for opt in ("", "1", "2"))
 
 
 class InstalledWheel:
@@ -735,3 +740,302 @@ def test_entry_points_scripts(
     )
     assert result.stdout == b"Hello, World!\n"
     assert result.stderr == b""
+
+
+def test_rpm_filelist_empty(wheel_contents, wheel, tmpdir):
+    """
+    Check rpm filelist for empty wheel.
+    """
+    contents = wheel_contents(create_init=False)
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_entrypoints_scripts(wheel_contents, wheel, tmpdir):
+    """
+    Check if console script is recorded in rpm filelist.
+    """
+    contents = wheel_contents(create_init=False)
+    contents["foo-1.0.dist-info/entry_points.txt"] = (
+        "[console_scripts]\nbar = foo:main\n"
+    )
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+    )
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    script_name = str(
+        Path(get_installation_scheme("foo")["scripts"]) / "bar",
+    )
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+            f"{purelib}/foo-1.0.dist-info/entry_points.txt",
+            script_name,
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_data(wheel_contents, wheel, tmpdir):
+    """
+    Check if data entries are recorded in rpm filelist.
+    """
+    contents = wheel_contents(create_init=False)
+    contents["foo-1.0.data/data/share/foo/asset.dat"] = ""
+    contents["foo-1.0.data/purelib/foo/purelib.foo.py"] = ""
+    contents["foo-1.0.data/platlib/foo/platlib.foo.py"] = ""
+    contents["foo-1.0.data/purelib/purelib.bar.py"] = ""
+    contents["foo-1.0.data/platlib/platlib.bar.py"] = ""
+    contents["foo-1.0.data/headers/foo.h"] = ""
+    contents["foo-1.0.data/headers/foo/bar.h"] = ""
+    contents["foo-1.0.data/scripts/foo"] = ""
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib, platlib, headers, scripts, data = (
+        get_installation_scheme("foo")[name]
+        for name in ("purelib", "platlib", "headers", "scripts", "data")
+    )
+    expected_files = sorted(
+        (
+            f"%dir {headers}",
+            f"{headers}/foo.h",
+            f"%dir {headers}/foo",
+            f"{headers}/foo/bar.h",
+            f"%dir {purelib}/foo",
+            f"{purelib}/foo/purelib.foo.py",
+            f"%dir {purelib}/foo/__pycache__",
+            *expected_pyc_lines(f"{purelib}/foo/purelib.foo.py"),
+            f"{platlib}/foo/platlib.foo.py",
+            *expected_pyc_lines(f"{platlib}/foo/platlib.foo.py"),
+            f"{purelib}/purelib.bar.py",
+            *expected_pyc_lines(f"{purelib}/purelib.bar.py"),
+            f"{platlib}/platlib.bar.py",
+            *expected_pyc_lines(f"{platlib}/platlib.bar.py"),
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+            f"{scripts}/foo",
+            f"{data}/share/foo/asset.dat",
+            *(
+                (f"%dir {platlib}/foo", f"%dir {platlib}/foo/__pycache__")
+                if purelib != platlib
+                else ()
+            ),
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_site(wheel_contents, wheel, tmpdir):
+    """
+    Check if site (purelib/platlib) entries are recorded in rpm filelist.
+    """
+    contents = wheel_contents()
+    contents["site_foo.py"] = ""
+    contents["foo/bar/__init__.py"] = ""
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo",
+            f"{purelib}/foo/__init__.py",
+            f"%dir {purelib}/foo/__pycache__",
+            *expected_pyc_lines(f"{purelib}/foo/__init__.py"),
+            f"%dir {purelib}/foo/bar",
+            f"{purelib}/foo/bar/__init__.py",
+            f"%dir {purelib}/foo/bar/__pycache__",
+            *expected_pyc_lines(f"{purelib}/foo/bar/__init__.py"),
+            f"{purelib}/site_foo.py",
+            *expected_pyc_lines(f"{purelib}/site_foo.py"),
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_not_used(wheel_contents, wheel, tmpdir):
+    """
+    Check if rpm filelist is not generated if was not asked
+    """
+    contents = wheel_contents()
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(wheel(contents=contents), destdir=destdir)
+
+    assert not filelist.exists()
+
+
+def test_rpm_filelist_installer(wheel_contents, wheel, tmpdir):
+    """
+    Check if INSTALLER in rpm filelist if used
+    """
+    contents = wheel_contents(create_init=False)
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        installer="test_installer",
+        rpm_filelist=filelist,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+            f"{purelib}/foo-1.0.dist-info/INSTALLER",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_no_strip_dist_info(wheel_contents, wheel, tmpdir):
+    """
+    Check if PEP 639 licenses/ in rpm filelist with --no-strip-dist-info
+    """
+    contents = wheel_contents(create_init=False)
+    contents["foo-1.0.dist-info/licenses/LICENSE.txt"] = "MIT\n"
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+        strip_dist_info=False,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+            f"{purelib}/foo-1.0.dist-info/WHEEL",
+            f"%dir {purelib}/foo-1.0.dist-info/licenses",
+            f"{purelib}/foo-1.0.dist-info/licenses/LICENSE.txt",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_man_page_globbing(wheel_contents, wheel, tmpdir):
+    """
+    Check man page globbing in rpm flielist.
+    """
+    contents = wheel_contents(create_init=False)
+    contents["foo-1.0.data/data/share/man/man1/aaa.1"] = ""
+    contents["foo-1.0.data/data/share/man/man1/bbb.1.gz"] = ""
+    contents["foo-1.0.data/data/share/man/man1/ccc.1.bz2"] = ""
+    contents["foo-1.0.data/data/share/man/man1/ddd.1.Z"] = ""
+    contents["foo-1.0.data/data/share/man/man1/eee.1.xz"] = ""
+    contents["foo-1.0.data/data/share/man/man1/fff.1.zst"] = ""
+    contents["foo-1.0.data/data/share/man/man3/Baz.3pm"] = ""
+    contents["foo-1.0.data/data/share/man/man3/Qux.3pm.gz"] = ""
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    data = get_installation_scheme("foo")["data"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+            f"{data}/share/man/man1/aaa.1*",
+            f"{data}/share/man/man1/bbb.1*",
+            f"{data}/share/man/man1/ccc.1*",
+            f"{data}/share/man/man1/ddd.1*",
+            f"{data}/share/man/man1/eee.1.xz*",
+            f"{data}/share/man/man1/fff.1.zst*",
+            f"{data}/share/man/man3/Baz.3pm*",
+            f"{data}/share/man/man3/Qux.3pm*",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+def test_rpm_filelist_sys_pycache_prefix(
+    wheel_contents,
+    wheel,
+    tmpdir,
+    mocker,
+):
+    """
+    Check the error if sys.pycache_prefix is set
+    """
+    contents = wheel_contents(create_init=False)
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    mocker.patch(
+        "pyproject_installer.install_cmd._install.sys.pycache_prefix",
+        "/new_prefix",
+    )
+    error_pattern = "rpm-filelist requires sys.pycache_prefix to be at its"
+    with pytest.raises(ValueError, match=error_pattern):
+        install_wheel(
+            wheel(contents=contents),
+            destdir=destdir,
+            rpm_filelist=filelist,
+        )
+    assert not filelist.exists()

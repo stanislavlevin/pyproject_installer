@@ -240,6 +240,65 @@ python -m pyproject_installer install
 >
 > *Example:* `python -m pyproject_installer install --no-strip-dist-info`
 
+> **`--rpm-filelist PATH`**
+>
+> Write an RPM `%files`-compatible filelist of every installed file, plus the computed `.pyc` paths for every installed `.py` under `purelib`/`platlib` (PEP 3147 / PEP 488). The file is consumable by `%files -f <PATH>` without post-processing, letting a spec declare package contents as `%files -f dist/foo.files` rather than enumerating them by hand. Paths in the output are system-absolute (`--destdir` is stripped). Parent directory of `PATH` must exist.
+>
+> *What is emitted:*
+>
+> - *File lines* - every file the installer writes to `--destdir`: `.py` sources, compiled extensions, entry-point scripts, dist-info files (`METADATA`, and with `--no-strip-dist-info` every file that survives filtering), the `INSTALLER` file (when `--installer` is used), and the relocated contents of `{dist}-{ver}.data/<scheme>/`.
+> - *`.pyc` expansion* - for every `.py` file whose deepest owning scheme is `purelib` or `platlib`, three bytecode paths are computed (`importlib.util.cache_from_source` at optimisation levels 0, 1, 2) and emitted. `.py` files outside `purelib`/`platlib` (scripts, data, headers, dist-info) are **not** expanded: RPM's bytecompile step does not compile them, so predicting `.pyc` there would yield phantom paths that fail `%files` parsing.
+> - *Man page globbing* - files under `scheme["data"]/share/man/` get a trailing `*` so the filelist still matches after RPM's `brp-compress` compresses them post-`%install` (uncompressed pages gain a compression extension). Suffixes brp decompresses (`.gz`, `.bz2`, `.Z`) are stripped first - brp will recompress them, so the on-disk extension may differ from the wheel's. Others (`.xz`, `.zst`, ...) are kept literal - brp leaves them alone.
+> - *`%dir` entries* - directories the package claims ownership of:
+>   - `{dist}-{ver}.dist-info` is **always** owned (installer creates it even when stripped down to `METADATA`); its subdirectories (e.g. PEP 639 `licenses/` under `--no-strip-dist-info`) are owned too.
+>   - `scheme["headers"]` (typically `/usr/include/pythonX.Y/<dist>`, per-distribution namespaced) is owned only when at least one installed file lives under it; its intermediate subdirectories are owned too.
+>   - Every intermediate directory between an installed file and its owning scheme root - i.e. package and sub-package dirs under `purelib`/`platlib` - is owned. For `.py` files in sub-packages, the sibling `__pycache__` directory is owned.
+>
+> *What is deliberately **not** emitted:*
+>
+> - The site roots themselves (`scheme["purelib"]`, `scheme["platlib"]` - e.g. `/usr/lib/pythonX.Y/site-packages`, `/usr/lib64/pythonX.Y/site-packages`) - owned by the Python runtime package.
+> - The shared site-level `__pycache__` (`/usr/lib{,64}/pythonX.Y/site-packages/__pycache__`) - every top-level single-file module would fight for ownership; no `%dir` is emitted even though `.pyc` file lines for top-level modules land inside it.
+> - `%dir` for FHS-standard roots (`/usr/bin`, `/usr/share`, etc.) or any intermediate directory under them. Files installed to `scheme["scripts"]` or `scheme["data"]` are emitted *file-only*; if your package ships app-specific data directories that no other package owns, add `%dir` lines for them manually in the spec.
+>
+> *Note:* `sys.pycache_prefix` must be at its default (`None`). `importlib.util.cache_from_source` respects it, so any non-default value (`PYTHONPYCACHEPREFIX`, `-X pycache_prefix=...`) would redirect every computed `.pyc` path under that prefix and desync the filelist from the buildroot; the installer refuses to run with `--rpm-filelist` in that case.
+>
+> *Default:* `None`, filelist is not written
+>
+> *Example:* `python -m pyproject_installer install --destdir /tmp/buildroot --rpm-filelist dist/foo.files`
+>
+> *Example output* - `dist/foo.files` after installing a pure-Python `foo-1.0-py3-none-any.whl` containing the `foo` package, a `foo_cli` console script, and a `.data/data/share/foo/asset.dat` asset on Python 3.13 with purelib = `/usr/lib/python3/site-packages`:
+>
+> ```
+> %dir /usr/lib/python3/site-packages/foo
+> %dir /usr/lib/python3/site-packages/foo-1.0.dist-info
+> %dir /usr/lib/python3/site-packages/foo/__pycache__
+> /usr/bin/foo_cli
+> /usr/lib/python3/site-packages/foo-1.0.dist-info/METADATA
+> /usr/lib/python3/site-packages/foo-1.0.dist-info/entry_points.txt
+> /usr/lib/python3/site-packages/foo/__init__.py
+> /usr/lib/python3/site-packages/foo/__pycache__/__init__.cpython-313.opt-1.pyc
+> /usr/lib/python3/site-packages/foo/__pycache__/__init__.cpython-313.opt-2.pyc
+> /usr/lib/python3/site-packages/foo/__pycache__/__init__.cpython-313.pyc
+> /usr/share/foo/asset.dat
+> ```
+>
+> Emitted paths follow `sysconfig.get_paths()` of the running interpreter. For a platform-specific wheel (e.g. `foo-1.0-cp313-cp313-linux_x86_64.whl`) on a split `lib`/`lib64` layout where platlib = `/usr/lib64/python3/site-packages`, the same contents plus a compiled extension land under the platlib root:
+>
+> ```
+> %dir /usr/lib64/python3/site-packages/foo
+> %dir /usr/lib64/python3/site-packages/foo-1.0.dist-info
+> %dir /usr/lib64/python3/site-packages/foo/__pycache__
+> /usr/bin/foo_cli
+> /usr/lib64/python3/site-packages/foo-1.0.dist-info/METADATA
+> /usr/lib64/python3/site-packages/foo-1.0.dist-info/entry_points.txt
+> /usr/lib64/python3/site-packages/foo/__init__.py
+> /usr/lib64/python3/site-packages/foo/__pycache__/__init__.cpython-313.opt-1.pyc
+> /usr/lib64/python3/site-packages/foo/__pycache__/__init__.cpython-313.opt-2.pyc
+> /usr/lib64/python3/site-packages/foo/__pycache__/__init__.cpython-313.pyc
+> /usr/lib64/python3/site-packages/foo/_ext.cpython-313-x86_64-linux-gnu.so
+> /usr/share/foo/asset.dat
+> ```
+
 ### Run
 
 Run command within Python virtual environment that has access to system and user
