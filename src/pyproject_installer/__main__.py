@@ -58,6 +58,7 @@ def install(args, parser):
         destdir=args.destdir,
         installer=args.installer,
         strip_dist_info=args.strip_dist_info,
+        rpm_filelist=args.rpm_filelist,
     )
 
 
@@ -536,6 +537,17 @@ def main_parser(prog):
             "entry_points.txt files are allowed in dist-info directory. "
             "Note: RECORD is unconditionally filtered out. "
             "(default: False)"
+        ),
+    )
+    parser_install.add_argument(
+        "--rpm-filelist",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "write an RPM %%files-compatible filelist of installed "
+            "files (plus computed .pyc paths) to PATH "
+            "(default: None, filelist is not written)"
         ),
     )
     parser_install.set_defaults(main=install)
