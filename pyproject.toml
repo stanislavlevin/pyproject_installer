@@ -35,7 +35,8 @@ backend-path = ["."]
 
 [dependency-groups]
 test = [
-    "pytest",
+    # 8.4.0 added pytest.RaisesGroup, used for ExceptionGroup assertions.
+    "pytest >= 8.4.0",
     "pytest-mock",
 ]
 coverage = [

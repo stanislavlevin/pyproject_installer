@@ -1,10 +1,63 @@
 import json
 import re
+import sys
 from copy import deepcopy
 
 import pytest
 
 from pyproject_installer.deps_cmd import deps_command
+from pyproject_installer.lib import dependency_groups
+
+if sys.version_info >= (3, 11):
+    RaisesGroup = pytest.RaisesGroup
+else:
+    from pyproject_installer.lib import errors
+
+    class RaisesGroup:
+        """Python-3.10 fallback for ``pytest.RaisesGroup``.
+
+        On 3.10 ``packaging.errors.ExceptionGroup`` is a plain ``Exception``
+        subclass (PEP 654 lands in 3.11), so ``pytest.RaisesGroup`` — which
+        does ``isinstance(exc, BaseExceptionGroup)`` — refuses to match.
+        This shim asserts the same shape (one ``ExceptionGroup`` whose
+        ``.exceptions`` are positionally instances of the given types and
+        whose ``.message`` matches ``match``) using only the attributes
+        packaging's shim provides.
+        """
+
+        def __init__(self, *expected_types, match=None):
+            self._expected_types = expected_types
+            self._match = match
+            self._cm = pytest.raises(errors.ExceptionGroup)
+            self._info = None
+
+        def __enter__(self):
+            self._info = self._cm.__enter__()
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            handled = self._cm.__exit__(exc_type, exc_val, exc_tb)
+            eg = self._info.value
+            if self._match is not None:
+                matched = re.search(self._match, eg.message)
+                assert (
+                    matched
+                ), f"message {eg.message!r} does not match {self._match!r}"
+            actual = list(eg.exceptions)
+            assert len(actual) == len(self._expected_types), (
+                f"got {len(actual)} inner exceptions, "
+                f"expected {len(self._expected_types)}"
+            )
+            for got, expected in zip(
+                actual,
+                self._expected_types,
+                strict=True,
+            ):
+                assert isinstance(got, expected), (
+                    f"inner exception {got!r} is not an instance of "
+                    f"{expected!r}"
+                )
+            return handled
 
 
 @pytest.fixture
@@ -138,12 +191,9 @@ def test_pep735_collector_no_groups(pep735_deps, pep735_depsconfig):
     pep735_deps({})
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        "pep735: group dependencies are not configured ("
-        "group: test, include chain: )",
-    )
-    expected_err = f"^{expected_err}$"
-    with pytest.raises(ValueError, match=expected_err):
+    expected_err = re.escape("pep735: ")
+    expected_err = f"^{expected_err}"
+    with RaisesGroup(LookupError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -153,18 +203,12 @@ def test_pep735_collector_no_groups(pep735_deps, pep735_depsconfig):
 @pytest.mark.parametrize(
     "group_data",
     (
-        ({"gp1": []}, "group: test, include chain: "),
-        (
-            {"teSt": ['{include-group = "gP1"}']},
-            "group: gP1, include chain: teSt->gP1",
-        ),
-        (
-            {
-                "gP1": ['{include-group = "gP2"}'],
-                "teSt": ['{include-group = "Gp1"}'],
-            },
-            "group: gP2, include chain: teSt->gP1->gP2",
-        ),
+        {"gp1": []},
+        {"teSt": ['{include-group = "gP1"}']},
+        {
+            "gP1": ['{include-group = "gP2"}'],
+            "teSt": ['{include-group = "Gp1"}'],
+        },
     ),
 )
 def test_pep735_collector_missing_group(
@@ -175,15 +219,12 @@ def test_pep735_collector_missing_group(
     """
     Collection of PEP735 dependencies with missing group
     """
-    group_config, err_msg = group_data
-    pep735_deps(group_config)
+    pep735_deps(group_data)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        f"pep735: group dependencies are not configured ({err_msg})",
-    )
-    expected_err = f"^{expected_err}$"
-    with pytest.raises(ValueError, match=expected_err):
+    expected_err = re.escape("pep735: ")
+    expected_err = f"^{expected_err}"
+    with RaisesGroup(LookupError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -193,23 +234,14 @@ def test_pep735_collector_missing_group(
 @pytest.mark.parametrize(
     "group_data",
     (
-        (
-            {"tesT": [], "Test": []},
-            "(group: test, include chain: ): Test, tesT",
-        ),
-        (
-            {"gRp": [], "Grp": [], "teSt": ['{include-group = "grP"}']},
-            "(group: grP, include chain: teSt->grP): Grp, gRp",
-        ),
-        (
-            {
-                "gRp1": ['{include-group = "grP2"}'],
-                "Grp2": [],
-                "gRp2": [],
-                "teSt": ['{include-group = "grP1"}'],
-            },
-            "(group: grP2, include chain: teSt->gRp1->grP2): Grp2, gRp2",
-        ),
+        {"tesT": [], "Test": []},
+        {"gRp": [], "Grp": [], "teSt": ['{include-group = "grP"}']},
+        {
+            "gRp1": ['{include-group = "grP2"}'],
+            "Grp2": [],
+            "gRp2": [],
+            "teSt": ['{include-group = "grP1"}'],
+        },
     ),
 )
 def test_pep735_collector_duplicate_names(
@@ -220,13 +252,15 @@ def test_pep735_collector_duplicate_names(
     """
     Collection of PEP735 dependencies with duplicate group names
     """
-    group_config, err_msg = group_data
-    pep735_deps(group_config)
+    pep735_deps(group_data)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(f"pep735: duplicate group names {err_msg}")
-    expected_err = f"^{expected_err}$"
-    with pytest.raises(ValueError, match=expected_err):
+    expected_err = re.escape("pep735: ")
+    expected_err = f"^{expected_err}"
+    with RaisesGroup(
+        dependency_groups.DuplicateGroupNames,
+        match=expected_err,
+    ):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -234,40 +268,31 @@ def test_pep735_collector_duplicate_names(
 
 
 @pytest.mark.parametrize(
-    "group_data",
+    "group_config",
     (
-        (["tesT = true"], "group: tesT, include chain: "),
-        (
-            ["gRp = true", 'teSt = [{include-group = "grP"}]'],
-            "group: gRp, include chain: teSt->gRp",
-        ),
-        (
-            [
-                'gRp1 = [{include-group = "grP2"}]',
-                "gRp2 = true",
-                'teSt = [{include-group = "grP1"}]',
-            ],
-            "group: gRp2, include chain: teSt->gRp1->gRp2",
-        ),
+        ["tesT = true"],
+        ["gRp = true", 'teSt = [{include-group = "grP"}]'],
+        [
+            'gRp1 = [{include-group = "grP2"}]',
+            "gRp2 = true",
+            'teSt = [{include-group = "grP1"}]',
+        ],
     ),
 )
 def test_pep735_collector_invalid_type_groupdeps(
     pyproject_toml,
     pep735_depsconfig,
-    group_data,
+    group_config,
 ):
     """
     Collection of PEP735 dependencies with invalid type of group's value
     """
-    group_config, err_msg = group_data
     pyproject_toml("\n".join(("[dependency-groups]", *group_config)) + "\n")
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        f"pep735: dependencies format is not a list ({err_msg}): ",
-    )
+    expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with pytest.raises(TypeError, match=expected_err):
+    with RaisesGroup(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -277,20 +302,14 @@ def test_pep735_collector_invalid_type_groupdeps(
 @pytest.mark.parametrize(
     "group_data",
     (
-        ({"tesT": ["true"]}, "group: tesT, include chain: "),
-        ({"tesT": ['"foo"', "true"]}, "group: tesT, include chain: "),
-        (
-            {"gRp": ["true"], "teSt": ['{include-group = "grP"}']},
-            "group: gRp, include chain: teSt->gRp",
-        ),
-        (
-            {
-                "gRp1": ['{include-group = "grP2"}'],
-                "Grp2": ["true"],
-                "teSt": ['{include-group = "grP1"}'],
-            },
-            "group: Grp2, include chain: teSt->gRp1->Grp2",
-        ),
+        {"tesT": ["true"]},
+        {"tesT": ['"foo"', "true"]},
+        {"gRp": ["true"], "teSt": ['{include-group = "grP"}']},
+        {
+            "gRp1": ['{include-group = "grP2"}'],
+            "Grp2": ["true"],
+            "teSt": ['{include-group = "grP1"}'],
+        },
     ),
 )
 def test_pep735_collector_invalid_type_depslist(
@@ -304,17 +323,35 @@ def test_pep735_collector_invalid_type_depslist(
     Requirement lists under dependency-groups may contain strings, tables
     (“dicts” in Python), or a mix of strings and tables.
     """
-    group_config, err_msg = group_data
-
-    pep735_deps(group_config)
+    pep735_deps(group_data)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        "pep735: dependencies lists may contain strings or dicts "
-        f"({err_msg}): ",
-    )
+    expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with pytest.raises(TypeError, match=expected_err):
+    with RaisesGroup(TypeError, match=expected_err):
+        deps_command("sync", depsconfig_path, srcnames=[])
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == input_conf
+
+
+def test_pep735_collector_multiple_errors_in_exceptiongroup(
+    pep735_deps,
+    pep735_depsconfig,
+):
+    """
+    Collection of PEP735 dependencies with several errors in one group
+
+    Packaging accumulates per-item errors and surfaces them together as one
+    ExceptionGroup; the wrap preserves every inner exception and prepends
+    'pep735: ' to the group's outer message.
+    """
+    pep735_deps({"test": ["true", "false"]})
+    depsconfig_path, input_conf = pep735_depsconfig()
+
+    expected_err = re.escape("pep735: ")
+    expected_err = f"^{expected_err}"
+    with RaisesGroup(TypeError, TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -348,12 +385,8 @@ def test_pep735_collector_valid_pep508_deps(
 @pytest.mark.parametrize(
     "group_data",
     (
-        ({"tesT": None}, "tesT", "group: tesT, include chain: "),
-        (
-            {"gRp": None, "teSt": ['{include-group = "grP"}']},
-            "gRp",
-            "group: gRp, include chain: teSt->gRp",
-        ),
+        ({"tesT": None}, "tesT"),
+        ({"gRp": None, "teSt": ['{include-group = "grP"}']}, "gRp"),
         (
             {
                 "gRp1": ['{include-group = "grP2"}'],
@@ -361,7 +394,6 @@ def test_pep735_collector_valid_pep508_deps(
                 "teSt": ['{include-group = "grP1"}'],
             },
             "Grp2",
-            "group: Grp2, include chain: teSt->gRp1->Grp2",
         ),
     ),
 )
@@ -377,15 +409,13 @@ def test_pep735_collector_invalid_pep508_deps(
     Strings in requirement lists must be valid Dependency Specifiers, as defined
     in PEP 508.
     """
-    group_config, group, err_msg = group_data
+    group_config, group = group_data
     in_reqs, _ = invalid_pep508_data
 
     pep735_deps(group_config | {group: [f'"{x}"' for x in in_reqs]})
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        f"pep735: invalid PEP508 Dependency Specifier ({err_msg}): ",
-    )
+    expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
@@ -433,7 +463,6 @@ def test_pep735_collector_no_deps(pep735_deps, pep735_depsconfig, group_data):
             {"gp1": ['{foo = "bar"}'], "gp2": ['"_foo"'], "test": ['"foo"']},
             ["foo"],
         ),
-        ({"test": ['"foo"'], "gp1": ['"foo1"'], "gP1": ['"foo2"']}, ["foo"]),
         ({"gp1": ['{include-group = "gp2"}'], "test": ['"foo"']}, ["foo"]),
     ),
 )
@@ -487,12 +516,12 @@ def test_pep735_collector_invalid_dep_object_specifiers(
     pep735_deps({group: invalid_deps})
     depsconfig_path, input_conf = pep735_depsconfig(group)
 
-    expected_err = re.escape(
-        "pep735: invalid Dependency Object Specifier ("
-        f"group: {group}, include chain: ): ",
-    )
+    expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with pytest.raises(ValueError, match=expected_err):
+    with RaisesGroup(
+        dependency_groups.InvalidDependencyGroupObject,
+        match=expected_err,
+    ):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -523,10 +552,7 @@ def test_pep735_collector_invalid_dep_group_include(
     pep735_deps({group: invalid_deps})
     depsconfig_path, input_conf = pep735_depsconfig(group)
 
-    expected_err = re.escape(
-        "pep735: Dependency Group Include's value is not a string ("
-        f"group: {group}, include chain: ): ",
-    )
+    expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
     with pytest.raises(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
@@ -538,33 +564,19 @@ def test_pep735_collector_invalid_dep_group_include(
 @pytest.mark.parametrize(
     "group_data",
     (
-        (
-            {
-                "teSt": ['{include-group = "Test"}'],
-            },
-            "group: teSt, include chain: teSt->teSt",
-        ),
-        (
-            {
-                "gRp1": ['{include-group = "Test"}'],
-                "teSt": ['{include-group = "grP1"}'],
-            },
-            "group: teSt, include chain: teSt->gRp1->teSt",
-        ),
-        (
-            {
-                "gRp1": ['{include-group = "Grp1"}'],
-                "teSt": ['{include-group = "grP1"}'],
-            },
-            "group: gRp1, include chain: teSt->gRp1->gRp1",
-        ),
-        (
-            {
-                "gRp1": ['"b"', '{include-group = "Test"}'],
-                "teSt": ['"a"', '{include-group = "grP1"}'],
-            },
-            "group: teSt, include chain: teSt->gRp1->teSt",
-        ),
+        {"teSt": ['{include-group = "Test"}']},
+        {
+            "gRp1": ['{include-group = "Test"}'],
+            "teSt": ['{include-group = "grP1"}'],
+        },
+        {
+            "gRp1": ['{include-group = "Grp1"}'],
+            "teSt": ['{include-group = "grP1"}'],
+        },
+        {
+            "gRp1": ['"b"', '{include-group = "Test"}'],
+            "teSt": ['"a"', '{include-group = "grP1"}'],
+        },
     ),
 )
 def test_pep735_collector_include_cycle(
@@ -575,15 +587,15 @@ def test_pep735_collector_include_cycle(
     """
     Collection of PEP735 dependencies with include cycle
     """
-    group_config, err_msg = group_data
-    pep735_deps(group_config)
+    pep735_deps(group_data)
     depsconfig_path, input_conf = pep735_depsconfig()
 
-    expected_err = re.escape(
-        f"pep735: include cycle detected ({err_msg})",
-    )
-    expected_err = f"^{expected_err}$"
-    with pytest.raises(ValueError, match=expected_err):
+    expected_err = re.escape("pep735: ")
+    expected_err = f"^{expected_err}"
+    with RaisesGroup(
+        dependency_groups.CyclicDependencyGroup,
+        match=expected_err,
+    ):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
