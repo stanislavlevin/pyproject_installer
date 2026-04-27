@@ -15,7 +15,7 @@ To verify changes if any:
 git diff 2.4.1:src/tomli @:backend/_vendor/tomli
 git diff 2.4.1:src/tomli @:src/pyproject_installer/_vendor/tomli
 - packaging: https://github.com/pypa/packaging
-git diff 26.1:src/packaging @:src/pyproject_installer/_vendor/packaging
+git diff 26.2:src/packaging @:src/pyproject_installer/_vendor/packaging
 """
 
 import os
