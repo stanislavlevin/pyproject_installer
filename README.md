@@ -299,6 +299,22 @@ python -m pyproject_installer install
 > /usr/share/foo/asset.dat
 > ```
 
+> **`--platlib`**
+>
+> Force the install to land in the `platlib` site-packages directory regardless of the wheel's `Root-Is-Purelib` flag. Both the unprefixed wheel root and any `.data/purelib/` content are redirected to `platlib`. Mutually exclusive with `--purelib`.
+>
+> *Default:* unset, the wheel's `Root-Is-Purelib` flag is honoured
+>
+> *Example:* `python -m pyproject_installer install --destdir /tmp/buildroot --platlib`
+
+> **`--purelib`**
+>
+> Force the install to land in the `purelib` site-packages directory regardless of the wheel's `Root-Is-Purelib` flag. Both the unprefixed wheel root and any `.data/platlib/` content are redirected to `purelib`. Mutually exclusive with `--platlib`. The symmetric inverse of `--platlib`.
+>
+> *Default:* unset, the wheel's `Root-Is-Purelib` flag is honoured
+>
+> *Example:* `python -m pyproject_installer install --destdir /tmp/buildroot --purelib`
+
 ### Run
 
 Run command within Python virtual environment that has access to system and user

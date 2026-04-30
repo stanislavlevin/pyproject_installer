@@ -1039,3 +1039,246 @@ def test_rpm_filelist_sys_pycache_prefix(
             rpm_filelist=filelist,
         )
     assert not filelist.exists()
+
+
+@pytest.mark.parametrize(
+    "wheel_purelib",
+    (True, False),
+    ids=("purelib", "platlib"),
+)
+@pytest.mark.parametrize(
+    "force_site",
+    ("purelib", "platlib"),
+    ids=("force_purelib", "force_platlib"),
+)
+def test_extraction_root_force_site(
+    wheel_purelib,
+    force_site,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check force_site overrides Root-Is-Purelib for root extraction.
+    """
+    contents = wheel_contents(purelib=wheel_purelib)
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        force_site=force_site,
+    )
+
+    scheme = get_installation_scheme("foo")
+    chosen_sitedir = Path(str(destdir) + scheme[force_site])
+    other_site = "platlib" if force_site == "purelib" else "purelib"
+    other_sitedir = Path(str(destdir) + scheme[other_site])
+
+    # /usr/lib and /usr/lib64 may collapse to the same path on
+    # non-multilib distros; only assert the negative when the two
+    # paths actually differ.
+    assert (chosen_sitedir / "foo" / "__init__.py").exists()
+    if chosen_sitedir != other_sitedir:
+        assert not (other_sitedir / "foo" / "__init__.py").exists()
+
+
+@pytest.mark.parametrize(
+    "force_site,other_site",
+    (
+        ("platlib", "purelib"),
+        ("purelib", "platlib"),
+    ),
+    ids=("force_platlib", "force_purelib"),
+)
+def test_force_site_redirects_data_subdir(
+    force_site,
+    other_site,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check .data/<other-site> content follows force_site to chosen site.
+    """
+    contents = wheel_contents()
+    contents[f"foo-1.0.data/{other_site}/extra.txt"] = "content\n"
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        force_site=force_site,
+    )
+
+    scheme = get_installation_scheme("foo")
+    chosen_sitedir = Path(str(destdir) + scheme[force_site])
+    other_sitedir = Path(str(destdir) + scheme[other_site])
+
+    assert (chosen_sitedir / "extra.txt").exists()
+    if chosen_sitedir != other_sitedir:
+        assert not (other_sitedir / "extra.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "force_site,wheel_purelib,other_site",
+    (
+        ("platlib", False, "purelib"),
+        ("purelib", True, "platlib"),
+    ),
+    ids=("force_platlib", "force_purelib"),
+)
+def test_force_site_idempotent_root_redirects_data(
+    force_site,
+    wheel_purelib,
+    other_site,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check force_site already aligned with Root-Is-Purelib keeps the
+    root unchanged but still redirects .data/<other-site> content to
+    the chosen site.
+    """
+    contents = wheel_contents(purelib=wheel_purelib)
+    contents[f"foo-1.0.data/{other_site}/extra.txt"] = "content\n"
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        force_site=force_site,
+    )
+
+    scheme = get_installation_scheme("foo")
+    chosen_sitedir = Path(str(destdir) + scheme[force_site])
+    other_sitedir = Path(str(destdir) + scheme[other_site])
+
+    # root stayed in chosen site (no change vs default)
+    assert (chosen_sitedir / "foo" / "__init__.py").exists()
+    if chosen_sitedir != other_sitedir:
+        assert not (other_sitedir / "foo" / "__init__.py").exists()
+    # .data/<other-site> content followed the override
+    assert (chosen_sitedir / "extra.txt").exists()
+    if chosen_sitedir != other_sitedir:
+        assert not (other_sitedir / "extra.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "force_site",
+    ("platlib", "purelib"),
+)
+def test_force_site_both_data_subdirs_consolidated(
+    force_site,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check force_site consolidates both .data/purelib and .data/platlib
+    content into the chosen site.
+    """
+    contents = wheel_contents()
+    contents["foo-1.0.data/purelib/from_purelib.txt"] = "p\n"
+    contents["foo-1.0.data/platlib/from_platlib.txt"] = "P\n"
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        force_site=force_site,
+    )
+
+    chosen_sitedir = Path(
+        str(destdir) + get_installation_scheme("foo")[force_site],
+    )
+    assert (chosen_sitedir / "from_purelib.txt").exists()
+    assert (chosen_sitedir / "from_platlib.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "force_site",
+    ("platlib", "purelib"),
+    ids=("force_platlib", "force_purelib"),
+)
+@pytest.mark.parametrize(
+    "wheel_purelib",
+    (True, False),
+    ids=("wheel_purelib", "wheel_platlib"),
+)
+@pytest.mark.parametrize(
+    "data_purelib",
+    ("purelib", "platlib"),
+    ids=("data_purelib", "data_platlib"),
+)
+def test_rpm_filelist_under_force_site(
+    force_site,
+    wheel_purelib,
+    data_purelib,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check rpm filelist under force_site.
+    """
+    contents = wheel_contents(purelib=wheel_purelib)
+    contents[f"foo-1.0.data/{data_purelib}/extra.txt"] = "content\n"
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+        force_site=force_site,
+    )
+
+    chosen_sitedir = get_installation_scheme("foo")[force_site]
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    expected_files = sorted(
+        (
+            f"%dir {chosen_sitedir}/foo",
+            f"{chosen_sitedir}/foo/__init__.py",
+            f"%dir {chosen_sitedir}/foo/__pycache__",
+            *expected_pyc_lines(f"{chosen_sitedir}/foo/__init__.py"),
+            f"%dir {chosen_sitedir}/foo-1.0.dist-info",
+            f"{chosen_sitedir}/foo-1.0.dist-info/METADATA",
+            f"{chosen_sitedir}/extra.txt",
+        ),
+    )
+    assert recorded_files == expected_files
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    ("scripts", "data", "headers", "bogus", ""),
+)
+def test_force_site_invalid_value_rejected(
+    bad_value,
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check install_wheel rejects force_site values outside purelib/platlib.
+    """
+    contents = wheel_contents()
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+
+    with pytest.raises(
+        ValueError,
+        match=r"force_site must be 'purelib' or 'platlib'",
+    ):
+        install_wheel(
+            wheel(contents=contents),
+            destdir=destdir,
+            force_site=bad_value,
+        )

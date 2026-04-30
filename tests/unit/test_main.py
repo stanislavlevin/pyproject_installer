@@ -341,6 +341,7 @@ def test_install_cli_default(mock_install_wheel, mock_read_tracker):
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -361,6 +362,7 @@ def test_install_cli_destdir(mock_install_wheel, mock_read_tracker):
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -380,6 +382,7 @@ def test_install_cli_wheel(mock_install_wheel, mock_read_tracker):
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -399,6 +402,7 @@ def test_install_cli_wheel_destdir(mock_install_wheel, mock_read_tracker):
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -419,6 +423,7 @@ def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
         "installer": installer_tool,
         "strip_dist_info": True,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -439,6 +444,7 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel):
         "installer": None,
         "strip_dist_info": False,
         "rpm_filelist": None,
+        "force_site": None,
     }
 
     project_main.main(install_args)
@@ -475,10 +481,74 @@ def test_install_cli_rpm_filelist(mock_install_wheel, tmpdir):
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": filelist,
+        "force_site": None,
     }
 
     project_main.main(install_args)
     mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_platlib(mock_install_wheel):
+    """
+    Run install with --platlib.
+    """
+    install_args = ["install", "--platlib"]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": None,
+        "force_site": "platlib",
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_purelib(mock_install_wheel):
+    """
+    Run install with --purelib.
+    """
+    install_args = ["install", "--purelib"]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": None,
+        "force_site": "purelib",
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+def test_install_cli_platlib_purelib_mutually_exclusive(
+    mock_install_wheel,
+    capsys,
+):
+    """
+    Check --platlib and --purelib together is an argparse error.
+    """
+    install_args = ["install", "--platlib", "--purelib"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(install_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    captured = capsys.readouterr()
+    assert not captured.out
+    # actual error message is controlled by cpython,
+    # so it's unreliable to check captured.err
+    mock_install_wheel.assert_not_called()
 
 
 def test_run_cli_default(mock_run_command, mock_read_tracker, caplog):
