@@ -162,9 +162,16 @@ def install_wheel(
     installer=None,
     strip_dist_info=True,
     rpm_filelist=None,
+    force_site=None,
 ):
     wheel_path = validate_wheel_path(wheel_path)
     destdir = validate_destdir(destdir)
+
+    if force_site is not None and force_site not in ("purelib", "platlib"):
+        raise ValueError(
+            "force_site must be 'purelib' or 'platlib', "
+            f"got: {force_site!r}",
+        )
 
     logger.info("Installing wheel")
     logger.info("Wheel directory: %s", wheel_path.parent)
@@ -176,6 +183,8 @@ def install_wheel(
         dist_version = whl.dist_version
         data_name = whl.data_name
         scheme = get_installation_scheme(dist_name)
+        if force_site is not None:
+            scheme["purelib"] = scheme["platlib"] = scheme[force_site]
         extraction_root = whl.extraction_root(scheme)
         rootdir = destdir / extraction_root.relative_to(extraction_root.root)
         logger.info("Wheel installation root: %s", rootdir)

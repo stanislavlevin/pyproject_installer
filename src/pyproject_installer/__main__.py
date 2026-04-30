@@ -59,6 +59,7 @@ def install(args, parser):
         installer=args.installer,
         strip_dist_info=args.strip_dist_info,
         rpm_filelist=args.rpm_filelist,
+        force_site=args.force_site,
     )
 
 
@@ -548,6 +549,29 @@ def main_parser(prog):
             "write an RPM %%files-compatible filelist of installed "
             "files (plus computed .pyc paths) to PATH "
             "(default: None, filelist is not written)"
+        ),
+    )
+    site_group = parser_install.add_mutually_exclusive_group()
+    site_group.add_argument(
+        "--platlib",
+        dest="force_site",
+        action="store_const",
+        const="platlib",
+        help=(
+            "force install into platlib site-packages, overriding "
+            "wheel's Root-Is-Purelib (also redirects .data/purelib "
+            "content). Mutually exclusive with --purelib."
+        ),
+    )
+    site_group.add_argument(
+        "--purelib",
+        dest="force_site",
+        action="store_const",
+        const="purelib",
+        help=(
+            "force install into purelib site-packages, overriding "
+            "wheel's Root-Is-Purelib (also redirects .data/platlib "
+            "content). Mutually exclusive with --platlib."
         ),
     )
     parser_install.set_defaults(main=install)
