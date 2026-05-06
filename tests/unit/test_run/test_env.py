@@ -637,7 +637,9 @@ def test_env_content_console_script(wheel_cscript, mock_usps, mock_ssps):
     expected_shebang = build_shebang(
         str(
             Path(json_data["bin_dir"])
-            / Path(sys._base_executable).name,  # noqa: SLF001
+            # sys._base_executable is a documented runtime attribute; not in
+            # typeshed.
+            / Path(sys._base_executable).name,  # type: ignore[attr-defined]  # noqa: SLF001
         ),
     )
     # build_shebang is covered by installer's tests

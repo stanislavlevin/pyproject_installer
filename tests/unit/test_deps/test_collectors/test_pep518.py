@@ -2,6 +2,7 @@ import json
 import re
 import textwrap
 from copy import deepcopy
+from typing import Any
 
 import pytest
 
@@ -36,7 +37,7 @@ def test_pep518_collector_missing_pyproject_toml(
     # prepare source config
     srcname = "foo"
     collector = "pep518"
-    input_conf = {"sources": {srcname: {"srctype": collector}}}
+    input_conf: dict[str, Any] = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     monkeypatch.chdir(tmpdir)
@@ -59,7 +60,7 @@ def test_pep518_collector_missing_build_system(
     # prepare source config
     srcname = "foo"
     collector = "pep518"
-    input_conf = {"sources": {srcname: {"srctype": collector}}}
+    input_conf: dict[str, Any] = {"sources": {srcname: {"srctype": collector}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     pyproject_path = pyproject("")

@@ -1,13 +1,22 @@
+import sys
 from pathlib import Path
+from typing import TypedDict
 
-try:
-    # Python 3.11+
+if sys.version_info >= (3, 11):
     import tomllib
-except ModuleNotFoundError:
+else:
     from ._vendor import tomli as tomllib
 
 
-def validate_path(cwd, path):
+class BackendConfigType(TypedDict, total=False):
+    package_dir: str
+    version_file: str | None
+    include_dirs_sdist: list[str] | None
+    include_files_sdist: list[str] | None
+    license_files: list[str]
+
+
+def validate_path(cwd: Path, path: Path) -> Path:
     err_msg = f"{path} should be relative"
     if path.is_absolute():
         raise ValueError(err_msg)
@@ -20,9 +29,9 @@ def validate_path(cwd, path):
     return abs_path
 
 
-def parse_backend_config(cwd, path):
+def parse_backend_config(cwd: Path, path: Path) -> BackendConfigType:
     """Parses table tool.pyproject_installer.backend of pyproject.toml"""
-    backend_config = {}
+    backend_config: BackendConfigType = {}
     with path.open("rb") as f:
         pyproject_data = tomllib.load(f)
 

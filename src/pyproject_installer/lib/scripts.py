@@ -1,4 +1,6 @@
 import logging
+from importlib.metadata import Distribution
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ if __name__ == "__main__":
 SHEBANG_LENGTH_LIMIT = 127
 
 
-def build_shebang(executable):
+def build_shebang(executable: str) -> str:
     """
     man 2 execve
     The kernel imposes a maximum length on the text that follows the
@@ -34,13 +36,13 @@ def build_shebang(executable):
 
 
 def generate_entrypoints_scripts(
-    distr,
-    python,
-    scriptsdir,
-    destdir,
+    distr: Distribution,
+    python: str,
+    scriptsdir: Path,
+    destdir: str | Path,
     *,
-    installed_paths=None,
-):
+    installed_paths: set[Path] | None = None,
+) -> None:
     """
     Optional entry_points
     https://packaging.python.org/en/latest/specifications/entry-points/

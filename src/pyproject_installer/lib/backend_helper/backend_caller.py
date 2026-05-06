@@ -10,11 +10,19 @@ import os
 import sys
 from importlib import import_module
 from pathlib import Path
+from typing import Any, Literal, TypedDict, overload
 
 logger = logging.getLogger(Path(__file__).name)
 
 # hook name: fallback (None - mandatory hook)
-SUPPORTED_HOOKS = {
+HookResultType = list[str] | str | None
+BuildWheelResultType = str
+BuildSdistResultType = str
+RequiresBuildWheelResultType = list[str]
+RequiresBuildSdistResultType = list[str]
+PrepareMetadataResultType = str
+
+SUPPORTED_HOOKS: dict[str, HookResultType] = {
     "build_wheel": None,
     "build_sdist": None,
     "get_requires_for_build_wheel": [],
@@ -24,7 +32,36 @@ SUPPORTED_HOOKS = {
 }
 
 
-def backend_object(backend, backend_path=None):
+class BackendBuildWheelType(TypedDict):
+    result: BuildWheelResultType
+
+
+class BackendBuildSdistType(TypedDict):
+    result: BuildSdistResultType
+
+
+class BackendRequiresBuildWheelType(TypedDict):
+    result: RequiresBuildWheelResultType
+
+
+class BackendRequiresBuildSdistType(TypedDict):
+    result: RequiresBuildSdistResultType
+
+
+class BackendPrepareMetadataType(TypedDict):
+    result: PrepareMetadataResultType
+
+
+BackendResultType = (
+    BackendBuildWheelType
+    | BackendBuildSdistType
+    | BackendRequiresBuildWheelType
+    | BackendRequiresBuildSdistType
+    | BackendPrepareMetadataType
+)
+
+
+def backend_object(backend: str, backend_path: list[str] | None = None) -> Any:
     if backend_path is not None:
         # Projects can specify that their backend code is hosted in-tree by
         # including the backend-path key in pyproject.toml. This key contains a
@@ -42,7 +79,13 @@ def backend_object(backend, backend_path=None):
         # Front ends MAY enforce this check, but are not required to. Doing so
         # would typically involve checking the backend's __file__ attribute
         # against the locations in backend-path.
-        actual_bep = Path(backend_obj.__file__).resolve(strict=True)
+        backend_file = backend_obj.__file__
+        if backend_file is None:
+            raise ValueError(
+                f"Backend {backend!r} has no __file__ location; "
+                f"cannot enforce backend-path",
+            )
+        actual_bep = Path(backend_file).resolve(strict=True)
         for path in backend_path:
             expected_bep = Path(path).resolve(strict=True)
 
@@ -66,14 +109,14 @@ def backend_object(backend, backend_path=None):
     return backend_obj
 
 
-def write_result(result_fd, result):
-    result = result.encode("utf-8")
+def write_result(result_fd: int, result: str) -> None:
+    payload = result.encode("utf-8")
     sent = 0
-    while sent != len(result):
-        sent += os.write(result_fd, result[sent:])
+    while sent != len(payload):
+        sent += os.write(result_fd, payload[sent:])
 
 
-def main_parser(prog):
+def main_parser(prog: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="PEP517 hook caller in subprocess",
         prog=prog,
@@ -114,12 +157,12 @@ def main_parser(prog):
     return parser
 
 
-def emit_less_than_warning(record):
+def emit_less_than_warning(record: logging.LogRecord) -> bool:
     # nonzero if record should be logged
     return record.levelno < logging.WARNING
 
 
-def setup_logging(*, verbose=False):
+def setup_logging(*, verbose: bool = False) -> None:
     # emit WARNING, ERROR and CRITICAL to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
@@ -142,7 +185,63 @@ def setup_logging(*, verbose=False):
     )
 
 
-def call_hook(backend, backend_path, hook, hook_args, hook_kwargs):
+@overload
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: Literal["build_wheel"],
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> BuildWheelResultType: ...
+
+
+@overload
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: Literal["build_sdist"],
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> BuildSdistResultType: ...
+
+
+@overload
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: Literal["get_requires_for_build_wheel"],
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> RequiresBuildWheelResultType: ...
+
+
+@overload
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: Literal["get_requires_for_build_sdist"],
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> RequiresBuildSdistResultType: ...
+
+
+@overload
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: Literal["prepare_metadata_for_build_wheel"],
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> PrepareMetadataResultType: ...
+
+
+def call_hook(
+    backend: str,
+    backend_path: list[str] | None,
+    hook: str,
+    hook_args: list[str],
+    hook_kwargs: dict[str, Any],
+) -> HookResultType:
     hook_obj = backend_object(backend, backend_path=backend_path)
     try:
         hook_func = getattr(hook_obj, hook)
@@ -154,10 +253,11 @@ def call_hook(backend, backend_path, hook, hook_args, hook_kwargs):
             ) from None
         return fallback
 
-    return hook_func(*hook_args, **hook_kwargs)
+    result: HookResultType = hook_func(*hook_args, **hook_kwargs)
+    return result
 
 
-def main(cli_args, prog=Path(__file__).name):
+def main(cli_args: list[str], prog: str = Path(__file__).name) -> None:
     parser = main_parser(prog)
     args = parser.parse_args(cli_args)
     setup_logging(verbose=args.verbose)

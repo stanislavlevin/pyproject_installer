@@ -1,6 +1,6 @@
 import pytest
 
-VALID_PEP508_DEPS_DATA = (
+VALID_PEP508_DEPS_DATA: tuple[tuple[list[str], list[str]], ...] = (
     ([], []),
     (["foo"], ["foo"]),
     (["foo == 1.0"], ["foo==1.0"]),
@@ -21,7 +21,7 @@ VALID_PEP508_DEPS_DATA = (
     ),
 )
 
-INVALID_PEP508_DEPS_DATA = (
+INVALID_PEP508_DEPS_DATA: tuple[tuple[list[str], list[str]], ...] = (
     (["_foo"], []),
     (["foo", "bar !> 1.0"], ["foo"]),
     (["foo", "bar > 1.0; invalid_marker=='1.0'"], ["foo"]),
@@ -30,21 +30,27 @@ INVALID_PEP508_DEPS_DATA = (
 
 
 @pytest.fixture(params=VALID_PEP508_DEPS_DATA)
-def valid_pep508_data(request):
+def valid_pep508_data(
+    request: pytest.FixtureRequest,
+) -> tuple[list[str], list[str]]:
     """
     return tuple of two elements,
     first item of them is actual valid PEP508 data (supposed to be collected),
     the second one is data expected to be read from deps config after `sync`.
     """
-    return request.param
+    result: tuple[list[str], list[str]] = request.param
+    return result
 
 
 @pytest.fixture(params=INVALID_PEP508_DEPS_DATA)
-def invalid_pep508_data(request):
+def invalid_pep508_data(
+    request: pytest.FixtureRequest,
+) -> tuple[list[str], list[str]]:
     """
     return tuple of two elements,
     first item of them is actual invalid PEP508 data (supposed to be collected),
     the second one is data expected to be read from deps config after `sync` if
     invalid dependency specifiers are allowed by a collector.
     """
-    return request.param
+    result: tuple[list[str], list[str]] = request.param
+    return result

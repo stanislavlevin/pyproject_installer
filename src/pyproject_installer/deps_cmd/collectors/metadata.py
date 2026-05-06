@@ -1,4 +1,5 @@
 import email
+from collections.abc import Iterator
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -20,10 +21,13 @@ class MetadataCollector(Collector):
 
     name = "metadata"
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            metadata_filename = build_metadata(Path.cwd(), outdir=tmp_path)
+            metadata_filename = build_metadata(
+                Path.cwd(),
+                outdir=tmp_path,
+            )
             metadata_path = tmp_path / metadata_filename
             metadata_text = metadata_path.read_text(encoding="utf-8")
         metadata_email = email.message_from_string(metadata_text)

@@ -16,8 +16,11 @@ import logging
 import os
 import tarfile
 import time
+from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
+from types import TracebackType
+from typing import IO, Any
 
 from .common import normalize_name_pep427, source_date_time
 from .config import parse_backend_config
@@ -31,7 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 class SdistBuilder:
-    def __init__(self, cwd, distr_name, distr_version, sdist_directory):
+    def __init__(
+        self,
+        cwd: Path,
+        distr_name: str,
+        distr_version: str,
+        sdist_directory: Path,
+    ) -> None:
         self.cwd = cwd
         self.distr_name = distr_name
         self.distr_version = distr_version
@@ -44,19 +53,24 @@ class SdistBuilder:
             format=tarfile.PAX_FORMAT,
         )
 
-    def __enter__(self):
+    def __enter__(self) -> "SdistBuilder":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
-    def close(self):
+    def close(self) -> None:
         self._tarfile.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
 
-    def package_modules(self, package_dir):
+    def package_modules(self, package_dir: Path) -> None:
         """Package Python packages and modules"""
         for root, dirs, files in os.walk(package_dir):
             dirs[:] = [d for d in sorted(dirs) if d != "__pycache__"]
@@ -67,8 +81,8 @@ class SdistBuilder:
                 if fp.suffix == ".pyc":
                     continue
 
-                # allow only Python modules for now
-                if fp.suffix != ".py":
+                # allow Python modules and the PEP 561 typing marker
+                if fp.suffix != ".py" and fp.name != "py.typed":
                     continue
 
                 fp_rel = fp.relative_to(self.cwd)
@@ -91,7 +105,7 @@ class SdistBuilder:
                         date_time=source_date_time(stat.st_mtime),
                     )
 
-    def package_metadata(self, core_metadata):
+    def package_metadata(self, core_metadata: bytes) -> None:
         with BytesIO(core_metadata) as src:
             self.package_file(
                 src,
@@ -100,7 +114,7 @@ class SdistBuilder:
                 date_time=source_date_time(time.time()),
             )
 
-    def package_files(self, files):
+    def package_files(self, files: Iterable[str]) -> None:
         for file in files:
             if Path(file).is_absolute():
                 raise ValueError(f"Path should be relative, given: {file}")
@@ -118,13 +132,19 @@ class SdistBuilder:
                         date_time=source_date_time(stat.st_mtime),
                     )
 
-    def package_license_files(self, patterns):
+    def package_license_files(self, patterns: Iterable[str]) -> None:
         # supported license files from root directory only
         self.package_files(
             (f.name for ptrn in patterns for f in self.cwd.glob(ptrn)),
         )
 
-    def package_file(self, src, filename, size, date_time):
+    def package_file(
+        self,
+        src: IO[bytes],
+        filename: str,
+        size: int,
+        date_time: int,
+    ) -> None:
         tarinfo = tarfile.TarInfo(str(self.root_dir / filename))
         tarinfo.size = size
         tarinfo.mtime = date_time
@@ -132,7 +152,10 @@ class SdistBuilder:
         self._tarfile.addfile(tarinfo, fileobj=src)
 
 
-def build_sdist(sdist_directory, config_settings=None):
+def build_sdist(
+    sdist_directory: str | Path,
+    config_settings: dict[str, Any] | None = None,
+) -> str:
     cwd = Path.cwd()
     pyproject = cwd / "pyproject.toml"
 

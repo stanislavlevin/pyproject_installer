@@ -5,8 +5,17 @@ import subprocess
 import threading
 from contextlib import suppress
 from pathlib import Path
+from typing import Any, Literal, TypedDict, overload
 
 from . import tomllib
+from .backend_helper.backend_caller import (
+    BackendBuildSdistType,
+    BackendBuildWheelType,
+    BackendPrepareMetadataType,
+    BackendRequiresBuildSdistType,
+    BackendRequiresBuildWheelType,
+    BackendResultType,
+)
 
 __all__ = [
     "backend_hook",
@@ -15,28 +24,55 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-BACKEND_CALLER = Path(__file__).parent / "backend_helper" / "backend_caller.py"
+BACKEND_CALLER = str(
+    Path(__file__).parent / "backend_helper" / "backend_caller.py",
+)
 
 
 class RaisingThread(threading.Thread):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._exc = None
+        self._exc: BaseException | None = None
 
-    def run(self, *args, **kwargs):
+    def run(self, *args: Any, **kwargs: Any) -> None:
         self._exc = None
         try:
             super().run(*args, **kwargs)
         except BaseException as e:  # noqa: BLE001
             self._exc = e
 
-    def join(self, *args, **kwargs):
+    def join(self, *args: Any, **kwargs: Any) -> None:
         super().join(*args, **kwargs)
         if self._exc:
             raise self._exc
 
 
-def parse_build_system_spec(srcdir):
+BuildSystemTypeBase = TypedDict(
+    "BuildSystemTypeBase",
+    {
+        "build-backend": str,
+        "requires": list[str],
+    },
+)
+
+
+BuildSystemOptType = TypedDict(
+    "BuildSystemOptType",
+    {
+        "backend-path": list[str],
+    },
+    total=False,
+)
+
+
+# pylint can't see that TypedDict() functional calls produce class-like
+# objects, so it flags inherit-non-class / duplicate-bases here.
+# pylint: disable-next=inherit-non-class,duplicate-bases
+class BuildSystemType(BuildSystemTypeBase, BuildSystemOptType):
+    pass
+
+
+def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
     """
     PEP517 spec: https://peps.python.org/pep-0517/#source-trees.
 
@@ -61,7 +97,7 @@ def parse_build_system_spec(srcdir):
     """
     logger.debug("Checking for PEP517 spec")
     pyproject_file = srcdir / "pyproject.toml"
-    default_build_system = {
+    default_build_system: BuildSystemType = {
         "build-backend": "setuptools.build_meta:__legacy__",
         "requires": ["setuptools"],
     }
@@ -119,7 +155,7 @@ def parse_build_system_spec(srcdir):
             f"build-backend should be a string, given: {build_backend!r}",
         )
 
-    bs = {
+    bs: BuildSystemType = {
         "build-backend": build_backend,
         "requires": requires,
     }
@@ -183,13 +219,13 @@ def parse_build_system_spec(srcdir):
 
 def make_helper_args(
     *,
-    python,
-    result_fd,
-    verbose,
-    build_system,
-    hook,
-    hook_args,
-):
+    python: str,
+    result_fd: int,
+    verbose: bool,
+    build_system: BuildSystemType,
+    hook: str,
+    hook_args: tuple[tuple[str, ...], dict[str, Any]],
+) -> list[str]:
     args = [
         python,
         BACKEND_CALLER,
@@ -209,7 +245,7 @@ def make_helper_args(
     return args
 
 
-def validate_source_dir(srcdir):
+def validate_source_dir(srcdir: Path) -> Path:
     """Resolve and validate source path"""
     logger.debug("Validating source path")
     try:
@@ -232,7 +268,69 @@ def validate_source_dir(srcdir):
     return srcdir
 
 
-def backend_hook(python, srcdir, verbose, hook, hook_args=((), {})):
+@overload
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: Literal["build_wheel"],
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendBuildWheelType: ...
+
+
+@overload
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: Literal["build_sdist"],
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendBuildSdistType: ...
+
+
+@overload
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: Literal["get_requires_for_build_wheel"],
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendRequiresBuildWheelType: ...
+
+
+@overload
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: Literal["get_requires_for_build_sdist"],
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendRequiresBuildSdistType: ...
+
+
+@overload
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: Literal["prepare_metadata_for_build_wheel"],
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendPrepareMetadataType: ...
+
+
+def backend_hook(
+    python: str,
+    srcdir: Path,
+    *,
+    verbose: bool,
+    hook: str,
+    hook_args: tuple[tuple[str, ...], dict[str, Any]] = ((), {}),
+) -> BackendResultType:
     srcdir = validate_source_dir(srcdir)
     build_system = parse_build_system_spec(srcdir)
     read = b""
@@ -241,7 +339,7 @@ def backend_hook(python, srcdir, verbose, hook, hook_args=((), {})):
 
     try:
 
-        def read_from_pipe():
+        def read_from_pipe() -> None:
             nonlocal read
             buffer_size = 2048
             while True:
@@ -290,7 +388,7 @@ def backend_hook(python, srcdir, verbose, hook, hook_args=((), {})):
             raise RuntimeError(str(e)) from e
         os.close(rfd)
         try:
-            result = json.loads(read.decode("utf-8"))
+            result: BackendResultType = json.loads(read.decode("utf-8"))
         except json.JSONDecodeError:
             raise RuntimeError(
                 "Received invalid JSON data from backend helper: "

@@ -17,7 +17,9 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any, NoReturn
 
 from . import __version__ as project_version
 from .build_cmd import WHEEL_TRACKER, build_sdist, build_wheel
@@ -30,7 +32,7 @@ from .run_cmd import run_command
 logger = logging.getLogger(Path(__file__).parent.name)
 
 
-def build(args, parser):
+def build(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     srcdir = args.srcdir or Path.cwd()
     outdir = srcdir / "dist" if args.outdir is None else args.outdir
     try:
@@ -47,7 +49,7 @@ def build(args, parser):
     )
 
 
-def install(args, parser):
+def install(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     try:
         wheel = default_built_wheel() if args.wheel is None else args.wheel
     except ValueError as e:
@@ -63,8 +65,13 @@ def install(args, parser):
     )
 
 
-def deps(action_name):
-    def wrapped(args, parser):
+def deps(
+    action_name: str,
+) -> Callable[[argparse.Namespace, argparse.ArgumentParser], None]:
+    def wrapped(
+        args: argparse.Namespace,
+        parser: argparse.ArgumentParser,
+    ) -> None:
         depsconfig = args.depsconfig or Path.cwd() / DEFAULT_CONFIG_NAME
 
         if (
@@ -88,22 +95,23 @@ def deps(action_name):
 
 
 class RunnerResult:
+
     def __init__(
         self,
-        status,
-        message,
-        log,
+        status: ExitCodes,
+        message: str | None,
+        log: Callable[..., None],
         *,
-        exception=None,
-        print_traceback=False,
-    ):
+        exception: BaseException | None = None,
+        print_traceback: bool = False,
+    ) -> None:
         self.status = status
         self.message = message
         self.log = log
         self.exception = exception
         self.print_traceback = print_traceback
 
-    def report(self):
+    def report(self) -> None:
         status_msg = "Command's result: %(status)s"
         if self.message is not None:
             status_msg += " (%(message)s)"
@@ -120,7 +128,7 @@ class RunnerResult:
                 self.log(f"{error_msg} %s", str(self.exception))
 
 
-def run(args, parser):
+def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     try:
         wheel = default_built_wheel() if args.wheel is None else args.wheel
     except ValueError as e:
@@ -163,7 +171,7 @@ def run(args, parser):
     sys.exit(result.status)
 
 
-def default_built_wheel():
+def default_built_wheel() -> Path:
     """
     By default the `.build` module saves wheel into 'srcdir/dist' and tracks
     it in 'srcdir/dist/.wheeltracker'.
@@ -183,7 +191,7 @@ def default_built_wheel():
     return default_wheel_dir / wheel_filename
 
 
-def convert_config_settings(value):
+def convert_config_settings(value: str | None) -> dict[str, Any] | None:
     if value is None:
         return None
 
@@ -203,7 +211,7 @@ def convert_config_settings(value):
 
 
 class MainArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         """Overrides default exit code(2) with our"""
         try:
             super().error(message)
@@ -212,21 +220,35 @@ class MainArgumentParser(argparse.ArgumentParser):
             raise
 
 
-def deps_subparsers(parser):
+def deps_subparsers(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(
         title="deps subcommands",
         help="--help for additional help",
         required=True,
     )
 
-    def add_deps_argument(parser, destname, *args, **kwargs):
+    def add_deps_argument(
+        parser: argparse.ArgumentParser,
+        destname: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         parser.add_argument(*args, **kwargs)
         destnames = parser.get_default("main_args") or []
         destnames.append(destname)
         parser.set_defaults(main_args=destnames)
 
-    def add_deps_parser(parsers, name, *args, **kwargs):
-        parser = parsers.add_parser(name, *args, **kwargs)
+    def add_deps_parser(
+        parsers: "argparse._SubParsersAction[argparse.ArgumentParser]",
+        name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> argparse.ArgumentParser:
+        parser = parsers.add_parser(
+            name,
+            *args,
+            **kwargs,
+        )
         parser.set_defaults(main=deps(name))
         return parser
 
@@ -411,7 +433,7 @@ def deps_subparsers(parser):
     )
 
 
-def main_parser(prog):
+def main_parser(prog: str) -> MainArgumentParser:
     parser = MainArgumentParser(
         description=(
             "Build, check and install Python project from source tree in "
@@ -627,12 +649,12 @@ def main_parser(prog):
     return parser
 
 
-def emit_less_than_warning(record):
+def emit_less_than_warning(record: logging.LogRecord) -> bool:
     # nonzero if record should be logged
     return record.levelno < logging.WARNING
 
 
-def setup_logging(*, verbose=False):
+def setup_logging(*, verbose: bool = False) -> None:
     # emit WARNING, ERROR and CRITICAL to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
@@ -655,7 +677,10 @@ def setup_logging(*, verbose=False):
     )
 
 
-def main(cli_args, prog=f"python -m {__package__}"):
+def main(
+    cli_args: Sequence[str],
+    prog: str = f"python -m {__package__}",
+) -> None:
     parser = main_parser(prog)
     args = parser.parse_args(cli_args)
     setup_logging(verbose=args.verbose)

@@ -2,8 +2,10 @@ import logging
 import shutil
 import sys
 import sysconfig
+from collections.abc import Callable, Iterable, Iterator
 from importlib.metadata import PathDistribution
 from pathlib import Path
+from typing import Literal
 
 from pyproject_installer.install_cmd._rpm_filelist import (
     write_rpm_filelist,
@@ -22,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 MAGIC_SHEBANG = b"#!python"
 
-ALLOW_DIST_INFO_LIST = ("METADATA", "entry_points.txt")
-DENY_DIST_INFO_LIST = ("RECORD",)
+ALLOW_DIST_INFO_LIST: tuple[str, ...] = ("METADATA", "entry_points.txt")
+DENY_DIST_INFO_LIST: tuple[str, ...] = ("RECORD",)
 
 
-def get_installation_scheme(dist_name):
+def get_installation_scheme(dist_name: str) -> dict[str, str]:
     scheme_dict = sysconfig.get_paths()
 
     # there is no headers in sysconfig for now
@@ -47,7 +49,13 @@ def get_installation_scheme(dist_name):
     return scheme_dict
 
 
-def install_wheel_data(data_path, scheme, destdir, *, installed_paths=None):
+def install_wheel_data(
+    data_path: Path,
+    scheme: dict[str, str],
+    destdir: Path,
+    *,
+    installed_paths: set[Path] | None = None,
+) -> None:
     """
     PEP427:
     Each subdirectory of distribution-1.0.data/ is a key into a dict of
@@ -63,13 +71,15 @@ def install_wheel_data(data_path, scheme, destdir, *, installed_paths=None):
     """
     logger.info("Installing .data")
 
+    copy_fn: Callable[[str, str], str]
     if installed_paths is None:
         copy_fn = shutil.copy2
     else:
 
-        def copy_fn(src, dst):
-            shutil.copy2(src, dst)
+        def copy_fn(src: str, dst: str) -> str:
+            new_file = shutil.copy2(src, dst)
             installed_paths.add(Path(dst))
+            return new_file
 
     # keys of .data dir were prechecked in `validate`
     for f in data_path.iterdir():
@@ -111,7 +121,7 @@ def install_wheel_data(data_path, scheme, destdir, *, installed_paths=None):
     shutil.rmtree(data_path)
 
 
-def validate_wheel_path(wheel_path):
+def validate_wheel_path(wheel_path: Path) -> Path:
     try:
         wheel_path = wheel_path.resolve(strict=True)
     except (FileNotFoundError, RuntimeError):
@@ -121,7 +131,7 @@ def validate_wheel_path(wheel_path):
     return wheel_path
 
 
-def validate_destdir(destdir):
+def validate_destdir(destdir: Path) -> Path:
     try:
         destdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
@@ -132,7 +142,12 @@ def validate_destdir(destdir):
     return destdir.resolve(strict=True)
 
 
-def filter_dist_info(dist_info, *, members, strip_dist_info=True):
+def filter_dist_info(
+    dist_info: str,
+    *,
+    members: Iterable[str],
+    strip_dist_info: bool = True,
+) -> Iterator[str]:
     """
     If `strip_dist_info` is True then only `allow_list` is allowed in
     dist-info directory. The `deny_list` is unconditionally filtered out.
@@ -156,14 +171,14 @@ def filter_dist_info(dist_info, *, members, strip_dist_info=True):
 
 
 def install_wheel(
-    wheel_path,
+    wheel_path: Path,
     *,
-    destdir,
-    installer=None,
-    strip_dist_info=True,
-    rpm_filelist=None,
-    force_site=None,
-):
+    destdir: Path,
+    installer: str | None = None,
+    strip_dist_info: bool = True,
+    rpm_filelist: Path | None = None,
+    force_site: Literal["purelib", "platlib"] | None = None,
+) -> None:
     wheel_path = validate_wheel_path(wheel_path)
     destdir = validate_destdir(destdir)
 
@@ -198,7 +213,9 @@ def install_wheel(
             ),
         )
 
-        installed_paths = set() if rpm_filelist is not None else None
+        installed_paths: set[Path] | None = (
+            set() if rpm_filelist is not None else None
+        )
 
         logger.info("Extracting wheel")
         whl.extract(rootdir, members=members)
@@ -240,7 +257,7 @@ def install_wheel(
             installed_paths=installed_paths,
         )
 
-    if installed_paths is not None:
+    if rpm_filelist is not None and installed_paths is not None:
         write_rpm_filelist(
             rpm_filelist,
             installed_paths,

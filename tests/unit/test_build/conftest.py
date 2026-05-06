@@ -1,10 +1,12 @@
 import json
+from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
 
 
 @pytest.fixture
-def mock_build(mocker):
+def mock_build(mocker: MockerFixture) -> MagicMock:
     mocker.patch(
         "pyproject_installer.lib.build_backend.os.pipe",
         return_value=(3, 4),

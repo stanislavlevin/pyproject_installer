@@ -1,9 +1,9 @@
 import contextlib
+import sys
 
-try:
-    # Python 3.11+
+if sys.version_info >= (3, 11):
     import tomllib
-except ModuleNotFoundError:
+else:
     from .._vendor import tomli as tomllib
 
 from .._vendor.packaging import (
@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-def is_pep508_requirement(requirement):
+def is_pep508_requirement(requirement: str) -> bool:
     """
     Returns True if string requirement is valid PEP508 specifier
     https://packaging.python.org/en/latest/specifications/dependency-specifiers/#dependency-specifiers

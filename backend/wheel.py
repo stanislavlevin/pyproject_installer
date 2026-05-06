@@ -17,8 +17,11 @@ import logging
 import os
 import time
 from base64 import urlsafe_b64encode
+from collections.abc import Iterable
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
+from types import TracebackType
+from typing import IO, Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from .common import normalize_name_pep427, source_date_time_zinfo
@@ -33,29 +36,40 @@ logger = logging.getLogger(__name__)
 
 
 class WheelBuilder:
-    def __init__(self, distr_name, distr_version, wheel_directory):
+
+    def __init__(
+        self,
+        distr_name: str,
+        distr_version: str,
+        wheel_directory: Path,
+    ) -> None:
         self.distr_name = distr_name
         self.distr_version = distr_version
         self.filename = f"{distr_name}-{distr_version}-py3-none-any.whl"
         self.wheel_path = wheel_directory / self.filename
         self._zipfile = ZipFile(self.wheel_path, "w")
         self.dist_info = f"{distr_name}-{distr_version}.dist-info"
-        self.records = []
+        self.records: list[tuple[str, str, int | str]] = []
         self.digest_alg = "sha256"
 
-    def __enter__(self):
+    def __enter__(self) -> "WheelBuilder":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
-    def close(self):
+    def close(self) -> None:
         self._zipfile.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
 
-    def add_record(self, filename, digest, size):
+    def add_record(self, filename: str, digest: bytes, size: int) -> None:
         self.records.append(
             (
                 filename,
@@ -67,7 +81,7 @@ class WheelBuilder:
             ),
         )
 
-    def package_modules(self, package_dir):
+    def package_modules(self, package_dir: Path) -> None:
         """Package Python packages and modules"""
         for root, dirs, files in os.walk(package_dir):
             dirs[:] = [d for d in sorted(dirs) if d != "__pycache__"]
@@ -77,8 +91,8 @@ class WheelBuilder:
                 if fp.suffix == ".pyc":
                     continue
 
-                # allow only Python modules for now
-                if fp.suffix != ".py":
+                # allow Python modules and the PEP 561 typing marker
+                if fp.suffix != ".py" and fp.name != "py.typed":
                     continue
 
                 fp_rel = fp.relative_to(package_dir)
@@ -100,7 +114,7 @@ class WheelBuilder:
                         source_date_time_zinfo(stat.st_mtime),
                     )
 
-    def package_wheel_metadata(self):
+    def package_wheel_metadata(self) -> None:
         dist_info_wheel = Path(self.dist_info) / "WHEEL"
         wheel_data = WheelMetadata(
             {
@@ -119,7 +133,7 @@ class WheelBuilder:
                 source_date_time_zinfo(time.time()),
             )
 
-    def package_metadata(self, core_metadata):
+    def package_metadata(self, core_metadata: bytes) -> None:
         dist_info_metadata = Path(self.dist_info) / "METADATA"
 
         with BytesIO(core_metadata) as src:
@@ -129,7 +143,11 @@ class WheelBuilder:
                 source_date_time_zinfo(time.time()),
             )
 
-    def package_license_files(self, cwd, patterns):
+    def package_license_files(
+        self,
+        cwd: Path,
+        patterns: Iterable[str],
+    ) -> None:
         # supported license files from root directory only
         for pattern in patterns:
             for file in cwd.glob(pattern):
@@ -143,7 +161,12 @@ class WheelBuilder:
                             source_date_time_zinfo(stat.st_mtime),
                         )
 
-    def package_file(self, src, filename, date_time):
+    def package_file(
+        self,
+        src: IO[bytes],
+        filename: str,
+        date_time: tuple[int, int, int, int, int, int],
+    ) -> None:
         zinfo = ZipInfo(filename, date_time=date_time)
         zinfo.external_attr = 0o644 << 16
         zinfo.compress_type = ZIP_DEFLATED
@@ -160,7 +183,7 @@ class WheelBuilder:
 
         self.add_record(filename, h.digest(), zinfo.file_size)
 
-    def package_record(self):
+    def package_record(self) -> None:
         dist_info_record = Path(self.dist_info) / "RECORD"
         zinfo = ZipInfo(
             str(dist_info_record),
@@ -178,7 +201,11 @@ class WheelBuilder:
             writer.writerows(self.records)
 
 
-def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
+def build_wheel(
+    wheel_directory: str | Path,
+    config_settings: dict[str, Any] | None = None,
+    metadata_directory: str | Path | None = None,
+) -> str:
     cwd = Path.cwd()
     pyproject = cwd / "pyproject.toml"
 

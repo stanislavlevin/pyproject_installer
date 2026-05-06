@@ -3,6 +3,7 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -56,7 +57,7 @@ def preserve_cwd(monkeypatch):
 @pytest.fixture
 def record_cwd():
     """Patch a mocked command to record its cwd"""
-    command_cwd = []
+    command_cwd: list[Path] = []
 
     def _patch_mocked_cmd(mocked_cmd):
         def _record_cwd():
@@ -744,7 +745,7 @@ def test_deps_cli_show_default(mock_deps_command):
     deps_args = ["deps", action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": []}
+    r_kwargs: dict[str, Any] = {"srcnames": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -761,7 +762,7 @@ def test_deps_cli_show_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": []}
+    r_kwargs: dict[str, Any] = {"srcnames": []}
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1285,7 +1286,7 @@ def test_deps_cli_eval_default(mock_deps_command):
     deps_args = ["deps", action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
+    r_kwargs: dict[str, Any] = {
         "srcnames": [],
         "depformat": None,
         "depformatextra": None,
@@ -1308,7 +1309,7 @@ def test_deps_cli_eval_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
+    r_kwargs: dict[str, Any] = {
         "srcnames": [],
         "depformat": None,
         "depformatextra": None,
@@ -1356,7 +1357,7 @@ def test_deps_cli_eval_depformat(mock_deps_command):
     deps_args = ["deps", action, "--depformat", "$name"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
+    r_kwargs: dict[str, Any] = {
         "srcnames": [],
         "depformat": "$name",
         "depformatextra": None,
@@ -1386,7 +1387,7 @@ def test_deps_cli_eval_depformat_depformatextra(mock_deps_command):
     ]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
+    r_kwargs: dict[str, Any] = {
         "srcnames": [],
         "depformat": "$name$fextra",
         "depformatextra": "+$extra",
@@ -1431,7 +1432,7 @@ def test_deps_cli_eval_extra(mock_deps_command):
     deps_args = ["deps", action, "--extra", extra]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
+    r_kwargs: dict[str, Any] = {
         "srcnames": [],
         "depformat": None,
         "depformatextra": None,

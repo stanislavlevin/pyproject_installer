@@ -14,6 +14,7 @@ to `write_rpm_filelist`.
 """
 
 import sys
+from collections.abc import Iterable
 from importlib.util import cache_from_source
 from itertools import chain
 from pathlib import Path
@@ -21,7 +22,7 @@ from pathlib import Path
 # Standard CPython optimization levels per PEP 488; argument to
 # importlib.util.cache_from_source. Not exposed as a stdlib constant,
 # so duplicated here with a single source of truth.
-PYC_OPTIMIZATION_LEVELS = ("", "1", "2")
+PYC_OPTIMIZATION_LEVELS: tuple[str, ...] = ("", "1", "2")
 
 # Compression extensions brp-compress decompresses on a man page.
 # If the wheel ships the page with one of these, brp will then
@@ -33,7 +34,13 @@ PYC_OPTIMIZATION_LEVELS = ("", "1", "2")
 MAN_COMPRESSION_SUFFIXES = frozenset({".gz", ".bz2", ".Z"})
 
 
-def render_rpm_filelist(files, *, destdir, scheme, dist_info):
+def render_rpm_filelist(
+    files: Iterable[str | Path],
+    *,
+    destdir: str | Path,
+    scheme: dict[str, str],
+    dist_info: str | Path,
+) -> str:
     """
     Return an RPM %files-compatible filelist body for ``files``.
 
@@ -173,7 +180,7 @@ def render_rpm_filelist(files, *, destdir, scheme, dist_info):
                 for o in PYC_OPTIMIZATION_LEVELS
             )
 
-    def render_file(p):
+    def render_file(p: Path) -> str:
         rp = str(p)
 
         # brp-compress compresses uncompressed man pages after %install
@@ -199,7 +206,14 @@ def render_rpm_filelist(files, *, destdir, scheme, dist_info):
     return "\n".join(lines) + "\n"
 
 
-def write_rpm_filelist(out_path, files, *, destdir, scheme, dist_info):
+def write_rpm_filelist(
+    out_path: str | Path,
+    files: Iterable[str | Path],
+    *,
+    destdir: str | Path,
+    scheme: dict[str, str],
+    dist_info: str | Path,
+) -> None:
     """
     Render the filelist for ``files`` and write it to ``out_path``.
     Permissions follow the process umask.

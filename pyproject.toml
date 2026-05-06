@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
 ]
 dynamic = ["version"]
 
@@ -45,6 +46,7 @@ coverage = [
 ]
 lint = [
     "black",
+    "mypy",
     "pylint",
     "ruff",
     {include-group = "test"},
@@ -197,3 +199,31 @@ ignore = [
 [tool.ruff.lint.flake8-pytest-style]
 parametrize-values-type = "tuple"
 parametrize-names-type = "csv"
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["src", "backend", "tests"]
+exclude = ['_vendor/', '\.venv', '\.run_venv', 'build/', '\.tox/']
+
+[[tool.mypy.overrides]]
+module = "pyproject_installer._vendor.*"
+follow_imports = "silent"
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+
+# Tests reach into private internals of these modules (for mocker.patch
+# of imported names, direct access to module-level constants, etc.).
+# Allow implicit re-exports so tests can `from x import name`.
+[[tool.mypy.overrides]]
+module = [
+    "pyproject_installer.__main__",
+    "pyproject_installer.deps_cmd.collectors",
+    "pyproject_installer.run_cmd._run_command",
+    "pyproject_installer.run_cmd._run_env",
+]
+implicit_reexport = true
