@@ -387,6 +387,24 @@ def test_in_tree_backend_not_used(build_backend, build_backend_path):
         )
 
 
+def test_in_tree_backend_namespace_package(
+    in_tree_build_backend,
+    build_backend_path,
+):
+    """A namespace package (directory without __init__.py) has __file__ = None,
+    so backend_object must reject it when backend-path enforcement is requested.
+    """
+    be = in_tree_build_backend("ns_be")
+    (be / "__init__.py").unlink()  # turn the package into a namespace package
+    with pytest.raises(
+        ValueError,
+        match="Backend 'ns_be' has no __file__ location",
+    ):
+        backend_caller.main(
+            [be.name, "build_wheel", "--backend-path", build_backend_path],
+        )
+
+
 @pytest.mark.parametrize("hook", ("build_wheel", "build_sdist"))
 def test_missing_mandatory_hook(hook, build_backend):
     hooks = list(backend_caller.SUPPORTED_HOOKS)
