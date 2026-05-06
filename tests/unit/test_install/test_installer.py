@@ -18,6 +18,7 @@ from pyproject_installer.install_cmd._install import (
     get_installation_scheme,
 )
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE
+from pyproject_installer.lib.wheel import WheelFile
 
 
 def expected_pyc_lines(path):
@@ -122,6 +123,18 @@ def test_bad_wheel(tmpdir, destdir):
         match=f"Error reading wheel {bad_whl}: ",
     ):
         install_wheel(bad_whl, destdir=destdir)
+
+
+def test_extract_raises_when_zipfile_uninitialized(
+    wheel,
+    wheel_contents,
+    tmpdir,
+):
+    """WheelFile.extract rejects use when _zipfile ended up unset."""
+    wf = WheelFile(wheel(contents=wheel_contents()))
+    wf._zipfile = None  # noqa: SLF001  # simulate post-init corruption
+    with pytest.raises(WheelFileError, match="Wheel was not initialized"):
+        wf.extract(tmpdir / "extract_target")
 
 
 @pytest.mark.skipif(

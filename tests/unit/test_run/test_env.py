@@ -651,3 +651,20 @@ def test_env_content_console_script(wheel_cscript, mock_usps, mock_ssps):
             main="main",
         )
         assert expected_content == json_data["content"][name]
+
+
+def test_venv_environ_raises_when_context_uninitialized(tmpdir):
+    """venv_environ() must reject use before create() populates context."""
+    venv = _run_env.PyprojectVenv(tmpdir / "wheel.whl")
+    with pytest.raises(ValueError, match="Uninitialized context"):
+        venv.venv_environ()
+
+
+def test_create_raises_when_super_leaves_context_unset(tmpdir, mocker):
+    """create() must surface a context that wasn't populated by the parent."""
+    venv = _run_env.PyprojectVenv(tmpdir / "wheel.whl")
+    # Skip real venv creation so ensure_directories never runs and self.context
+    # stays None.
+    mocker.patch("venv.EnvBuilder.create")
+    with pytest.raises(ValueError, match="Uninitialized context"):
+        venv.create(tmpdir / "venv_dir")
