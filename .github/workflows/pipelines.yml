@@ -57,6 +57,14 @@ jobs:
     - name: Black
       run: |
         .venv/bin/python -m black -v --check --diff .
+    - name: Run mypy
+      run: |
+        .venv/bin/python -m mypy \
+          --pretty \
+          --show-error-end \
+          --show-error-code-links \
+          --error-summary \
+          --color-output
 
   unit_tests:
     name: Run unit tests

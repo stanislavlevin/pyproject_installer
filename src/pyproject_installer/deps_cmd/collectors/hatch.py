@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement, tomllib
@@ -21,16 +22,16 @@ class HatchCollector(Collector):
 
     name = "hatch"
 
-    def __init__(self, hatchconfig, hatchenv):
+    def __init__(self, hatchconfig: str | Path, hatchenv: str) -> None:
         self.hatchconfig = Path(hatchconfig)
         self.hatchenv = hatchenv
 
-    def _hatchenv_data(self):
+    def collect(self) -> Iterator[str]:
         with self.hatchconfig.open("rb") as f:
             hatch_data = tomllib.load(f)
         if self.hatchconfig.name == "pyproject.toml":
             try:
-                env_data = hatch_data["tool"]["hatch"]["envs"][self.hatchenv]
+                data = hatch_data["tool"]["hatch"]["envs"][self.hatchenv]
             except KeyError:
                 raise ValueError(
                     f"Hatch: missing tool.hatch.envs.{self.hatchenv} table in "
@@ -39,16 +40,13 @@ class HatchCollector(Collector):
         else:
             # hatch.toml or custom config
             try:
-                env_data = hatch_data["envs"][self.hatchenv]
+                data = hatch_data["envs"][self.hatchenv]
             except KeyError:
                 raise ValueError(
                     f"Hatch: missing envs.{self.hatchenv} table in "
                     f"{self.hatchconfig.name}",
                 ) from None
-        return env_data
 
-    def collect(self):
-        data = self._hatchenv_data()
         try:
             deps = data["dependencies"]
         except KeyError:

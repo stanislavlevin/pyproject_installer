@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement
@@ -14,7 +15,7 @@ class Pep518Collector(Collector):
 
     name = "pep518"
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         build_system = parse_build_system_spec(Path.cwd())
 
         for req in build_system["requires"]:

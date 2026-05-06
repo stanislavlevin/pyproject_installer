@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -22,11 +23,11 @@ class ToxCollector(Collector):
 
     name = "tox"
 
-    def __init__(self, toxconfig, testenv):
+    def __init__(self, toxconfig: str | Path, testenv: str) -> None:
         self.toxconfig = Path(toxconfig)
         self.testenv = testenv
 
-    def _tox_config(self):
+    def _tox_config(self) -> ConfigParser:
         config = ConfigParser(interpolation=None)
         if self.toxconfig.suffix == ".toml":
             # pyproject.toml
@@ -46,7 +47,7 @@ class ToxCollector(Collector):
                 config.read_file(f)
         return config
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         config = self._tox_config()
         try:
             testenv = config[self.testenv]

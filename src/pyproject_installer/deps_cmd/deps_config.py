@@ -1,22 +1,42 @@
 import json
 import re
 import sys
+from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from pathlib import Path
 from string import Template
+from typing import Any, TypedDict
 
 from ..errors import DepsSourcesConfigError, DepsUnsyncedError
 from ..lib import is_pep508_requirement, requirements
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
+from .collectors.collector import Collector
 
 DEFAULT_CONFIG_NAME = "pyproject_deps.json"
 
 
-def get_identifiers(template):
+class DepsConfigSourceBaseType(TypedDict):
+    srctype: str
+
+
+class DepsConfigSourceOptType(TypedDict, total=False):
+    deps: tuple[str, ...]
+    srcargs: tuple[str, ...]
+
+
+class DepsConfigSourceSpec(DepsConfigSourceBaseType, DepsConfigSourceOptType):
+    pass
+
+
+class DepsConfigType(TypedDict):
+    sources: dict[str, DepsConfigSourceSpec]
+
+
+def get_identifiers(template: Template) -> list[str]:
     """Compat get_identifiers (added in Python 3.11)"""
     if hasattr(template, "get_identifiers"):
-        return template.get_identifiers()
+        return template.get_identifiers()  # type: ignore[no-any-return]
 
     # taken from CPython 3.11
     ids = []
@@ -37,13 +57,13 @@ def get_identifiers(template):
 
 
 class DepsSourcesConfig:
-    def __init__(self, file=None):
+    def __init__(self, file: str | Path | None = None) -> None:
         self.file = (
             Path.cwd() / DEFAULT_CONFIG_NAME if file is None else Path(file)
         )
-        self._config = None
+        self._config: DepsConfigType | None = None
 
-    def validate_config(self, config):
+    def validate_config(self, config: DepsConfigType) -> None:
         """Very basic validation of required fields"""
         if not isinstance(config, dict):
             raise DepsSourcesConfigError(
@@ -78,7 +98,7 @@ class DepsSourcesConfig:
                     ) from None
 
     @property
-    def config(self):
+    def config(self) -> DepsConfigType:
         if self._config is None:
             with self.file.open(encoding="utf-8") as f:
                 try:
@@ -92,37 +112,42 @@ class DepsSourcesConfig:
         return self._config
 
     @config.setter
-    def config(self, value):
+    def config(self, value: DepsConfigType) -> None:
         self._config = deepcopy(value)
         self.save()
 
-    def set_default(self):
+    def set_default(self) -> None:
         # default config
         self.config = {"sources": {}}
 
-    def save(self):
+    def save(self) -> None:
         self.validate_config(self.config)
         # first parse the whole config
         json_config = self._to_json(self.config)
         self.file.write_text(json_config, encoding="utf-8")
 
-    def show(self, srcnames=()):
-        show_conf = {"sources": {}}
+    def show(self, srcnames: tuple[str, ...] = ()) -> None:
+        show_conf: DepsConfigType = {"sources": {}}
         for srcname, source in self.iter_sources(srcnames):
             show_conf["sources"][srcname] = source
         self._show(show_conf)
 
-    def _to_json(self, conf):
+    def _to_json(self, conf: Mapping[str, Any]) -> str:
         return json.dumps(conf, indent=2, sort_keys=True) + "\n"
 
-    def _show(self, conf):
+    def _show(self, conf: Mapping[str, Any]) -> None:
         sys.stdout.write(self._to_json(conf))
 
     @property
-    def sources(self):
+    def sources(self) -> dict[str, DepsConfigSourceSpec]:
         return self.config["sources"]
 
-    def add(self, srcname, srctype, srcargs=()):
+    def add(
+        self,
+        srcname: str,
+        srctype: str,
+        srcargs: tuple[str, ...] = (),
+    ) -> None:
         if not self.file.is_file():
             # allow new file
             self.set_default()
@@ -136,13 +161,16 @@ class DepsSourcesConfig:
             self.sources[srcname]["srcargs"] = srcargs
         self.save()
 
-    def delete(self, srcname):
+    def delete(self, srcname: str) -> None:
         if srcname not in self.sources:
             raise ValueError(f"Source {srcname} doesn't exist")
         del self.sources[srcname]
         self.save()
 
-    def iter_sources(self, srcnames=()):
+    def iter_sources(
+        self,
+        srcnames: tuple[str, ...] = (),
+    ) -> Iterator[tuple[str, DepsConfigSourceSpec]]:
         if missing_srcnames := [x for x in srcnames if x not in self.sources]:
             raise ValueError(
                 f"Nonexistent sources: {', '.join(missing_srcnames)}",
@@ -151,7 +179,11 @@ class DepsSourcesConfig:
         for srcname in srcnames or self.sources:
             yield srcname, self.sources[srcname]
 
-    def validate_collector(self, srctype, srcargs):
+    def validate_collector(
+        self,
+        srctype: str,
+        srcargs: tuple[str, ...],
+    ) -> Collector:
         collector_cls = get_collector(srctype)
         if collector_cls is None:
             raise DepsSourcesConfigError(
@@ -164,11 +196,17 @@ class DepsSourcesConfig:
                 f"Unsupported arguments of collector {srctype}: {e!s}",
             ) from None
 
-    def collect(self, srctype, srcargs):
+    def collect(self, srctype: str, srcargs: tuple[str, ...]) -> Iterator[str]:
         collector = self.validate_collector(srctype, srcargs)
         return collector.collect()
 
-    def sync(self, *, srcnames=(), verify=False, verify_excludes=()):
+    def sync(
+        self,
+        *,
+        srcnames: tuple[str, ...] = (),
+        verify: bool = False,
+        verify_excludes: tuple[str, ...] = (),
+    ) -> None:
         """Sync sources
 
         verify: do sync of selected sources, but print the diff on
@@ -180,10 +218,10 @@ class DepsSourcesConfig:
         if verify_excludes and not verify:
             raise ValueError("verify_excludes must be used with verify")
 
-        diff = {}
+        diff: dict[str, dict[str, list[str]]] = {}
         verify_excludes_regs = {re.compile(x) for x in verify_excludes}
 
-        def filter_verify_excludes(req):
+        def filter_verify_excludes(req: requirements.Requirement) -> bool:
             """filter diff output"""
             req_name = pep503_normalized_name(req.name)
             return not any(reg.match(req_name) for reg in verify_excludes_regs)
@@ -206,7 +244,7 @@ class DepsSourcesConfig:
             if stored_deps == synced_deps:
                 continue
 
-            source["deps"] = sorted(map(str, synced_deps))
+            source["deps"] = tuple(sorted(map(str, synced_deps)))
 
             if not verify:
                 continue
@@ -232,7 +270,12 @@ class DepsSourcesConfig:
             self._show(diff)
             raise DepsUnsyncedError
 
-    def depformat(self, req, depformat, depformatextra):
+    def depformat(
+        self,
+        req: requirements.Requirement,
+        depformat: str,
+        depformatextra: str | None,
+    ) -> Iterator[str]:
         template = Template(depformat)
         identifiers = get_identifiers(template)
 
@@ -259,12 +302,12 @@ class DepsSourcesConfig:
     def eval(
         self,
         *,
-        srcnames=(),
-        depformat=None,
-        depformatextra=None,
-        extra=None,
-        excludes=(),
-    ):
+        srcnames: tuple[str, ...] = (),
+        depformat: str | None = None,
+        depformatextra: str | None = None,
+        extra: str | None = None,
+        excludes: tuple[str, ...] = (),
+    ) -> None:
         if depformatextra is not None and depformat is None:
             raise ValueError("depformatextra must be used with depformat")
         deps = set()

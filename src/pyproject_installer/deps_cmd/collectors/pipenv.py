@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement, markers, tomllib
@@ -19,11 +20,11 @@ class PipenvCollector(Collector):
 
     name = "pipenv"
 
-    def __init__(self, pipfile, category):
+    def __init__(self, pipfile: str | Path, category: str) -> None:
         self.pipfile = Path(pipfile)
         self.category = category
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         with self.pipfile.open("rb") as f:
             pipfile_data = tomllib.load(f)
 

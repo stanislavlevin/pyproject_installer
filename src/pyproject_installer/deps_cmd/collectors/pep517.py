@@ -1,4 +1,5 @@
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement
@@ -16,7 +17,7 @@ class Pep517Collector(Collector):
 
     name = "pep517"
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         for req in backend_hook(
             python=sys.executable,
             srcdir=Path.cwd(),

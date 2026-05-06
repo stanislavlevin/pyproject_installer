@@ -2,7 +2,10 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 from venv import EnvBuilder
 
 import pytest
@@ -14,18 +17,19 @@ from pyproject_installer.lib.build_backend import backend_hook
 
 
 class ContextVenv(EnvBuilder):
-    def __init__(self, *args, **kwargs):
-        self.context = None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.context: SimpleNamespace | None = None
         super().__init__(*args, **kwargs)
 
-    def ensure_directories(self, *args, **kwargs):
+    def ensure_directories(self, *args: Any, **kwargs: Any) -> SimpleNamespace:
         # save context for reusage
         self.context = super().ensure_directories(*args, **kwargs)
         return self.context
 
 
 @pytest.fixture(scope="session")
-def pyproject_installer_whl():
+def pyproject_installer_whl() -> Iterator[Path]:
     """Build pyproject_installer as wheel"""
     with tempfile.TemporaryDirectory() as d:
         wheels = Path(d) / "wheels"
@@ -36,7 +40,7 @@ def pyproject_installer_whl():
             "pyproject_installer",
             "build",
             "--outdir",
-            wheels,
+            str(wheels),
         ]
         subprocess.check_call(build_args)
         built_files = {f.name for f in wheels.iterdir()}
@@ -50,7 +54,7 @@ def pyproject_installer_whl():
 
 
 @pytest.fixture
-def virt_env(tmpdir):
+def virt_env(tmpdir: Path) -> SimpleNamespace:
     """Create virtual environment and returns its context
 
     https://docs.python.org/3/library/venv.html#venv.EnvBuilder.ensure_directories
@@ -58,11 +62,15 @@ def virt_env(tmpdir):
     venv_path = tmpdir / "venv"
     venv = ContextVenv(with_pip=True)
     venv.create(venv_path)
+    assert venv.context is not None
     return venv.context
 
 
 @pytest.fixture
-def virt_env_installer(virt_env, pyproject_installer_whl):
+def virt_env_installer(
+    virt_env: SimpleNamespace,
+    pyproject_installer_whl: Path,
+) -> SimpleNamespace:
     """Install pyproject_installer with pip into virtual env"""
     python = virt_env.env_exec_cmd
 
@@ -78,10 +86,10 @@ def virt_env_installer(virt_env, pyproject_installer_whl):
 
 
 @pytest.fixture
-def install_build_deps():
+def install_build_deps() -> Callable[[str, Path], None]:
     """Calc and install build deps of srcdir with pip"""
 
-    def _install_build_deps(python, srcdir):
+    def _install_build_deps(python: str, srcdir: Path) -> None:
         # get common build requirements(PEP518)
         with (srcdir / "pyproject.toml").open("rb") as f:
             pyproject_data = tomllib.load(f)
@@ -128,7 +136,7 @@ def install_build_deps():
 
 
 @pytest.fixture
-def setuptools_project(pyproject):
+def setuptools_project(pyproject: Callable[..., Path]) -> Path:
     pyproject_path = pyproject(
         textwrap.dedent(
             """\
@@ -154,7 +162,7 @@ def setuptools_project(pyproject):
 
 
 @pytest.fixture
-def pdm_project(pyproject):
+def pdm_project(pyproject: Callable[..., Path]) -> Path:
     return pyproject(
         textwrap.dedent(
             """\

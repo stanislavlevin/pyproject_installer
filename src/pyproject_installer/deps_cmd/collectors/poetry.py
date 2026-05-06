@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement, markers, tomllib
@@ -20,10 +21,10 @@ class PoetryCollector(Collector):
 
     name = "poetry"
 
-    def __init__(self, group):
+    def __init__(self, group: str) -> None:
         self.group = group
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         pyproject_file = Path.cwd() / "pyproject.toml"
 
         with pyproject_file.open("rb") as f:

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import dependency_groups, errors, requirements, tomllib
@@ -16,11 +17,11 @@ class Pep735Collector(Collector):
 
     name = "pep735"
 
-    def __init__(self, group):
+    def __init__(self, group: str) -> None:
         # group name can be non-normalized
         self.group = group
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         pyproject_file = Path.cwd() / "pyproject.toml"
 
         with pyproject_file.open("rb") as f:
@@ -42,7 +43,7 @@ class Pep735Collector(Collector):
             )
 
         try:
-            return dependency_groups.resolve_dependency_groups(
+            yield from dependency_groups.resolve_dependency_groups(
                 groups_data,
                 self.group,
             )

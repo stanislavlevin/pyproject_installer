@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 from ...lib import is_pep508_requirement
@@ -18,14 +19,14 @@ class PipReqFileCollector(Collector):
 
     name = "pip_reqfile"
 
-    def __init__(self, reqfile):
+    def __init__(self, reqfile: str | Path) -> None:
         self.reqfile = Path(reqfile)
 
-    def collect(self):
+    def collect(self) -> Iterator[str]:
         # see pip._internal.req.req_file.ignore_comments
         comment_re = re.compile(r"(^|\s+)#.*$")
 
-        def _parse_pip_reqline(line):
+        def _parse_pip_reqline(line: str) -> str:
             return comment_re.sub("", line).strip()
 
         with self.reqfile.open(encoding="utf-8") as f:

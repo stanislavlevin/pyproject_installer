@@ -29,7 +29,9 @@ else:
             self._expected_types = expected_types
             self._match = match
             self._cm = pytest.raises(errors.ExceptionGroup)
-            self._info = None
+            self._info: pytest.ExceptionInfo[errors.ExceptionGroup] | None = (
+                None
+            )
 
         def __enter__(self):
             self._info = self._cm.__enter__()
@@ -37,6 +39,7 @@ else:
 
         def __exit__(self, exc_type, exc_val, exc_tb):
             handled = self._cm.__exit__(exc_type, exc_val, exc_tb)
+            assert self._info is not None
             eg = self._info.value
             if self._match is not None:
                 matched = re.search(self._match, eg.message)

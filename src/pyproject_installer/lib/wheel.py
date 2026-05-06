@@ -2,10 +2,13 @@ import base64
 import csv
 import hashlib
 import logging
+from collections.abc import Collection, Iterator
+from email.message import Message as EmailMessage
 from email.parser import Parser
 from importlib.metadata import PathDistribution
 from io import TextIOWrapper
 from pathlib import Path
+from types import TracebackType
 from zipfile import BadZipFile, ZipFile
 from zipfile import Path as ZipPath
 
@@ -19,12 +22,12 @@ WHEEL_SPECIFICATION_VERSION = (1, 0)
 RECORD_FIELDS_NUMBER = 3
 
 
-def digest_for_record(name, data):
+def digest_for_record(name: str, data: bytes) -> str:
     digest = hashlib.new(name, data).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
-def parse_name(name):
+def parse_name(name: str) -> tuple[str, str]:
     """Parse wheel's name"""
     supported_format = (
         "{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-"
@@ -53,8 +56,8 @@ def parse_name(name):
 
 
 class WheelFile:
-    def __init__(self, wheel_path):
-        self._zipfile = None
+    def __init__(self, wheel_path: str | Path) -> None:
+        self._zipfile: ZipFile | None = None
         try:
             self._zipfile = ZipFile(wheel_path)
         except BadZipFile as e:
@@ -78,20 +81,20 @@ class WheelFile:
         )
         self.data_name = f"{self.dist_name}-{self.dist_version}.data"
         self.data = self.root / self.data_name
-        self._wheel_metadata = None
+        self._wheel_metadata: EmailMessage | None = None
         self.validate()
 
     @property
-    def memberlist(self):
+    def memberlist(self) -> Iterator[str]:
         yield from self._memberlist
 
     @property
-    def wheel_metadata(self):
+    def wheel_metadata(self) -> EmailMessage:
         if self._wheel_metadata is None:
             self._wheel_metadata = self.parse_wheel_metadata()
         return self._wheel_metadata
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate wheel according to PEP427"""
         logger.debug("Validating wheel file")
 
@@ -105,7 +108,7 @@ class WheelFile:
         if self.data.exists():
             self.validate_data()
 
-    def validate_entry_points(self):
+    def validate_entry_points(self) -> None:
         """
         the name of the entry point should be usable as a command in a system
         shell after the package is installed. The object reference points to a
@@ -120,7 +123,7 @@ class WheelFile:
                         f"Invalid entry_points specification: {ep.value}",
                     )
 
-    def validate_data(self):
+    def validate_data(self) -> None:
         """
         Each subdirectory of distribution-1.0.data/ is a key into a dict of
         destination directories, such as
@@ -149,7 +152,7 @@ class WheelFile:
                 f"{', '.join(data_subpath_diff)}",
             )
 
-    def validate_record(self):
+    def validate_record(self) -> None:
         logger.debug("Validating RECORD")
         record_path = self.dist_info / "RECORD"
         recorded_files = set()
@@ -197,7 +200,11 @@ class WheelFile:
                 f"{', '.join(extra_packaged)}",
             )
 
-    def validate_hash_record(self, recorded_file, hash_info):
+    def validate_hash_record(
+        self,
+        recorded_file: str,
+        hash_info: str,
+    ) -> None:
         hash_name, _, hash_value = hash_info.partition("=")
         if not hash_name or not hash_value:
             raise ValueError(f"Invalid hash record: {hash_info}")
@@ -219,7 +226,7 @@ class WheelFile:
                 f"Incorrect hash for recorded file: {recorded_file}",
             )
 
-    def extraction_root(self, scheme):
+    def extraction_root(self, scheme: dict[str, str]) -> Path:
         """
         Root-Is-Purelib is true if the top level directory of the archive should
         be installed into purelib; otherwise the root should be installed into
@@ -231,7 +238,7 @@ class WheelFile:
             sitedir = "platlib"
         return Path(scheme[sitedir]).absolute()
 
-    def validate_wheel_spec_version(self):
+    def validate_wheel_spec_version(self) -> None:
         """
         A wheel installer should warn if Wheel-Version is greater than the
         version it supports, and must fail if Wheel-Version has a greater major
@@ -268,7 +275,7 @@ class WheelFile:
                 ".".join([str(i) for i in WHEEL_SPECIFICATION_VERSION]),
             )
 
-    def validate_dist_info(self):
+    def validate_dist_info(self) -> None:
         if not self.dist_info.exists() or not self.dist_info.is_dir():
             raise ValueError(
                 f"Missing mandatory dist-info directory: {self.dist_info}",
@@ -281,7 +288,7 @@ class WheelFile:
                     f"Missing mandatory {f} in dist-info directory",
                 )
 
-    def parse_wheel_metadata(self):
+    def parse_wheel_metadata(self) -> EmailMessage:
         """
         PEP427:
         METADATA and WHEEL are Metadata version 1.1 or greater format metadata.
@@ -295,24 +302,37 @@ class WheelFile:
 
         return Parser().parsestr(wheel_text)
 
-    def parse_name(self):
+    def parse_name(self) -> tuple[str, str]:
         logger.debug("Parsing wheel filename")
         return parse_name(self.name)
 
-    def extract(self, path, members=None):
+    def extract(
+        self,
+        path: str | Path,
+        members: Collection[str] | None = None,
+    ) -> None:
+        if self._zipfile is None:
+            raise WheelFileError(
+                "Wheel was not initialized properly before extraction",
+            )
         if members is None:
-            members = self.memberlist
+            members = tuple(self.memberlist)
         self._zipfile.extractall(path, members=members)
 
-    def __enter__(self):
+    def __enter__(self) -> "WheelFile":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
-    def close(self):
+    def close(self) -> None:
         if self._zipfile is not None:
             self._zipfile.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()

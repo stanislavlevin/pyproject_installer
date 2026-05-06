@@ -68,7 +68,9 @@ def test_rpmbuild_bl_accepts_generated_filelist(
     )
     compileall.compile_dir(
         str(purelib_buildroot),
-        optimize=[0, 1, 2],
+        # compileall.compile_dir does accept a list of optimization levels at
+        # runtime (compiles once per level); typeshed only documents int.
+        optimize=[0, 1, 2],  # type: ignore[arg-type]
         quiet=1,
     )
 
@@ -79,7 +81,7 @@ def test_rpmbuild_bl_accepts_generated_filelist(
     # Exit code is 0 when every listed path exists in the buildroot.
     subprocess.check_call(
         [
-            RPMBUILD,
+            RPMBUILD,  # type: ignore[list-item]
             "--buildroot=" + str(buildroot),
             "--define",
             f"_topdir {tmpdir}",

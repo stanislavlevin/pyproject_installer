@@ -1,9 +1,11 @@
 import logging
 import shutil
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any, Literal, get_args
 
 from ..lib.build_backend import backend_hook
 from ..lib.wheel import WheelFile
@@ -19,14 +21,25 @@ logger = logging.getLogger(__name__)
 
 WHEEL_TRACKER = ".wheeltracker"
 
-SUPPORTED_BUILD_HOOKS = (
+
+SUPPORTED_BUILD_HOOKS_TYPE = Literal[
     "build_wheel",
     "build_sdist",
     "prepare_metadata_for_build_wheel",
-)
+]
 
 
-def build(srcdir, *, outdir, hook, config=None, verbose=False):
+SUPPORTED_BUILD_HOOKS: tuple[str, ...] = get_args(SUPPORTED_BUILD_HOOKS_TYPE)
+
+
+def build(
+    srcdir: Path,
+    *,
+    outdir: Path,
+    hook: SUPPORTED_BUILD_HOOKS_TYPE,
+    config: dict[str, Any] | None = None,
+    verbose: bool = False,
+) -> str:
     logger.info("Source tree: %s", srcdir)
     logger.info("Output dir: %s", outdir)
     if config is not None:
@@ -51,12 +64,18 @@ def build(srcdir, *, outdir, hook, config=None, verbose=False):
         srcdir=srcdir,
         verbose=verbose,
         hook=hook,
-        hook_args=[(str(outdir),), {"config_settings": config}],
+        hook_args=((str(outdir),), {"config_settings": config}),
     )
     return hook_result["result"]
 
 
-def build_wheel(srcdir, *, outdir, config=None, verbose=False):
+def build_wheel(
+    srcdir: Path,
+    *,
+    outdir: Path,
+    config: dict[str, Any] | None = None,
+    verbose: bool = False,
+) -> None:
     logger.info("Building wheel")
     wheel_filename = build(
         srcdir,
@@ -71,7 +90,13 @@ def build_wheel(srcdir, *, outdir, config=None, verbose=False):
     logger.info("Built wheel: %s", wheel_filename)
 
 
-def build_sdist(srcdir, *, outdir, config=None, verbose=False):
+def build_sdist(
+    srcdir: Path,
+    *,
+    outdir: Path,
+    config: dict[str, Any] | None = None,
+    verbose: bool = False,
+) -> None:
     logger.info("Building sdist")
     sdist_filename = build(
         srcdir,
@@ -84,7 +109,13 @@ def build_sdist(srcdir, *, outdir, config=None, verbose=False):
 
 
 @contextmanager
-def build_out_tmpdir(srcdir, hook, config, verbose):
+def build_out_tmpdir(
+    srcdir: Path,
+    hook: SUPPORTED_BUILD_HOOKS_TYPE,
+    config: dict[str, Any] | None,
+    *,
+    verbose: bool,
+) -> Iterator[tuple[str, Path]]:
     tmpdir = TemporaryDirectory()
     tmp_path = Path(tmpdir.name)
     try:
@@ -100,7 +131,13 @@ def build_out_tmpdir(srcdir, hook, config, verbose):
         tmpdir.cleanup()
 
 
-def build_metadata(srcdir, *, outdir, config=None, verbose=False):
+def build_metadata(
+    srcdir: Path,
+    *,
+    outdir: Path,
+    config: dict[str, Any] | None = None,
+    verbose: bool = False,
+) -> str:
     """Build core metadata and put it on outdir"""
     logger.info("Building metadata")
     metadata_filename = "METADATA"
@@ -114,10 +151,10 @@ def build_metadata(srcdir, *, outdir, config=None, verbose=False):
         ) from None
     outdir = outdir.resolve(strict=True)
 
-    hook = "prepare_metadata_for_build_wheel"
+    hook: SUPPORTED_BUILD_HOOKS_TYPE = "prepare_metadata_for_build_wheel"
     logger.info("Building metadata with %s", hook)
     with (
-        build_out_tmpdir(srcdir, hook, config, verbose) as (
+        build_out_tmpdir(srcdir, hook, config, verbose=verbose) as (
             distinfo_dir,
             tmp_path,
         ),
@@ -136,16 +173,16 @@ def build_metadata(srcdir, *, outdir, config=None, verbose=False):
     hook = "build_wheel"
     logger.info("Fallback to building metadata with %s", hook)
     with (
-        build_out_tmpdir(srcdir, hook, config, verbose) as (
+        build_out_tmpdir(srcdir, hook, config, verbose=verbose) as (
             wheel_filename,
             tmp_path,
         ),
     ):
         wheel_path = tmp_path / wheel_filename
         with WheelFile(wheel_path) as whl:
-            metadata_path_src = whl.dist_info / metadata_filename
+            metadata_path_zip_src = whl.dist_info / metadata_filename
             with (
-                metadata_path_src.open(mode="rb") as fsrc,
+                metadata_path_zip_src.open(mode="rb") as fsrc,
                 metadata_path_dest.open(mode="wb") as fdst,
             ):
                 shutil.copyfileobj(fsrc, fdst)

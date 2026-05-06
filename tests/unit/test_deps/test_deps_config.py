@@ -1,6 +1,7 @@
 import json
 import re
 from copy import deepcopy
+from typing import Any
 
 import pytest
 
@@ -232,7 +233,7 @@ def test_config_delete(depsconfig):
 
     deps_command(action, depsconfig_path, srcname=srcname)
     config_data = json.loads(depsconfig_path.read_text(encoding="utf-8"))
-    expected_data = {"sources": {}}
+    expected_data: dict[str, Any] = {"sources": {}}
     assert config_data == expected_data
 
 
@@ -277,7 +278,7 @@ def test_config_show(select_data, depsconfig, capsys):
 
     deps_command(action, depsconfig_path, srcnames=select)
 
-    out_conf = {"sources": {}}
+    out_conf: dict[str, Any] = {"sources": {}}
     for srcname in selected:
         out_conf["sources"][srcname] = input_conf["sources"][srcname]
     expected_out = json.dumps(out_conf, indent=2) + "\n"
@@ -317,12 +318,12 @@ def test_config_show_empty(depsconfig, capsys):
     action = "show"
 
     # prepare source config
-    input_conf = {"sources": {}}
+    input_conf: dict[str, Any] = {"sources": {}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     deps_command(action, depsconfig_path, srcnames=[])
 
-    output_conf = {"sources": {}}
+    output_conf: dict[str, Any] = {"sources": {}}
     expected_out = json.dumps(output_conf, indent=2) + "\n"
 
     captured = capsys.readouterr()
@@ -336,7 +337,7 @@ def test_config_sync_empty(depsconfig, capsys):
     action = "sync"
 
     # prepare source config
-    input_conf = {"sources": {}}
+    input_conf: dict[str, Any] = {"sources": {}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     deps_command(action, depsconfig_path, srcnames=[])
@@ -366,7 +367,7 @@ def test_config_sync_selected(select_data, depsconfig, mock_collector, capsys):
     select, synced = select_data
 
     # prepare source config
-    input_conf = {
+    input_conf: dict[str, Any] = {
         "sources": {
             "foo": {"srctype": "mock_collector"},
             "bar": {"srctype": "mock_collector"},
@@ -746,7 +747,7 @@ def test_config_eval_empty(depsconfig, capsys):
     action = "eval"
 
     # prepare source config
-    input_conf = {"sources": {}}
+    input_conf: dict[str, Any] = {"sources": {}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     deps_command(action, depsconfig_path, srcnames=[])
