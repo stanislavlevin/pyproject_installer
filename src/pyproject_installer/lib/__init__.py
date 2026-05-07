@@ -1,9 +1,9 @@
 import contextlib
 import sys
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # pragma: no cover
     import tomllib
-else:
+else:  # pragma: no cover
     from .._vendor import tomli as tomllib
 
 from .._vendor.packaging import (
