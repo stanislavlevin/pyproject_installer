@@ -137,6 +137,27 @@ def test_extract_raises_when_zipfile_uninitialized(
         wf.extract(tmpdir / "extract_target")
 
 
+def test_extract_default_members_uses_memberlist(
+    wheel,
+    wheel_contents,
+    installed_wheel,
+):
+    """extract() without a members argument extracts the full memberlist."""
+    dest_wheel = installed_wheel()
+    wf = WheelFile(wheel(contents=wheel_contents()))
+    wf.extract(dest_wheel.destdir)  # no members= -> default-members branch
+    expected_filelist = {
+        dest_wheel.destdir / f
+        for f in (
+            "foo/__init__.py",
+            "foo-1.0.dist-info/METADATA",
+            "foo-1.0.dist-info/WHEEL",
+            "foo-1.0.dist-info/RECORD",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
+
+
 @pytest.mark.skipif(
     # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
     os.geteuid() == 0,

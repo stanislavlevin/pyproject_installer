@@ -33,12 +33,8 @@ class DepsConfigType(TypedDict):
     sources: dict[str, DepsConfigSourceSpec]
 
 
-def get_identifiers(template: Template) -> list[str]:
-    """Compat get_identifiers (added in Python 3.11)"""
-    if hasattr(template, "get_identifiers"):
-        return template.get_identifiers()  # type: ignore[no-any-return]
-
-    # taken from CPython 3.11
+def _get_identifiers_py310(template: Template) -> list[str]:  # pragma: no cover
+    """Backport of CPython 3.11 Template.get_identifiers for Python 3.10."""
     ids = []
     for mo in template.pattern.finditer(template.template):
         named = mo.group("named") or mo.group("braced")
@@ -54,6 +50,13 @@ def get_identifiers(template: Template) -> list[str]:
                 template.pattern,
             )
     return ids
+
+
+def get_identifiers(template: Template) -> list[str]:
+    """Compat get_identifiers (added in Python 3.11)"""
+    if hasattr(template, "get_identifiers"):  # pragma: no cover
+        return template.get_identifiers()  # type: ignore[no-any-return]
+    return _get_identifiers_py310(template)  # pragma: no cover
 
 
 class DepsSourcesConfig:

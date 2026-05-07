@@ -150,6 +150,7 @@ omit = [
 [tool.coverage.report]
 skip_covered = false
 show_missing = true
+fail_under = 100
 
 [tool.coverage.paths]
 source = [
