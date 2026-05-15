@@ -98,7 +98,7 @@ def wheel_dir(tmpdir):
     def _wheel_dir(whl, dirname):
         with ZipFile(whl, "a") as z:
             if sys.version_info >= (3, 11):
-                # pylint: disable-next=no-member
+                # pylint: disable-next=no-member,useless-suppression
                 z.mkdir(dirname)
             else:
                 (dir_path := tmpdir / dirname).mkdir()
@@ -1316,3 +1316,165 @@ def test_force_site_invalid_value_rejected(
             destdir=destdir,
             force_site=bad_value,
         )
+
+
+def test_install_exclude_paths_default_empty(
+    wheel_contents,
+    wheel,
+    installed_wheel,
+):
+    """
+    Check install behavior is unchanged when exclude_paths is omitted.
+    Tests are not stripped.
+    """
+    contents = wheel_contents()
+    contents["foo/tests/__init__.py"] = ""
+    contents["foo/tests/test_x.py"] = ""
+    dest_wheel = installed_wheel()
+
+    install_wheel(wheel(contents=contents), destdir=dest_wheel.destdir)
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo/__init__.py",
+            "foo/tests/__init__.py",
+            "foo/tests/test_x.py",
+            "foo-1.0.dist-info/METADATA",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
+
+
+def test_install_exclude_paths_drops_matching_members(
+    wheel_contents,
+    wheel,
+    installed_wheel,
+):
+    """
+    Check exclude_paths drops every matching wheel member.
+    """
+    contents = wheel_contents()
+    contents["foo/tests/__init__.py"] = ""
+    contents["foo/tests/test_x.py"] = ""
+    contents["foo/core.py"] = ""
+    dest_wheel = installed_wheel()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=dest_wheel.destdir,
+        exclude_paths=["*/tests/*"],
+    )
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo/__init__.py",
+            "foo/core.py",
+            "foo-1.0.dist-info/METADATA",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
+
+
+def test_install_exclude_paths_does_not_create_empty_parent_dirs(
+    wheel_contents,
+    wheel,
+    installed_wheel,
+):
+    """
+    Check the parent directory of an excluded member is not created
+    when the excluded file is the sole occupant of that directory.
+    zipfile.ZipFile.extractall(members=...) only creates listed
+    paths, so a directory that would have held only the excluded
+    file is never instantiated in the destdir.
+    """
+    contents = wheel_contents()
+    contents["foo/tests/test_x.py"] = ""
+    dest_wheel = installed_wheel()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=dest_wheel.destdir,
+        exclude_paths=["foo/tests/test_x.py"],
+    )
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo/__init__.py",
+            "foo-1.0.dist-info/METADATA",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
+
+
+def test_install_exclude_paths_can_strip_dist_info_files(
+    wheel_contents,
+    wheel,
+    installed_wheel,
+):
+    """
+    Check a pattern targeting a dist-info file does strip it.
+    Excluding entry_points.txt is the canonical use: it suppresses
+    the generated console-script wrappers because the script
+    generator only runs when the file is present in the install
+    tree.
+    """
+    contents = wheel_contents()
+    contents["foo-1.0.dist-info/entry_points.txt"] = (
+        "[console_scripts]\nbar = foo:main\n"
+    )
+    dest_wheel = installed_wheel()
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=dest_wheel.destdir,
+        exclude_paths=["*.dist-info/entry_points.txt"],
+    )
+
+    expected_filelist = {
+        dest_wheel.sitedir / f
+        for f in (
+            "foo/__init__.py",
+            "foo-1.0.dist-info/METADATA",
+        )
+    }
+    assert dest_wheel.filelist() == expected_filelist
+
+
+def test_install_exclude_paths_with_rpm_filelist_omits_stripped(
+    wheel_contents,
+    wheel,
+    tmpdir,
+):
+    """
+    Check rpm_filelist contains only non-excluded entries.
+    """
+    contents = wheel_contents()
+    contents["foo/tests/__init__.py"] = ""
+    contents["foo/tests/test_x.py"] = ""
+    destdir = tmpdir / "destdir"
+    destdir.mkdir()
+    filelist = tmpdir / "foo.files"
+
+    install_wheel(
+        wheel(contents=contents),
+        destdir=destdir,
+        rpm_filelist=filelist,
+        exclude_paths=["*/tests/*"],
+    )
+
+    recorded_files = filelist.read_text(encoding="utf-8").splitlines()
+    purelib = get_installation_scheme("foo")["purelib"]
+    expected_files = sorted(
+        (
+            f"%dir {purelib}/foo",
+            f"{purelib}/foo/__init__.py",
+            f"%dir {purelib}/foo/__pycache__",
+            *expected_pyc_lines(f"{purelib}/foo/__init__.py"),
+            f"%dir {purelib}/foo-1.0.dist-info",
+            f"{purelib}/foo-1.0.dist-info/METADATA",
+        ),
+    )
+    assert recorded_files == expected_files

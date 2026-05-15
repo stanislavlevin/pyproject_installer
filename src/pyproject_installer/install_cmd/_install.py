@@ -2,11 +2,12 @@ import logging
 import shutil
 import sys
 import sysconfig
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from importlib.metadata import PathDistribution
 from pathlib import Path
 from typing import Literal
 
+from pyproject_installer.install_cmd._exclude_paths import filter_exclude_paths
 from pyproject_installer.install_cmd._rpm_filelist import (
     write_rpm_filelist,
 )
@@ -178,6 +179,7 @@ def install_wheel(
     strip_dist_info: bool = True,
     rpm_filelist: Path | None = None,
     force_site: Literal["purelib", "platlib"] | None = None,
+    exclude_paths: Sequence[str] = (),
 ) -> None:
     wheel_path = validate_wheel_path(wheel_path)
     destdir = validate_destdir(destdir)
@@ -205,13 +207,14 @@ def install_wheel(
         logger.info("Wheel installation root: %s", rootdir)
 
         dist_info = f"{dist_name}-{dist_version}.dist-info"
-        members = tuple(
-            filter_dist_info(
-                dist_info,
-                members=whl.memberlist,
-                strip_dist_info=strip_dist_info,
-            ),
+        chain: Iterator[str] = filter_dist_info(
+            dist_info,
+            members=whl.memberlist,
+            strip_dist_info=strip_dist_info,
         )
+        if exclude_paths:
+            chain = filter_exclude_paths(chain, patterns=exclude_paths)
+        members = tuple(chain)
 
         installed_paths: set[Path] | None = (
             set() if rpm_filelist is not None else None

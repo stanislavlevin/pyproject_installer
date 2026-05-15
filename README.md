@@ -299,6 +299,32 @@ python -m pyproject_installer install
 > /usr/share/foo/asset.dat
 > ```
 
+> **`--exclude-paths PATTERN [PATTERN ...]`**
+>
+> One or more `fnmatch` glob patterns. Files whose wheel-relative POSIX path matches any pattern are excluded from installation. Pattern syntax follows Python's [`fnmatch`](https://docs.python.org/3/library/fnmatch.html) module: `*` matches any run of characters including `/`; `?` matches one character; `[seq]` / `[!seq]` are character classes.
+>
+> *Path format:* patterns are matched against the wheel's ZIP `namelist()` entries verbatim. Those entries are always forward-slash separated POSIX paths with no leading `/` and no `./` prefix, regardless of host operating system. Examples of what a pattern matches against: `pkg/__init__.py`, `pkg/sub/foo.py`, `pkg-1.0.dist-info/METADATA`, `pkg-1.0.data/scripts/cli`.
+>
+> Intended for RPM packaging: strip test files (`tests/`, `test_*.py`, `*_test.py`) and other artifacts the upstream project shipped inside the wheel but that aren't useful in installed form.
+>
+> Because `*` is slash-blind in `fnmatch`, every pattern should include literal `/` anchors to avoid leaking across directory boundaries. Typical default list (root-anchored + nested forms, suitable for an RPM macro):
+>
+> ```
+> tests/*       */tests/*
+> test_*.py     */test_*.py
+> *_test.py     */*_test.py
+> ```
+>
+> No hard-coded exceptions: a pattern matching `*.dist-info/METADATA` does strip it. System-level filtering of `dist-info` content remains controlled by `--no-strip-dist-info`.
+>
+> *Scope -- wheel members only.* Patterns are matched against the wheel's ZIP namelist before extraction. Content synthesised by the installer downstream is **not** subject to these patterns: console-script wrappers generated from `entry_points.txt`, the `INSTALLER` file written by `--installer`, and `.pyc` files produced post-install by external bytecompile steps (e.g. RPM's `brp-python-bytecompile`). To suppress generated console scripts, exclude `*.dist-info/entry_points.txt` -- the script-generation step is skipped when the file is absent from the install tree.
+>
+> *Default:* `[]`, no paths excluded.
+>
+> *Example:* `python -m pyproject_installer install --destdir /tmp/buildroot --exclude-paths 'tests/*' '*/tests/*' 'test_*.py' '*/test_*.py' '*_test.py' '*/*_test.py'`
+>
+> *Note:* `--exclude-paths` uses `nargs="+"` and greedily consumes positional-looking arguments. Place the wheel positional before `--exclude-paths`, terminate the option with `--`, or follow it with another flag -- otherwise the wheel argument is consumed as another pattern.
+
 > **`--platlib`**
 >
 > Force the install to land in the `platlib` site-packages directory regardless of the wheel's `Root-Is-Purelib` flag. Both the unprefixed wheel root and any `.data/purelib/` content are redirected to `platlib`. Mutually exclusive with `--purelib`.
