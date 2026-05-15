@@ -337,12 +337,13 @@ def test_install_cli_default(mock_install_wheel, mock_read_tracker):
     wheel = Path.cwd() / "dist" / "foo.whl"
     wheel_tracker = wheel.parent / project_main.WHEEL_TRACKER
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -358,12 +359,13 @@ def test_install_cli_destdir(mock_install_wheel, mock_read_tracker):
     wheel = Path.cwd() / "dist" / "foo.whl"
     wheel_tracker = wheel.parent / project_main.WHEEL_TRACKER
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -378,12 +380,13 @@ def test_install_cli_wheel(mock_install_wheel, mock_read_tracker):
 
     destdir = Path("/")
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -398,12 +401,13 @@ def test_install_cli_wheel_destdir(mock_install_wheel, mock_read_tracker):
     install_args = ["install", str(wheel), "--destdir", str(destdir)]
 
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -425,6 +429,7 @@ def test_install_cli_installer_tool(mock_install_wheel, mock_read_tracker):
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -440,12 +445,13 @@ def test_install_cli_no_strip_dist_info(mock_install_wheel):
     destdir = Path("/")
     wheel = Path.cwd() / "dist" / "foo.whl"
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": False,
         "rpm_filelist": None,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -483,6 +489,7 @@ def test_install_cli_rpm_filelist(mock_install_wheel, tmpdir):
         "strip_dist_info": True,
         "rpm_filelist": filelist,
         "force_site": None,
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -499,12 +506,13 @@ def test_install_cli_platlib(mock_install_wheel):
     destdir = Path("/")
     wheel = Path.cwd() / "dist" / "foo.whl"
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": "platlib",
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -521,12 +529,13 @@ def test_install_cli_purelib(mock_install_wheel):
     destdir = Path("/")
     wheel = Path.cwd() / "dist" / "foo.whl"
     i_args = (wheel,)
-    i_kwargs = {
+    i_kwargs: dict[str, Any] = {
         "destdir": destdir,
         "installer": None,
         "strip_dist_info": True,
         "rpm_filelist": None,
         "force_site": "purelib",
+        "exclude_paths": [],
     }
 
     project_main.main(install_args)
@@ -549,6 +558,72 @@ def test_install_cli_platlib_purelib_mutually_exclusive(
     assert not captured.out
     # actual error message is controlled by cpython,
     # so it's unreliable to check captured.err
+    mock_install_wheel.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_exclude_paths_multiple(mock_install_wheel):
+    """
+    Run install with --exclude-paths passing multiple patterns.
+    """
+    install_args = [
+        "install",
+        "--exclude-paths",
+        "tests/*",
+        "*/tests/*",
+        "test_*.py",
+    ]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": None,
+        "force_site": None,
+        "exclude_paths": ["tests/*", "*/tests/*", "test_*.py"],
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_exclude_paths_single(mock_install_wheel):
+    """
+    Run install with --exclude-paths passing a single pattern.
+    """
+    install_args = ["install", "--exclude-paths", "tests/*"]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": None,
+        "force_site": None,
+        "exclude_paths": ["tests/*"],
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_exclude_paths_requires_value(mock_install_wheel):
+    """
+    --exclude-paths requires at least one value (nargs='+').
+    """
+    install_args = ["install", "--exclude-paths"]
+
+    with pytest.raises(SystemExit):
+        project_main.main(install_args)
+    # actual error message is controlled by cpython,
+    # so it's unreliable to check stderr
     mock_install_wheel.assert_not_called()
 
 

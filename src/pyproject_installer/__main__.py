@@ -62,6 +62,7 @@ def install(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
         strip_dist_info=args.strip_dist_info,
         rpm_filelist=args.rpm_filelist,
         force_site=args.force_site,
+        exclude_paths=args.exclude_paths,
     )
 
 
@@ -571,6 +572,18 @@ def main_parser(prog: str) -> MainArgumentParser:
             "write an RPM %%files-compatible filelist of installed "
             "files (plus computed .pyc paths) to PATH "
             "(default: None, filelist is not written)"
+        ),
+    )
+    parser_install.add_argument(
+        "--exclude-paths",
+        dest="exclude_paths",
+        nargs="+",
+        default=[],
+        metavar="PATTERN",
+        help=(
+            "fnmatch glob patterns. Files whose wheel-relative POSIX path "
+            "matches any pattern are excluded from installation. "
+            "(default: [])"
         ),
     )
     site_group = parser_install.add_mutually_exclusive_group()
