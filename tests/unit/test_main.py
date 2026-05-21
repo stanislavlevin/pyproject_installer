@@ -39,6 +39,25 @@ def mock_deps_command(mocker):
 
 
 @pytest.fixture
+def mock_completion_command(mocker):
+    return mocker.patch.object(project_main, "completion_command")
+
+
+@pytest.fixture
+def mock_main(mocker):
+    return mocker.patch.object(project_main, "main")
+
+
+@pytest.fixture
+def mock_run_autocomplete(mocker):
+    return mocker.patch.object(
+        project_main,
+        "run_autocomplete",
+        side_effect=SystemExit,
+    )
+
+
+@pytest.fixture
 def mock_read_tracker(mocker):
     return mocker.patch.object(
         project_main.Path,
@@ -70,6 +89,18 @@ def record_cwd():
         return _cwd
 
     return _patch_mocked_cmd
+
+
+def invalid_choice_messages(choice, *, choices):
+    return (
+        f"invalid choice: '{choice}' (choose from {msg})\n"
+        for msg in [
+            # Python 3.12.8/3.13.1+
+            ", ".join(choices),
+            # Python < 3.12.8/3.13.1
+            ", ".join(f"'{x}'" for x in choices),
+        ]
+    )
 
 
 def test_version():
@@ -1626,14 +1657,9 @@ def test_deps_cli_add_wrong_srctype(capsys):
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.WRONG_USAGE
 
-    expected_err_msgs = (
-        f"invalid choice: '{srctype}' (choose from {msg})\n"
-        for msg in [
-            # Python 3.12.8/3.13.1+
-            ", ".join(project_main.SUPPORTED_COLLECTORS),
-            # Python < 3.12.8/3.13.1
-            ", ".join(f"'{x}'" for x in project_main.SUPPORTED_COLLECTORS),
-        ]
+    expected_err_msgs = invalid_choice_messages(
+        srctype,
+        choices=project_main.SUPPORTED_COLLECTORS,
     )
     captured = capsys.readouterr()
     assert not captured.out
@@ -1719,3 +1745,88 @@ def test_deps_cli_delete_depsconfig(mock_deps_command):
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_completion_cli(mock_completion_command):
+    """Run completion with 'bash' argument"""
+    shell = "bash"
+    completion_args = ["completion", shell]
+    project_main.main(completion_args)
+    b_args = (shell,)
+    b_kwargs: dict[str, Any] = {}
+    mock_completion_command.assert_called_once_with(*b_args, **b_kwargs)
+
+
+def test_completion_unsupported_shell(capsys):
+    """Run completion with unsupported shell"""
+    shell = "zsh"
+    completion_args = ["completion", shell]
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(completion_args, prog="pyproject-installer")
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    expected_err_msgs = invalid_choice_messages(
+        shell,
+        choices=project_main.SUPPORTED_SHELLS,
+    )
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert any(True for msg in expected_err_msgs if msg in captured.err)
+
+
+def test_completion_cli_help(capsys):
+    """Run completion --help
+
+    - check msg and exit code
+    """
+    completion_args = ["completion", "--help"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(completion_args)
+
+    assert exc.value.code == ExitCodes.OK
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    expected_msg = "usage: python -m pyproject_installer completion "
+    assert expected_msg in captured.out
+
+
+def test_cli_entry(mock_main, mock_run_autocomplete, monkeypatch, mocker):
+    """
+    Run cli_entry in non-completion mode.
+
+    Expected results:
+    - run_autocomplete is not called
+    - main is called
+    """
+    monkeypatch.delenv("_PYPROJECT_INSTALLER_COMPLETE", raising=False)
+    main_args = ["any"]
+    mocker.patch.object(project_main.sys, "argv", ["any-prog", *main_args])
+    project_main.cli_entry()
+    b_args = main_args
+    b_kwargs = {"prog": "pyproject-installer"}
+    mock_run_autocomplete.assert_not_called()
+    mock_main.assert_called_once_with(b_args, **b_kwargs)
+
+
+def test_cli_entry_run_completion(
+    mock_main,
+    mock_run_autocomplete,
+    monkeypatch,
+    mocker,
+):
+    """
+    Run cli_entry in completion mode.
+
+    Expected results:
+    - run_autocomplete is called
+    - main is not called
+    """
+    monkeypatch.setenv("_PYPROJECT_INSTALLER_COMPLETE", "1")
+    main_args = ["any"]
+    mocker.patch.object(project_main.sys, "argv", ["any-prog", *main_args])
+    with pytest.raises(SystemExit):
+        project_main.cli_entry()
+    mock_run_autocomplete.assert_called_once()
+    mock_main.assert_not_called()

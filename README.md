@@ -25,6 +25,7 @@
     - [sync](#sync)
     - [eval](#eval)
     - [delete](#delete)
+  - [Bash completion](#bash-completion)
 - [Comparison with other tools](#comparison-with-other-tools)
 - [Bootstrap](#bootstrap)
 - [Tests](#tests)
@@ -556,6 +557,31 @@ Deconfigure source of Python dependencies.
 > *Example:* `python -m pyproject_installer deps delete build`
 
 See `python -m pyproject_installer deps delete --help` for full options.
+
+
+### Bash completion
+
+`pyproject-installer completion bash` writes a bash completion script to
+stdout. The script is generated from the live argparse tree and binds
+to the `pyproject-installer` console script.
+
+#### End-user one-shot install (no per-shell cost)
+
+```bash
+mkdir -p ~/.local/share/bash-completion/completions
+pyproject-installer completion bash \
+    > ~/.local/share/bash-completion/completions/pyproject-installer
+```
+
+The file is picked up lazily by `bash-completion` when the user first
+types `pyproject-installer<TAB>` in a new shell.
+
+#### End-user eval-on-startup (opt-in interpreter spawn per shell)
+
+```bash
+# in ~/.bashrc
+eval "$(pyproject-installer completion bash)"
+```
 
 
 ## Comparison with other tools

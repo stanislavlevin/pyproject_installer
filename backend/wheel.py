@@ -11,14 +11,15 @@ build_wheel:
    - exclude __pycache__ and .pyc
 """
 
+import configparser
 import csv
 import hashlib
 import logging
 import os
 import time
 from base64 import urlsafe_b64encode
-from collections.abc import Iterable
-from io import BytesIO, TextIOWrapper
+from collections.abc import Iterable, Mapping
+from io import BytesIO, StringIO, TextIOWrapper
 from pathlib import Path
 from types import TracebackType
 from typing import IO, Any
@@ -143,6 +144,34 @@ class WheelBuilder:
                 source_date_time_zinfo(time.time()),
             )
 
+    def package_entry_points(self, scripts: Mapping[str, str]) -> None:
+        """
+        Emit dist-info/entry_points.txt for [console_scripts].
+
+        See for details:
+        https://packaging.python.org/en/latest/specifications/entry-points/
+        """
+
+        # entry-point names are case-sensitive; default optionxform lowercases.
+        class CaseSensitiveConfigParser(configparser.ConfigParser):
+            def optionxform(self, optionstr: str) -> str:
+                return optionstr
+
+        cp = CaseSensitiveConfigParser(interpolation=None)
+        cp["console_scripts"] = {
+            name: scripts[name] for name in sorted(scripts)
+        }
+
+        buf = StringIO()
+        cp.write(buf)
+
+        with BytesIO(buf.getvalue().encode("utf-8")) as src:
+            self.package_file(
+                src,
+                str(Path(self.dist_info) / "entry_points.txt"),
+                source_date_time_zinfo(time.time()),
+            )
+
     def package_license_files(
         self,
         cwd: Path,
@@ -241,6 +270,8 @@ def build_wheel(
         whl.package_wheel_metadata()
         whl.package_metadata(CoreMetadata(metadata_pep621).dump_as_bytes())
         whl.package_license_files(cwd, backend_config["license_files"])
+        if scripts := metadata_pep621.get("scripts"):
+            whl.package_entry_points(scripts)
         whl.package_record()
 
     return whl.filename

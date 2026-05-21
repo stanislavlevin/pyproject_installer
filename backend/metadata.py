@@ -53,6 +53,7 @@ Pep621MetadataType = TypedDict(
         "classifiers": list[str],
         "dynamic": list[str],
         "urls": dict[str, str],
+        "scripts": dict[str, str],
     },
     total=False,
 )
@@ -71,6 +72,7 @@ Pep621SupportedFieldsType = Literal[
     "classifiers",
     "dynamic",
     "urls",
+    "scripts",
 ]
 
 
