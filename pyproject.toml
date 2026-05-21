@@ -29,6 +29,9 @@ dynamic = ["version"]
 source = "https://github.com/stanislavlevin/pyproject_installer"
 tracker = "https://github.com/stanislavlevin/pyproject_installer/issues"
 
+[project.scripts]
+pyproject-installer = "pyproject_installer.__main__:cli_entry"
+
 [build-system]
 requires = []
 build-backend = "backend"

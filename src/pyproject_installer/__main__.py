@@ -24,6 +24,8 @@ from typing import Any, NoReturn
 from . import __version__ as project_version
 from .build_cmd import WHEEL_TRACKER, build_sdist, build_wheel
 from .codes import ExitCodes
+from .completion_cmd import SUPPORTED_SHELLS, completion_command
+from .completion_cmd._autocomplete import run_autocomplete
 from .deps_cmd import DEFAULT_CONFIG_NAME, SUPPORTED_COLLECTORS, deps_command
 from .errors import DepsUnsyncedError, RunCommandEnvError, RunCommandError
 from .install_cmd import install_wheel
@@ -170,6 +172,13 @@ def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
 
     result.report()
     sys.exit(result.status)
+
+
+def completion(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,  # noqa: ARG001  (handler convention)
+) -> None:
+    completion_command(args.shell)
 
 
 def default_built_wheel() -> Path:
@@ -485,6 +494,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         type=Path,
         nargs="?",
         default=None,
+        metavar="DIR",
         help=(
             "source directory "
             "(default: current working directory)%(default).0s"
@@ -494,6 +504,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         "--outdir",
         "-o",
         type=Path,
+        metavar="DIR",
         help="output directory for built wheel (default: {srcdir}/dist)",
     )
     parser_build.add_argument(
@@ -528,6 +539,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         type=Path,
         nargs="?",
         default=None,
+        metavar="FILE",
         help=(
             "wheel file to install "
             "(default: contructed as directory {cwd}/dist and wheel filename "
@@ -539,6 +551,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         "-d",
         default="/",
         type=Path,
+        metavar="DIR",
         help=(
             "Wheel installation root will be prepended with destdir "
             "(default: /)"
@@ -624,6 +637,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         "--wheel",
         type=Path,
         default=None,
+        metavar="FILE",
         help=(
             "wheel file to install "
             "(default: contructed as directory {cwd}/dist and wheel filename "
@@ -652,6 +666,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         "--depsconfig",
         type=Path,
         default=None,
+        metavar="FILE",
         help=(
             "configuration file to use "
             f"(default: {{cwd}}/{DEFAULT_CONFIG_NAME})%(default).0s"
@@ -659,6 +674,22 @@ def main_parser(prog: str) -> MainArgumentParser:
     )
 
     deps_subparsers(parser_deps)
+
+    # completion subcli
+    parser_completion = subparsers.add_parser(
+        "completion",
+        description=(
+            "Print a shell completion script for the requested shell to "
+            "stdout."
+        ),
+    )
+    parser_completion.add_argument(
+        "shell",
+        choices=SUPPORTED_SHELLS,
+        help="shell to generate completion for",
+    )
+    parser_completion.set_defaults(main=completion)
+
     return parser
 
 
@@ -706,6 +737,21 @@ def main(
         logger.debug("changed working directory to %s", args.cwd)
 
     args.main(args, parser)
+
+
+def cli_entry() -> None:
+    """Console-script entry; used by [project.scripts] = pyproject-installer.
+
+    Checks for the ``_PYPROJECT_INSTALLER_COMPLETE`` sentinel set by the
+    bash completion wrapper. When present, hands off to the
+    autocomplete runtime (which reads ``COMP_WORDS`` / ``COMP_CWORD``
+    from the environment, prints candidates, and exits) BEFORE normal
+    argparse processing runs. Otherwise behaves as the standard entry
+    point with ``prog="pyproject-installer"``.
+    """
+    if os.environ.get("_PYPROJECT_INSTALLER_COMPLETE") == "1":
+        run_autocomplete(main_parser("pyproject-installer"))
+    main(sys.argv[1:], prog="pyproject-installer")
 
 
 if __name__ == "__main__":
