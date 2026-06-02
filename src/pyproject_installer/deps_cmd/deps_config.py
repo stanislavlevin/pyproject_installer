@@ -8,7 +8,7 @@ from string import Template
 from typing import Any, TypedDict
 
 from ..errors import DepsSourcesConfigError, DepsUnsyncedError
-from ..lib import is_pep508_requirement, requirements
+from ..lib import is_pep508_requirement, requirements, specifiers
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
 from .collectors.collector import Collector
@@ -209,6 +209,7 @@ class DepsSourcesConfig:
         srcnames: tuple[str, ...] = (),
         verify: bool = False,
         verify_excludes: tuple[str, ...] = (),
+        verify_ignore_version: bool = False,
     ) -> None:
         """Sync sources
 
@@ -217,9 +218,17 @@ class DepsSourcesConfig:
 
         verify_excludes: filter out dependencies from diff output
         normalized names of those match given regexes (requires verify=True).
+
+        verify_ignore_version: filter out from diff output dependencies that
+        differ only in their version specifier, i.e. a dependency with the same
+        normalized name, extras, marker and url is present on both sides of the
+        diff (requires verify=True).
         """
         if verify_excludes and not verify:
             raise ValueError("verify_excludes must be used with verify")
+
+        if verify_ignore_version and not verify:
+            raise ValueError("verify_ignore_version must be used with verify")
 
         diff: dict[str, dict[str, list[str]]] = {}
         verify_excludes_regs = {re.compile(x) for x in verify_excludes}
@@ -228,6 +237,19 @@ class DepsSourcesConfig:
             """filter diff output"""
             req_name = pep503_normalized_name(req.name)
             return not any(reg.match(req_name) for reg in verify_excludes_regs)
+
+        def version_less_req(
+            req: requirements.Requirement,
+        ) -> requirements.Requirement:
+            """New requirement equal to req but without its version specifier
+
+            Lets two requirements that differ only in their specifier compare
+            and hash equal through Requirement's own __eq__/__hash__, instead of
+            rebuilding their identity from hand-picked fields.
+            """
+            versionless = requirements.Requirement(str(req))
+            versionless.specifier = specifiers.SpecifierSet()
+            return versionless
 
         for srcname, source in self.iter_sources(srcnames):
             synced_deps = set(
@@ -252,13 +274,38 @@ class DepsSourcesConfig:
             if not verify:
                 continue
 
+            new_deps = synced_deps - stored_deps
+            extra_deps = stored_deps - synced_deps
+
+            if verify_ignore_version:
+                # Reuse one version-less form per requirement instead of
+                # reparsing it for every membership test below.
+                versionless = {
+                    req: version_less_req(req) for req in new_deps | extra_deps
+                }
+                # A version-less form on both sides of the diff means the dep
+                # was both added and removed, so only its version changed; the
+                # originals with such a form are dropped. A form on one side is
+                # a genuine add or removal and is kept.
+                both_sides = {versionless[req] for req in new_deps} & {
+                    versionless[req] for req in extra_deps
+                }
+                version_changed_deps = {
+                    req for req, vl in versionless.items() if vl in both_sides
+                }
+            else:
+                version_changed_deps = set()
+
             for field_name, diff_deps in (
-                ("new_deps", synced_deps - stored_deps),
-                ("extra_deps", stored_deps - synced_deps),
+                ("new_deps", new_deps),
+                ("extra_deps", extra_deps),
             ):
-                filtered_diff_deps = set(
-                    filter(filter_verify_excludes, diff_deps),
-                )
+                filtered_diff_deps = {
+                    req
+                    for req in diff_deps
+                    if filter_verify_excludes(req)
+                    and req not in version_changed_deps
+                }
 
                 if not filtered_diff_deps:
                     continue

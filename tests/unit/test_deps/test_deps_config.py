@@ -713,6 +713,223 @@ def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
     assert not captured.out
 
 
+@pytest.mark.parametrize(
+    "old_reqs,new_reqs",
+    (
+        # only the version specifier differs
+        (["foo>=1"], ["foo>=2"]),
+        (["foo<81,>=78.1.1"], ["foo<82,>=78.1.1"]),
+        # extras and markers preserved, only version changes
+        (["foo[a,b]>=1"], ["foo[a,b]>=2"]),
+        (
+            ['foo>=1; python_version < "3.11"'],
+            ['foo>=2; python_version < "3.11"'],
+        ),
+        # several deps, all version-only
+        (["foo>=1", "bar==1"], ["foo>=2", "bar==2"]),
+        # gaining a specifier where there was none is still version-only
+        (["foo"], ["foo>=1"]),
+    ),
+)
+def test_config_sync_verify_ignore_version_unchanged(
+    old_reqs,
+    new_reqs,
+    depsconfig,
+    mock_collector,
+    capsys,
+):
+    """Sync version-only changed source with verify and ignore-version
+
+    Version-only changes don't appear in the diff and don't fail, but the
+    config is still rewritten to the synced deps.
+    """
+
+    action = "sync"
+    srcname = "src_foo"
+
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcnames=[],
+        verify=True,
+        verify_ignore_version=True,
+    )
+
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = sorted(new_reqs)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
+@pytest.mark.parametrize(
+    "data",
+    # original reqs, updated reqs, expected diff
+    (
+        # version-only foo suppressed, genuinely added dep surfaces
+        (
+            ["foo>=1"],
+            ["foo>=2", "newdep>=1"],
+            {"new_deps": ["newdep>=1"]},
+        ),
+        # version-only foo suppressed, genuinely removed dep surfaces
+        (
+            ["foo>=1", "gone==1"],
+            ["foo>=2"],
+            {"extra_deps": ["gone==1"]},
+        ),
+        # a change of extras is a real change, not a version change
+        (
+            ["foo[a]>=1"],
+            ["foo[a,b]>=2"],
+            {"extra_deps": ["foo[a]>=1"], "new_deps": ["foo[a,b]>=2"]},
+        ),
+        # a change of marker is a real change, not a version change
+        (
+            ['foo>=1; python_version < "3.11"'],
+            ['foo>=2; python_version < "3.12"'],
+            {
+                "extra_deps": ['foo>=1; python_version < "3.11"'],
+                "new_deps": ['foo>=2; python_version < "3.12"'],
+            },
+        ),
+    ),
+)
+def test_config_sync_verify_ignore_version_changed(
+    data,
+    depsconfig,
+    mock_collector,
+    capsys,
+):
+    """Sync source with verify and ignore-version, real changes still fail"""
+
+    action = "sync"
+    old_reqs, new_reqs, diff = data
+    srcname = "src_foo"
+
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcnames=[],
+            verify=True,
+            verify_ignore_version=True,
+        )
+
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = sorted(new_reqs)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+    expected_out = json.dumps({srcname: diff}, indent=2) + "\n"
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == expected_out
+
+
+def test_config_sync_verify_ignore_version_with_exclude(
+    depsconfig,
+    mock_collector,
+    capsys,
+):
+    """ignore-version and exclude filters compose"""
+
+    action = "sync"
+    srcname = "src_foo"
+
+    # foo: version-only (ignored), bar: removed but excluded, baz: added
+    old_reqs = ["foo>=1", "bar==1"]
+    new_reqs = ["foo>=2", "baz>=1"]
+
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "mock_collector",
+                "deps": old_reqs,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcnames=[],
+            verify=True,
+            verify_ignore_version=True,
+            verify_excludes=["bar.*"],
+        )
+
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = sorted(new_reqs)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+    diff = {srcname: {"new_deps": ["baz>=1"]}}
+    expected_out = json.dumps(diff, indent=2) + "\n"
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == expected_out
+
+
+def test_config_sync_verify_ignore_version_without_verify(depsconfig, capsys):
+    """Sync with ignore-version and without verify"""
+
+    action = "sync"
+
+    input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    expected_err = re.escape("verify_ignore_version must be used with verify")
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcnames=[],
+            verify_ignore_version=True,
+        )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
 @pytest.mark.parametrize("select_data", NONEXISTENT_SOURCE_DATA)
 def test_config_sync_nonexistent_source(select_data, depsconfig, capsys):
     """Sync nonexistent source"""

@@ -498,6 +498,14 @@ Sync stored requirements to configured sources.
 >
 > *Example:* `python -m pyproject_installer deps sync --verify build --verify-exclude 'foo.*'`
 
+> **`--verify-ignore-version`**
+>
+> Exclude from diff requirements that differ only in their version specifier, i.e. a requirement with the same PEP 503-normalized name, extras, marker and url is present on both sides of the diff. A requirement that was genuinely added or removed (or whose extras/marker/url changed) still appears in the diff and fails verification. Useful in downstream packaging to avoid failing on upstream upper-bound bumps such as `setuptools<81` -> `setuptools<82`. Requires `--verify`.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer deps sync --verify build --verify-ignore-version`
+
 See `python -m pyproject_installer deps sync --help` for full options.
 
 #### eval

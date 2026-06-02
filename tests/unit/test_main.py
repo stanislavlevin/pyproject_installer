@@ -924,7 +924,12 @@ def test_deps_cli_sync_default(mock_deps_command):
     deps_args = ["deps", action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": False, "verify_excludes": []}
+    r_kwargs = {
+        "srcnames": [],
+        "verify": False,
+        "verify_excludes": [],
+        "verify_ignore_version": False,
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -941,7 +946,12 @@ def test_deps_cli_sync_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": False, "verify_excludes": []}
+    r_kwargs = {
+        "srcnames": [],
+        "verify": False,
+        "verify_excludes": [],
+        "verify_ignore_version": False,
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -960,7 +970,12 @@ def test_deps_cli_sync_selected(mock_deps_command, srcnames):
     deps_args.extend(srcnames)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": srcnames, "verify": False, "verify_excludes": []}
+    r_kwargs = {
+        "srcnames": srcnames,
+        "verify": False,
+        "verify_excludes": [],
+        "verify_ignore_version": False,
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1300,7 +1315,12 @@ def test_deps_cli_sync_verify(mock_deps_command):
     deps_args = ["deps", action, "--verify"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": True, "verify_excludes": []}
+    r_kwargs = {
+        "srcnames": [],
+        "verify": True,
+        "verify_excludes": [],
+        "verify_ignore_version": False,
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1334,7 +1354,12 @@ def test_deps_cli_sync_verify_excludes(excludes, mock_deps_command):
     deps_args.extend(excludes)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {"srcnames": [], "verify": True, "verify_excludes": excludes}
+    r_kwargs = {
+        "srcnames": [],
+        "verify": True,
+        "verify_excludes": excludes,
+        "verify_ignore_version": False,
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1358,6 +1383,49 @@ def test_deps_cli_sync_verify_excludes_without_verify(capsys):
     captured = capsys.readouterr()
     assert not captured.out
     expected_msg = "--verify-exclude option must be used with --verify"
+    assert expected_msg in captured.err
+
+
+def test_deps_cli_sync_verify_ignore_version(mock_deps_command):
+    """Run deps sync with verify and ignore-version
+
+    - mock deps_command
+    - check args
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--verify", "--verify-ignore-version"]
+
+    r_args = (action, depsconfig)
+    r_kwargs = {
+        "srcnames": [],
+        "verify": True,
+        "verify_excludes": [],
+        "verify_ignore_version": True,
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_sync_verify_ignore_version_without_verify(capsys):
+    """Run deps sync with ignore-version and without verify
+
+    - mock deps_command
+    - check error
+    """
+    action = "sync"
+    deps_args = ["deps", action, "--verify-ignore-version"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "--verify-ignore-version option must be used with --verify"
     assert expected_msg in captured.err
 
 
