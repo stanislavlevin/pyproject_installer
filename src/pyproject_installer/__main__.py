@@ -87,6 +87,11 @@ def deps(
         if getattr(args, "verify_excludes", []) and not args.verify:
             parser.error("--verify-exclude option must be used with --verify")
 
+        if getattr(args, "verify_ignore_version", False) and not args.verify:
+            parser.error(
+                "--verify-ignore-version option must be used with --verify",
+            )
+
         kwargs = {x: getattr(args, x) for x in args.main_args}
         try:
             deps_command(action_name, depsconfig, **kwargs)
@@ -317,6 +322,20 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         help=(
             "Regex patterns, exclude from diff requirements PEP503-normalized "
             " names of those match one of the patterns (default: []). "
+            "Requires --verify"
+        ),
+    )
+
+    destname = "verify_ignore_version"
+    add_deps_argument(
+        subparser_sync,
+        destname,
+        "--verify-ignore-version",
+        dest=destname,
+        action="store_true",
+        help=(
+            "Exclude from diff requirements that differ only in their version "
+            "specifier (same PEP503-normalized name, extras, marker and url). "
             "Requires --verify"
         ),
     )
