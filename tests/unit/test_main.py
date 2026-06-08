@@ -103,6 +103,16 @@ def invalid_choice_messages(choice, *, choices):
     )
 
 
+DEFAULT_DEPS_ADD_CLI_KWARGS = {
+    "srcargs": [],
+    "reconfigure": False,
+    "sync": False,
+    "verify": False,
+    "verify_excludes": [],
+    "verify_ignore_version": False,
+}
+
+
 def test_version():
     result = subprocess.run(
         args=[sys.executable, "-m", "pyproject_installer", "--version"],
@@ -1676,11 +1686,11 @@ def test_deps_cli_add_default(mock_deps_command):
     deps_args = ["deps", action, srcname, srctype]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcname": srcname,
-        "srctype": srctype,
-        "srcargs": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1699,11 +1709,11 @@ def test_deps_cli_add_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action, srcname, srctype]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcname": srcname,
-        "srctype": srctype,
-        "srcargs": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1749,14 +1759,181 @@ def test_deps_cli_add_sourceargs(srcargs, mock_deps_command):
     deps_args.extend(srcargs)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcname": srcname,
-        "srctype": srctype,
-        "srcargs": srcargs,
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+        srcargs=srcargs,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_reconfigure(mock_deps_command):
+    """Run deps add with reconfigure
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", action, "--reconfigure", srcname, srctype]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+        reconfigure=True,
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_sync(mock_deps_command):
+    """Run deps add with sync
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", action, "--sync", srcname, srctype]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+        sync=True,
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_sync_verify(mock_deps_command):
+    """Run deps add with sync and verify options
+
+    - mock deps_command
+    - check args
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        srctype,
+        "--sync",
+        "--verify",
+        "--verify-ignore-version",
+        "--verify-exclude",
+        "wheel$",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+        sync=True,
+        verify=True,
+        verify_ignore_version=True,
+        verify_excludes=["wheel$"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize(
+    "verify_command",
+    (["--verify"], ["--verify-exclude", "x$"], ["--verify-ignore-version"]),
+    ids=lambda x: x[0],
+)
+def test_deps_cli_add_verify_without_sync(
+    verify_command,
+    capsys,
+    mock_deps_command,
+):
+    """Run deps add with verify commands
+
+    - mock deps_command
+    - check error
+    """
+    action = "add"
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = ["deps", action, srcname, srctype, *verify_command]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "--verify options on add must be used with --sync"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sync_verify_drift_exits(mock_deps_command):
+    """Run deps add with sync and failed verify
+
+    - mock deps_command
+    - raise DepsUnsyncedError
+    - check exit code
+    """
+    action = "add"
+    srcname = "foo"
+    srctype = "metadata"
+    mock_deps_command.side_effect = project_main.DepsUnsyncedError
+    deps_args = ["deps", action, srcname, srctype, "--sync", "--verify"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.SYNC_VERIFY_ERROR
+
+
+@pytest.mark.parametrize(
+    "verify_subcommand",
+    (["--verify-exclude", "x$"], ["--verify-ignore-version"]),
+    ids=lambda x: x[0],
+)
+def test_deps_cli_add_sync_verify_options_require_verify(
+    verify_subcommand,
+    mock_deps_command,
+    capsys,
+):
+    """Run deps add with sync and verify-* without verify
+
+    - mock deps_command
+    - check error
+    """
+    action = "add"
+    srcname = "foo"
+    srctype = "metadata"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        srctype,
+        "--sync",
+        *verify_subcommand,
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected = f"{verify_subcommand[0]} option must be used with --verify"
+    assert expected in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
 
 
 def test_deps_cli_delete_help(capsys):

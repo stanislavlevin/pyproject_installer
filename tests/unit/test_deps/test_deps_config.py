@@ -224,6 +224,222 @@ def test_config_add_srcargs(depsconfig_path):
     assert config_data == expected_data
 
 
+def test_config_add_reconfigure_new(depsconfig_path):
+    """reconfigure=True adds a not-yet-configured source (same as plain add)."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "metadata"
+
+    assert not depsconfig_path.exists()
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        reconfigure=True,
+    )
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {"sources": {srcname: {"srctype": srctype}}}
+    assert actual_conf == expected_conf
+
+
+def test_config_add_reconfigure_same_keeps_deps(depsconfig):
+    """reconfigure with identical type+args is a no-op and keeps stored deps."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "pip_reqfile"
+    srcargs = ["r.txt"]
+
+    input_conf = {
+        "sources": {
+            srcname: {"srctype": srctype, "srcargs": srcargs, "deps": ["bar"]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        srcargs=srcargs,
+        reconfigure=True,
+    )
+    expected_conf = deepcopy(input_conf)
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_reconfigure_differ_args_drops_deps(depsconfig):
+    """reconfigure with different args replaces the source, drops its deps."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "pip_reqfile"
+    srcargs = ["other.txt"]
+
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": srctype,
+                "srcargs": ["r.txt"],
+                "deps": ["bar"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        srcargs=srcargs,
+        reconfigure=True,
+    )
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["srcargs"] = srcargs
+    del expected_conf["sources"][srcname]["deps"]
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_reconfigure_differ_type_drops_deps(depsconfig):
+    """reconfigure with different type replaces the source, drops its deps."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "pip_reqfile"
+    srcargs = ["other.txt"]
+
+    input_conf = {
+        "sources": {
+            srcname: {
+                "srctype": "tox",
+                "srcargs": ["tox.ini", "testenv"],
+                "deps": ["bar"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        srcargs=srcargs,
+        reconfigure=True,
+    )
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["srctype"] = srctype
+    expected_conf["sources"][srcname]["srcargs"] = srcargs
+    del expected_conf["sources"][srcname]["deps"]
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sync(depsconfig_path, mock_collector):
+    """add(sync=True) configures the source then syncs it (collects deps)."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "mock_collector"
+    new_reqs = ["bar", "baz"]
+
+    mock_collector(new_reqs)
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        sync=True,
+    )
+    expected_conf = {
+        "sources": {srcname: {"srctype": srctype, "deps": new_reqs}},
+    }
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_reconfigure_keep_sync(depsconfig, mock_collector):
+    """reconfigure-keep with sync=True still syncs (no early return)."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "mock_collector"
+    old_reqs = ["old"]
+    new_reqs = ["new"]
+
+    input_conf = {
+        "sources": {srcname: {"srctype": srctype, "deps": old_reqs}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    mock_collector(new_reqs)
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        srctype=srctype,
+        reconfigure=True,
+        sync=True,
+    )
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = new_reqs
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sync_skipped_when_add_fails(depsconfig):
+    """add(sync=True) must not sync when the add itself fails."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "metadata"
+    old_reqs = ["bar"]
+
+    input_conf = {
+        "sources": {srcname: {"srctype": srctype, "deps": old_reqs}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    with pytest.raises(ValueError, match=rf"^Source {srcname} already exists"):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcname=srcname,
+            srctype=srctype,
+            sync=True,
+        )
+
+    expected_conf = deepcopy(input_conf)
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sync_verify_drift(depsconfig_path, mock_collector):
+    """add(sync=True, verify=True) raises DepsUnsyncedError on drift."""
+
+    action = "add"
+    srcname = "foo"
+    srctype = "mock_collector"
+    new_reqs = ["bar"]
+
+    mock_collector(new_reqs)
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            action,
+            depsconfig_path,
+            srcname=srcname,
+            srctype=srctype,
+            sync=True,
+            verify=True,
+        )
+
+
 def test_config_delete(depsconfig):
     """Delete source"""
 
