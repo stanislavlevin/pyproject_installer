@@ -84,6 +84,15 @@ def deps(
         ):
             parser.error("depformatextra option must be used with depformat")
 
+        if (
+            hasattr(args, "sync")
+            and not args.sync
+            and any(
+                (args.verify, args.verify_excludes, args.verify_ignore_version),
+            )
+        ):
+            parser.error("--verify options on add must be used with --sync")
+
         if getattr(args, "verify_excludes", []) and not args.verify:
             parser.error("--verify-exclude option must be used with --verify")
 
@@ -267,6 +276,54 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         parser.set_defaults(main=deps(name))
         return parser
 
+    def add_sync_options(parser: argparse.ArgumentParser) -> None:
+        """Add the verify options shared by `sync` and `add`.
+
+        Registered in `main_args`, so they are forwarded to the action:
+        `sync()` directly, or `add()` (which passes them on to its own
+        sync when `--sync` is given).
+        """
+        destname = "verify"
+        add_deps_argument(
+            parser,
+            destname,
+            f"--{destname}",
+            action="store_true",
+            help=(
+                "Sync sources, but print diff and exits with code "
+                f"{ExitCodes.SYNC_VERIFY_ERROR} if the sources were unsynced"
+            ),
+        )
+
+        destname = "verify_excludes"
+        add_deps_argument(
+            parser,
+            destname,
+            "--verify-exclude",
+            dest=destname,
+            nargs="+",
+            default=[],
+            help=(
+                "Regex patterns; exclude from diff requirements whose "
+                "PEP503-normalized names match one of the patterns "
+                "(default: []). Requires --verify"
+            ),
+        )
+
+        destname = "verify_ignore_version"
+        add_deps_argument(
+            parser,
+            destname,
+            "--verify-ignore-version",
+            dest=destname,
+            action="store_true",
+            help=(
+                "Exclude from diff requirements that differ only in their "
+                "version specifier (same PEP503-normalized name, extras, "
+                "marker and url). Requires --verify"
+            ),
+        )
+
     # show
     subparser_show = add_deps_parser(
         subparsers,
@@ -299,46 +356,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         nargs="*",
     )
 
-    destname = "verify"
-    add_deps_argument(
-        subparser_sync,
-        destname,
-        f"--{destname}",
-        help=(
-            "Sync sources, but print diff and exits with code "
-            f"{ExitCodes.SYNC_VERIFY_ERROR} if the sources were unsynced"
-        ),
-        action="store_true",
-    )
-
-    destname = "verify_excludes"
-    add_deps_argument(
-        subparser_sync,
-        destname,
-        "--verify-exclude",
-        dest=destname,
-        nargs="+",
-        default=[],
-        help=(
-            "Regex patterns, exclude from diff requirements PEP503-normalized "
-            " names of those match one of the patterns (default: []). "
-            "Requires --verify"
-        ),
-    )
-
-    destname = "verify_ignore_version"
-    add_deps_argument(
-        subparser_sync,
-        destname,
-        "--verify-ignore-version",
-        dest=destname,
-        action="store_true",
-        help=(
-            "Exclude from diff requirements that differ only in their version "
-            "specifier (same PEP503-normalized name, extras, marker and url). "
-            "Requires --verify"
-        ),
-    )
+    add_sync_options(subparser_sync)
 
     # eval
     subparser_eval = add_deps_parser(
@@ -445,6 +463,33 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         nargs="*",
         help="specific configuration options for source (default: [])",
     )
+
+    destname = "reconfigure"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        f"--{destname}",
+        action="store_true",
+        help=(
+            "Reconfigure an already-configured source: keep it when the type "
+            "and args are unchanged, replace it (dropping stored deps) when "
+            "they differ. Without this, an existing source is an error."
+        ),
+    )
+
+    destname = "sync"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        f"--{destname}",
+        action="store_true",
+        help=(
+            "After configuring the source, sync it in the same process "
+            "(accepts the verify options below). Lets one add call replace "
+            "a separate sync."
+        ),
+    )
+    add_sync_options(subparser_add)
 
     # delete
     subparser_delete = add_deps_parser(

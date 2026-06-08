@@ -150,19 +150,56 @@ class DepsSourcesConfig:
         srcname: str,
         srctype: str,
         srcargs: tuple[str, ...] = (),
+        *,
+        reconfigure: bool = False,
+        sync: bool = False,
+        verify: bool = False,
+        verify_excludes: tuple[str, ...] = (),
+        verify_ignore_version: bool = False,
     ) -> None:
+        """Configure a source of dependencies, optionally syncing it
+
+        reconfigure: if the source already exists, keep it when its type
+        and args are unchanged, or replace it (dropping its stored deps)
+        when they differ, instead of raising. Without it an existing
+        source raises ValueError.
+
+        sync: after configuring the source (newly added, kept or
+        replaced), sync it in the same process. The verify options
+        (verify, verify_excludes, verify_ignore_version) are forwarded to
+        sync() and only apply when sync=True.
+        """
         if not self.file.is_file():
             # allow new file
             self.set_default()
         srcargs = tuple(srcargs)
         self.validate_collector(srctype, srcargs)
 
+        keep_existing = False
         if srcname in self.sources:
-            raise ValueError(f"Source {srcname} already exists")
-        self.sources[srcname] = {"srctype": srctype}
-        if srcargs:
-            self.sources[srcname]["srcargs"] = srcargs
-        self.save()
+            if not reconfigure:
+                raise ValueError(f"Source {srcname} already exists")
+            if (
+                self.sources[srcname]["srctype"] == srctype
+                and tuple(self.sources[srcname].get("srcargs", ())) == srcargs
+            ):
+                keep_existing = True
+            else:
+                del self.sources[srcname]
+
+        if not keep_existing:
+            self.sources[srcname] = {"srctype": srctype}
+            if srcargs:
+                self.sources[srcname]["srcargs"] = srcargs
+            self.save()
+
+        if sync:
+            self.sync(
+                srcnames=(srcname,),
+                verify=verify,
+                verify_excludes=verify_excludes,
+                verify_ignore_version=verify_ignore_version,
+            )
 
     def delete(self, srcname: str) -> None:
         if srcname not in self.sources:
@@ -216,8 +253,8 @@ class DepsSourcesConfig:
         verify: do sync of selected sources, but print the diff on
         stdout and raise DepsUnsyncedError if sources were unsynced before
 
-        verify_excludes: filter out dependencies from diff output
-        normalized names of those match given regexes (requires verify=True).
+        verify_excludes: filter out from diff output dependencies whose
+        normalized names match given regexes (requires verify=True).
 
         verify_ignore_version: filter out from diff output dependencies that
         differ only in their version specifier, i.e. a dependency with the same

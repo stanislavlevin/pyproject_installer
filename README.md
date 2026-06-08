@@ -434,6 +434,22 @@ Configure source of Python dependencies. Supported sources: standardized formats
 >
 > *Default:* `[]`
 
+> **`--reconfigure`**
+>
+> Reconfigure an already-configured source instead of failing on a duplicate name: keep it when the source type and args are unchanged (exit 0), or replace it (dropping its stored deps) when they differ. Without this flag, adding an already-configured name is an error.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer deps add --reconfigure runtime metadata`
+
+> **`--sync`**
+>
+> After a successful add (newly added, kept, or replaced), sync the source in the same process. Accepts the same verify options as [`deps sync`](#sync) (`--verify`, `--verify-exclude`, `--verify-ignore-version`), each of which requires `--sync`. This lets a single `add` call replace the downstream `show || add` followed by `sync` sequence. Because `--verify-exclude` takes one or more values, give the source name and type *before* the verify options (or use the `--verify-exclude=PATTERN` form); otherwise they are folded into the exclude list.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer deps add build_pep517 pep517 --sync --verify --verify-exclude 'wheel$'`
+
 Examples:
 
 ```console
