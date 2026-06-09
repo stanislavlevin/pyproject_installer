@@ -12,3 +12,6 @@ class ExitCodes(IntEnum):
     INTERNAL_ERROR = 3
     # sync --verify
     SYNC_VERIFY_ERROR = 4
+    # add --candidates: no candidate matched (reported; existing source,
+    # if any, left untouched)
+    ADD_NO_CANDIDATE_ERROR = 5

@@ -424,15 +424,29 @@ Configure source of Python dependencies. Supported sources: standardized formats
 >
 > Source name.
 
-> **`<source type>`** (positional)
+> **`<source type>`** (positional, optional)
+>
+> Omit when using `--candidates`.
 >
 > *Choices:* `pep517`, `pep518`, `pep735`, `metadata`, `pip_reqfile`, `poetry`, `tox`, `hatch`, `pdm`, `pipenv`
 
 > **`<source-specific options>`** (positional, variadic)
 >
+> Omit when using `--candidates`.
+>
 > Specific configuration options for source.
 >
 > *Default:* `[]`
+
+> **`--candidates LIST`**
+>
+> Discover the source from an ordered list instead of a fixed type. `LIST` is a `;`-separated string whose entries are each `<type> [args ...]` (the same shape as the positional type/args). The walk goes left to right and the first candidate that *collects successfully* (its source is present and collectable) wins, even if it has zero dependencies; its type and args are recorded under the source name. A candidate is skipped when its source cannot be collected (for example a missing file or group); a malformed candidate list (an unknown type or the wrong number of arguments) is an error, not a silent skip. It is mutually exclusive with the positional type/args (giving both is a usage error), so the source name is the only positional; every other aspect of `add` (add-only by default, `--reconfigure`, `--sync` and its verify options) behaves exactly as with an explicit type. Because `--verify-exclude` takes one or more values, keep the source name *before* it.
+>
+> When no candidate is picked, `add` reports it and exits with code 5 in every case, whether or not `name` is already configured and whether or not `--reconfigure` is given; any existing source under `name` is left untouched. `--sync` (and the `--verify` that depends on it) never runs on a no-candidate branch.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer deps add check --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt' --reconfigure --sync --verify`
 
 > **`--reconfigure`**
 >
@@ -482,6 +496,12 @@ python -m pyproject_installer deps add check pdm test
 
 # pipenv packages
 python -m pyproject_installer deps add check pipenv Pipfile packages
+
+# autodiscover a test-dependency source (first existing wins), then
+# reconcile and verify it in one process
+python -m pyproject_installer deps add check \
+    --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt' \
+    --reconfigure --sync --verify
 ```
 
 See `python -m pyproject_installer deps add --help` for full options.

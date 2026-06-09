@@ -6,19 +6,6 @@ import pytest
 from pyproject_installer.deps_cmd import deps_command
 
 
-@pytest.fixture
-def pip_reqfile(tmpdir, monkeypatch):
-    """pip's requirements.txt file"""
-
-    def _pip_reqfile(content):
-        reqfile_path = tmpdir / "requirements.txt"
-        reqfile_path.write_text(content, encoding="utf-8")
-        monkeypatch.chdir(tmpdir)
-        return reqfile_path
-
-    return _pip_reqfile
-
-
 def test_pipreqfile_collector_valid_deps(
     valid_pep508_data,
     pip_reqfile,
