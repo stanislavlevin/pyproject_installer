@@ -27,7 +27,12 @@ from .codes import ExitCodes
 from .completion_cmd import SUPPORTED_SHELLS, completion_command
 from .completion_cmd._autocomplete import run_autocomplete
 from .deps_cmd import DEFAULT_CONFIG_NAME, SUPPORTED_COLLECTORS, deps_command
-from .errors import DepsUnsyncedError, RunCommandEnvError, RunCommandError
+from .errors import (
+    DepsNoCandidateError,
+    DepsUnsyncedError,
+    RunCommandEnvError,
+    RunCommandError,
+)
 from .install_cmd import install_wheel
 from .run_cmd import run_command
 
@@ -84,6 +89,15 @@ def deps(
         ):
             parser.error("depformatextra option must be used with depformat")
 
+        if hasattr(args, "candidates"):
+            if all((args.candidates, args.srctype)):
+                parser.error(
+                    "srctype positional is mutually exclusive "
+                    "with --candidates",
+                )
+            if not any((args.candidates, args.srctype)):
+                parser.error("either srctype or --candidates is required")
+
         if (
             hasattr(args, "sync")
             and not args.sync
@@ -107,6 +121,10 @@ def deps(
         except DepsUnsyncedError:
             # sync --verify error
             sys.exit(ExitCodes.SYNC_VERIFY_ERROR)
+        except DepsNoCandidateError as e:
+            # add --candidates with no candidate picked: report and exit
+            logger.info("%s", e)
+            sys.exit(ExitCodes.ADD_NO_CANDIDATE_ERROR)
 
     return wrapped
 
@@ -213,6 +231,31 @@ def default_built_wheel() -> Path:
         ) from None
 
     return default_wheel_dir / wheel_filename
+
+
+def parse_candidates(value: str) -> tuple[tuple[str, ...], ...]:
+    """Parse a ;-separated --candidates list into (type, *args) tuples.
+
+    Each ;-separated entry is split on whitespace into a type followed by its
+    args, and blank entries are dropped; surrounding or repeated whitespace
+    and a trailing ';' are therefore harmless (' pep735  test ;' is one
+    ('pep735', 'test') entry). A malformed candidate list is rejected as a
+    usage error rather than silently skipped: it is an error when no entries
+    are left after dropping blanks (an empty, whitespace-only, or ';'-only
+    value), or when an entry's type is not a known collector.
+    """
+    candidates = tuple(
+        tuple(parts) for entry in value.split(";") if (parts := entry.split())
+    )
+    if not candidates:
+        raise argparse.ArgumentTypeError(f"no candidates parsed from {value!r}")
+    for srctype, *_ in candidates:
+        if srctype not in SUPPORTED_COLLECTORS:
+            raise argparse.ArgumentTypeError(
+                f"invalid candidate type: {srctype!r} "
+                f"(choose from {', '.join(SUPPORTED_COLLECTORS)})",
+            )
+    return candidates
 
 
 def convert_config_settings(value: str | None) -> dict[str, Any] | None:
@@ -451,8 +494,10 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         subparser_add,
         destname,
         destname,
+        nargs="?",
+        default=None,
         choices=SUPPORTED_COLLECTORS,
-        help="source type",
+        help="source type (omit when using --candidates)",
     )
 
     destname = "srcargs"
@@ -461,7 +506,28 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         destname,
         destname,
         nargs="*",
-        help="specific configuration options for source (default: [])",
+        help=(
+            "specific configuration options for source "
+            "(omit when using --candidates; default: [])"
+        ),
+    )
+
+    destname = "candidates"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        f"--{destname}",
+        type=parse_candidates,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Discover the source from an ordered, ';'-separated list of "
+            "'<type> [args ...]' candidates: the first that collects "
+            "successfully (its source is present, even with zero deps) is "
+            "picked and supplies the recorded type/args. Mutually exclusive "
+            "with the positional type/args; the source name is the only "
+            "positional."
+        ),
     )
 
     destname = "reconfigure"

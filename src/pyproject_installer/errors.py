@@ -14,5 +14,9 @@ class DepsUnsyncedError(Exception):
     """Stored and actual dependencies are not synced"""
 
 
+class DepsNoCandidateError(Exception):
+    """No candidate source matched the given --candidates list"""
+
+
 class DepsSourcesConfigError(Exception):
     """Wrong format or data of deps config"""

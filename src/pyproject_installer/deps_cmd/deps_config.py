@@ -1,13 +1,19 @@
 import json
 import re
 import sys
+from collections import deque
 from collections.abc import Iterator, Mapping
+from contextlib import suppress
 from copy import deepcopy
 from pathlib import Path
 from string import Template
 from typing import Any, TypedDict
 
-from ..errors import DepsSourcesConfigError, DepsUnsyncedError
+from ..errors import (
+    DepsNoCandidateError,
+    DepsSourcesConfigError,
+    DepsUnsyncedError,
+)
 from ..lib import is_pep508_requirement, requirements, specifiers
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
@@ -145,12 +151,45 @@ class DepsSourcesConfig:
     def sources(self) -> dict[str, DepsConfigSourceSpec]:
         return self.config["sources"]
 
+    def _resolve_candidate(
+        self,
+        candidates: tuple[tuple[str, ...], ...],
+    ) -> tuple[str, tuple[str, ...]] | None:
+        """First candidate that collects successfully, as (srctype, srcargs)
+
+        The candidate list is validated up front: an unknown type or the
+        wrong number of arguments means the candidate list itself is
+        malformed and raises DepsSourcesConfigError -- it is not a silently
+        skipped entry. The validated entries are then walked left to right
+        and the first that collects successfully wins -- its source is
+        present and collectable -- even if it yields zero dependencies. A
+        candidate is skipped when its collect fails for any reason (a
+        missing file or group, or data that cannot be parsed): a source that
+        cannot be collected is not a usable source. Returns None when no
+        candidate collects.
+        """
+        validated: list[tuple[str, tuple[str, ...], Collector]] = []
+        for candidate in candidates:
+            srctype, srcargs = candidate[0], candidate[1:]
+            # Raises DepsSourcesConfigError on an unknown type or the wrong
+            # number of arguments: a malformed list is an error, not a skip.
+            collector = self.validate_collector(srctype, srcargs)
+            validated.append((srctype, srcargs, collector))
+
+        for srctype, srcargs, collector in validated:
+            with suppress(Exception):
+                # collectors collect lazily
+                deque(collector.collect(), maxlen=0)
+                return srctype, srcargs
+        return None
+
     def add(
         self,
         srcname: str,
-        srctype: str,
+        srctype: str | None = None,
         srcargs: tuple[str, ...] = (),
         *,
+        candidates: tuple[tuple[str, ...], ...] | None = None,
         reconfigure: bool = False,
         sync: bool = False,
         verify: bool = False,
@@ -158,6 +197,13 @@ class DepsSourcesConfig:
         verify_ignore_version: bool = False,
     ) -> None:
         """Configure a source of dependencies, optionally syncing it
+
+        candidates: an ordered list of (srctype, *srcargs) candidates,
+        mutually exclusive with srctype/srcargs -- exactly one of srctype
+        or candidates is required; the source is taken from the first
+        candidate that collects successfully (its source is present and
+        collectable). When no candidate is picked, DepsNoCandidateError
+        is raised in every case and any existing srcname is left untouched.
 
         reconfigure: if the source already exists, keep it when its type
         and args are unchanged, or replace it (dropping its stored deps)
@@ -169,6 +215,20 @@ class DepsSourcesConfig:
         (verify, verify_excludes, verify_ignore_version) are forwarded to
         sync() and only apply when sync=True.
         """
+        if all((candidates, srctype)):
+            raise ValueError(
+                "srctype is mutually exclusive with candidates",
+            )
+
+        if candidates is not None:
+            if (picked := self._resolve_candidate(candidates)) is None:
+                raise DepsNoCandidateError(
+                    f"No candidate source matched for {srcname}",
+                )
+            srctype, srcargs = picked
+        elif srctype is None:
+            raise ValueError("add requires either srctype or candidates")
+
         if not self.file.is_file():
             # allow new file
             self.set_default()

@@ -103,8 +103,10 @@ def invalid_choice_messages(choice, *, choices):
     )
 
 
-DEFAULT_DEPS_ADD_CLI_KWARGS = {
+DEFAULT_DEPS_ADD_CLI_KWARGS: dict[str, Any] = {
+    "srctype": None,
     "srcargs": [],
+    "candidates": None,
     "reconfigure": False,
     "sync": False,
     "verify": False,
@@ -1934,6 +1936,224 @@ def test_deps_cli_add_sync_verify_options_require_verify(
     expected = f"{verify_subcommand[0]} option must be used with --verify"
     assert expected in capsys.readouterr().err
     mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_candidates(mock_deps_command):
+    """Run deps add with --candidates
+
+    - mock deps_command
+    - check the ;-list is parsed to a tuple of (type, *args) tuples
+    - check srctype is None (no positional type)
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        "pep735 test;pip_reqfile r.txt",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        candidates=(("pep735", "test"), ("pip_reqfile", "r.txt")),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_candidates_lenient_parsing(mock_deps_command):
+    """Run deps add with a sloppy but valid --candidates list
+
+    - mock deps_command
+    - blank entries (trailing ';', whitespace-only) are dropped
+    - a multi-arg entry is split into (type, *args)
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        " pep735  test ; tox tox.ini testenv ;; pip_reqfile r.txt ; ",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        candidates=(
+            ("pep735", "test"),
+            ("tox", "tox.ini", "testenv"),
+            ("pip_reqfile", "r.txt"),
+        ),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_candidates_reconfigure_sync_verify(mock_deps_command):
+    """Run deps add --candidates composed with --reconfigure/--sync/--verify
+
+    - mock deps_command
+    - check all options are forwarded with the parsed candidates
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        "pep735 test;pep735 tests",
+        "--reconfigure",
+        "--sync",
+        "--verify",
+        "--verify-exclude",
+        "pytest-cov",
+        "flake8$",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        candidates=(("pep735", "test"), ("pep735", "tests")),
+        reconfigure=True,
+        sync=True,
+        verify=True,
+        verify_excludes=["pytest-cov", "flake8$"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_candidates_with_type_is_error(mock_deps_command, capsys):
+    """Run deps add with both --candidates and a positional type
+
+    - mock deps_command
+    - check mutual-exclusion usage error
+    """
+    action = "add"
+    srcname = "check"
+    srctype = "metadata"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        srctype,
+        "--candidates",
+        "pep735 test",
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = (
+        "srctype positional is mutually exclusive with --candidates"
+    )
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_requires_type_or_candidates(mock_deps_command, capsys):
+    """Run deps add with neither a positional type nor --candidates
+
+    - mock deps_command
+    - check usage error
+    """
+    action = "add"
+    srcname = "check"
+    deps_args = ["deps", action, srcname]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "either srctype or --candidates is required"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_candidates_empty_is_error(mock_deps_command, capsys):
+    """Run deps add with an empty --candidates list
+
+    - mock deps_command
+    - check usage error
+    """
+    action = "add"
+    srcname = "check"
+    candidates = " ; "
+    deps_args = ["deps", action, srcname, "--candidates", candidates]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = f"no candidates parsed from {candidates!r}"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_candidates_unknown_type_is_error(
+    mock_deps_command,
+    capsys,
+):
+    """Run deps add with an unknown type in --candidates
+
+    - mock deps_command
+    - an unknown type is a malformed list -> usage error, not a silent skip
+    """
+    action = "add"
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        "pep735 test;bogus x",
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "invalid candidate type: 'bogus'"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_candidates_no_candidate_reports_and_exits(
+    mock_deps_command,
+    caplog,
+):
+    """Run deps add --candidates when no candidate matches
+
+    - mock deps_command to raise DepsNoCandidateError
+    - check the error is reported and the dedicated exit code is used
+    """
+    action = "add"
+    srcname = "check"
+    expected_message = f"No candidate source matched for {srcname}"
+    mock_deps_command.side_effect = project_main.DepsNoCandidateError(
+        expected_message,
+    )
+    deps_args = ["deps", action, srcname, "--candidates", "pep735 test"]
+
+    with (
+        caplog.at_level(logging.INFO),
+        pytest.raises(SystemExit) as exc,
+    ):
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.ADD_NO_CANDIDATE_ERROR
+    assert expected_message in caplog.text
 
 
 def test_deps_cli_delete_help(capsys):

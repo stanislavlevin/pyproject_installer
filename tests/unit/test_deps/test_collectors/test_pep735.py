@@ -64,20 +64,6 @@ else:
 
 
 @pytest.fixture
-def pep735_deps(pyproject_toml):
-    """Fill pyproject.toml with Dependency Groups dependencies (PEP735)"""
-
-    def _pep735_deps(groups_data):
-        contents = ["[dependency-groups]"]
-        for group, deps in groups_data.items():
-            contents.append(f"{group} = [{', '.join(deps)}]")
-
-        return pyproject_toml("\n".join(contents) + "\n")
-
-    return _pep735_deps
-
-
-@pytest.fixture
 def pep735_depsconfig(depsconfig):
     """Configure depsconfig for PEP735 source of dependencies"""
     srcname = "src1"
