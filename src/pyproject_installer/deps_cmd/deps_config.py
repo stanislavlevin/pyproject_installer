@@ -461,15 +461,31 @@ class DepsSourcesConfig:
         exclude_regexes = {re.compile(x) for x in excludes}
 
         for _, source in self.iter_sources(srcnames):
+            # instantiate the collector for its eval_env() marker contribution;
+            # the type and args were already validated at config load
+            collector = self.validate_collector(
+                source["srctype"],
+                tuple(source.get("srcargs", ())),
+            )
+            source_env = collector.eval_env()
             for req in source.get("deps", ()):
                 parsed_req = requirements.Requirement(req)
 
                 # evaluating markers
                 marker = parsed_req.marker
                 if marker is not None:
+                    # build an override mapping only when there is something
+                    # to override; pass None otherwise so the marker is
+                    # evaluated against packaging's default environment (its
+                    # documented contract for None). A source's recorded extra
+                    # (via eval_env) takes precedence over a command-line
+                    # --extra.
                     env = None
                     if extra is not None:
                         env = {"extra": extra}
+
+                    if source_env:
+                        env = (env or {}) | source_env
                     marker_res = marker.evaluate(env)
                     if not marker_res:
                         continue

@@ -77,3 +77,24 @@ def mock_collector(mocker):
         )
 
     return _collector
+
+
+@pytest.fixture
+def pyproject_metadata_extra(pyproject_metadata):
+    """
+    project with self-hosted build backend providing
+    prepare_metadata_for_build_wheel which generates metadata containing extras
+    """
+
+    def _pyproject_metadata_extra(extra, **kwargs):
+        return pyproject_metadata(
+            headers=[
+                "Metadata-Version: 2.1",
+                "Name: foo",
+                "Version: 1.0",
+                f"Provides-Extra: {extra}",
+            ],
+            **kwargs,
+        )
+
+    return _pyproject_metadata_extra

@@ -510,6 +510,44 @@ def test_config_add_candidates_uncollectable_is_skipped(
     assert actual_conf == expected_conf
 
 
+def test_config_add_candidates_metadata_extra_unknown_skipped(
+    depsconfig_path,
+    pyproject_metadata_extra,
+):
+    """A metadata_extra whose extra is undeclared is skipped; next wins.
+
+    Exercises the feature's headline discovery path: an unknown extra
+    makes the collector raise, so the candidate walk moves on to the
+    declared extra.
+    """
+
+    action = "add"
+    srcname = "check"
+    collector = "metadata_extra"
+    extra = "bar"
+    unknown = "nope"
+    candidates = (
+        (collector, unknown),  # extra not provided -> skipped
+        (collector, extra),  # provided -> picked
+    )
+
+    pyproject_metadata_extra(extra, reqs=(f"baz; extra == '{extra}'",))
+
+    deps_command(
+        action,
+        depsconfig_path,
+        srcname=srcname,
+        candidates=candidates,
+    )
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            srcname: {"srctype": collector, "srcargs": [extra]},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
 def test_config_add_candidates_no_candidate_unconfigured_errors(
     depsconfig_path,
 ):

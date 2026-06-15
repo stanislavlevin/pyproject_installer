@@ -428,7 +428,7 @@ Configure source of Python dependencies. Supported sources: standardized formats
 >
 > Omit when using `--candidates`.
 >
-> *Choices:* `pep517`, `pep518`, `pep735`, `metadata`, `pip_reqfile`, `poetry`, `tox`, `hatch`, `pdm`, `pipenv`
+> *Choices:* `pep517`, `pep518`, `pep735`, `metadata`, `metadata_extra`, `pip_reqfile`, `poetry`, `tox`, `hatch`, `pdm`, `pipenv`
 
 > **`<source-specific options>`** (positional, variadic)
 >
@@ -476,6 +476,12 @@ python -m pyproject_installer deps add build_pep517 pep517
 # core metadata dependencies
 python -m pyproject_installer deps add runtime metadata
 
+# core metadata extra
+# (its deps are the project's full core dependency list, not just the
+# extra's delta; the extra is stored in the source and applied
+# automatically at eval, so no eval --extra is needed)
+python -m pyproject_installer deps add check metadata_extra tests
+
 # PEP 735 dependency group
 python -m pyproject_installer deps add check pep735 test
 
@@ -500,7 +506,7 @@ python -m pyproject_installer deps add check pipenv Pipfile packages
 # autodiscover a test-dependency source (first existing wins), then
 # reconcile and verify it in one process
 python -m pyproject_installer deps add check \
-    --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt' \
+    --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt;metadata_extra tests' \
     --reconfigure --sync --verify
 ```
 
@@ -579,6 +585,8 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 > *Default:* `None`
 >
 > *Example:* `python -m pyproject_installer deps eval build --extra tests`
+>
+> A `metadata_extra` source carries its own recorded extra: that extra is always applied to its stored dependencies, and `--extra` is ignored for that source (it still applies to other sources).
 
 > **`--exclude`**
 >
