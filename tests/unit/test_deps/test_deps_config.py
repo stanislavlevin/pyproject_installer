@@ -1156,3 +1156,51 @@ def test_config_eval_excludes(deps, depsconfig, capsys):
     captured = capsys.readouterr()
     assert not captured.err
     assert captured.out == expected_out
+
+
+def test_config_eval_metadata_extra_applies_stored_extra(depsconfig, capsys):
+    """A metadata_extra source evaluates with its recorded extra."""
+    action = "eval"
+    collector = "metadata_extra"
+    deps = ["qux", 'baz; extra == "bar"', 'corge; extra == "quux"']
+    input_conf = {
+        "sources": {
+            "check": {
+                "srctype": collector,
+                "srcargs": ["bar"],
+                "deps": deps,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    # No --extra on the command line: the stored extra drives evaluation.
+    deps_command(action, depsconfig_path, srcnames=[])
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == 'baz; extra == "bar"\nqux\n'
+
+
+def test_config_eval_metadata_extra_ignores_cli_extra(depsconfig, capsys):
+    """For metadata_extra, the recorded extra wins over a CLI --extra."""
+    action = "eval"
+    collector = "metadata_extra"
+    deps = ['baz; extra == "bar"', 'corge; extra == "quux"']
+    input_conf = {
+        "sources": {
+            "check": {
+                "srctype": collector,
+                "srcargs": ["bar"],
+                "deps": deps,
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    # CLI asks for "quux", but the source records "bar" and wins.
+    deps_command(action, depsconfig_path, srcnames=[], extra="quux")
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == 'baz; extra == "bar"\n'

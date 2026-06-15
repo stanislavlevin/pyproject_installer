@@ -1,6 +1,7 @@
 from .collector import Collector
 from .hatch import HatchCollector
 from .metadata import MetadataCollector
+from .metadata_extra import MetadataExtraCollector
 from .pdm import PdmCollector
 from .pep517 import Pep517Collector
 from .pep518 import Pep518Collector
@@ -18,6 +19,7 @@ _COLLECTOR_CLASSES: list[type[Collector]] = [
     Pep517Collector,
     Pep518Collector,
     MetadataCollector,
+    MetadataExtraCollector,
     PipReqFileCollector,
     PoetryCollector,
     ToxCollector,

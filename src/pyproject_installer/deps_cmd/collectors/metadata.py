@@ -1,5 +1,6 @@
 import email
 from collections.abc import Iterator
+from email.message import Message
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -21,7 +22,8 @@ class MetadataCollector(Collector):
 
     name = "metadata"
 
-    def collect(self) -> Iterator[str]:
+    def parsed_metadata(self) -> Message:
+        """Build the project's core metadata on cwd and parse it once."""
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             metadata_filename = build_metadata(
@@ -30,8 +32,11 @@ class MetadataCollector(Collector):
             )
             metadata_path = tmp_path / metadata_filename
             metadata_text = metadata_path.read_text(encoding="utf-8")
-        metadata_email = email.message_from_string(metadata_text)
-        requires = metadata_email.get_all("Requires-Dist", [])
+        return email.message_from_string(metadata_text)
+
+    def iter_requires(self, metadata: Message) -> Iterator[str]:
+        """Parse and validate Requires-Dist from parsed metadata."""
+        requires = metadata.get_all("Requires-Dist", [])
         for req in requires:
             if not is_pep508_requirement(req):
                 err_msg = (
@@ -39,3 +44,6 @@ class MetadataCollector(Collector):
                 )
                 raise ValueError(err_msg) from None
             yield req
+
+    def collect(self) -> Iterator[str]:
+        yield from self.iter_requires(self.parsed_metadata())
