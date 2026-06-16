@@ -1134,6 +1134,30 @@ def test_config_eval_extra(data, depsconfig, capsys):
     assert captured.out == expected_out
 
 
+@pytest.mark.parametrize("marker_extra", ("te-st", "te_st", "Te.St", "TE-ST"))
+@pytest.mark.parametrize("extra", ("Te-St", "te_st", "te.st"))
+def test_config_eval_extra_normalized(extra, marker_extra, depsconfig, capsys):
+    """Both the --extra arg and the marker's extra value are normalized
+    before comparison (PEP 503/685), so any denormalized spelling of
+    either side selects the dep."""
+
+    action = "eval"
+    deps = [f'foo ; extra == "{marker_extra}"', 'bar ; extra == "doc"']
+
+    # prepare source config
+    input_conf = {"sources": {"foo": {"srctype": "metadata", "deps": deps}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(action, depsconfig_path, srcnames=[], extra=extra)
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    # eval parses each dep through Requirement and prints str(parsed_req),
+    # and packaging normalizes the extra marker on the way, so the printed
+    # form is te-st regardless of the stored marker's spelling.
+    assert captured.out == 'foo; extra == "te-st"\n'
+
+
 @pytest.mark.parametrize("deps", (["foo", "foo_bar", "Bar", "foobar"],))
 def test_config_eval_excludes(deps, depsconfig, capsys):
     """Eval source with excludes"""

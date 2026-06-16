@@ -580,7 +580,7 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 
 > **`--extra`**
 >
-> PEP 508 `extra` marker to evaluate with.
+> PEP 508 `extra` marker to evaluate with. Before evaluation the supplied name and each dependency's `extra == ...` marker value are both PEP 503/685-normalized, then compared in that normalized form, so `Foo.Bar`, `foo_bar` and `foo-bar` are equivalent.
 >
 > *Default:* `None`
 >
