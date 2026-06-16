@@ -36,31 +36,41 @@ def test_metadata_extra_collects_full_list(
     assert actual_conf == expected_conf
 
 
+@pytest.mark.parametrize(
+    "requested",
+    ("foo-bar", "Foo.Bar", "foo_bar", "FOO-BAR"),
+)
+@pytest.mark.parametrize("header", ("foo-bar", "Foo.Bar", "foo_bar", "FOO_BAR"))
 def test_metadata_extra_normalizes_extra(
+    header,
+    requested,
     pyproject_metadata_extra,
     depsconfig,
 ):
-    """The requested extra is matched PEP 503/685-normalized."""
+    """The extra is matched PEP 503/685-normalized on both the requested
+    and the Provides-Extra (provided) side."""
     srcname = "check"
     collector = "metadata_extra"
-    extra = "bar"
     input_conf = {
         "sources": {
             srcname: {
                 "srctype": collector,
-                "srcargs": [extra.capitalize()],
+                "srcargs": [requested],
             },
         },
     }
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    pyproject_metadata_extra(extra, reqs=(f"baz; extra == '{extra}'",))
+    pyproject_metadata_extra(header, reqs=(f"baz; extra == '{header}'",))
 
     deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     expected_conf = deepcopy(input_conf)
-    expected_conf["sources"][srcname]["deps"] = [f'baz; extra == "{extra}"']
+    # sync() round-trips each dep through Requirement -> str, and packaging
+    # normalizes the extra marker on the way, so the stored form is foo-bar
+    # regardless of the header's spelling.
+    expected_conf["sources"][srcname]["deps"] = ['baz; extra == "foo-bar"']
     assert actual_conf == expected_conf
 
 
