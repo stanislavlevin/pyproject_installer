@@ -18,4 +18,5 @@ Builds/installs PEP 517/518 projects in network-isolated envs (RPM packaging). R
 - Non-isolated build; no build-dep checking (caller's job).
 - Install drops `RECORD` (PEP 627), no bytecompilation — by design.
 - pytest `filterwarnings = ["error"]` — warnings are errors.
+- Logging → **stderr** only; `stdout` is reserved for a command's machine-readable data (`deps eval`/`show`/`sync --verify`). Never `print()`/log diagnostics to stdout.
 - New features need tests + docs; new CLI opts → `README.md` with `name`/`description`/`example`.

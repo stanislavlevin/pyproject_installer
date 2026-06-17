@@ -1,7 +1,6 @@
 import logging
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -137,30 +136,14 @@ def test_help():
     assert result.stderr == b""
 
 
-@pytest.mark.parametrize(
-    "verbose, logging_kwargs",
-    (
-        (False, ("%(levelname)-8s : %(message)s", logging.INFO)),
-        (True, ("%(levelname)-8s : %(name)s : %(message)s", logging.DEBUG)),
-    ),
-    ids=["default", "verbose"],
-)
 @pytest.mark.usefixtures("mock_build_wheel")
-def test_logging(verbose, logging_kwargs, mocker):
-    """Check format and level of logging depending on verbosity"""
+def test_logging_default(mocker):
+    """Check format and level of default logging"""
     m = mocker.patch.object(project_main.logging, "basicConfig")
 
     build_args = ["build"]
-    if verbose:
-        build_args.insert(0, "--verbose")
-
     project_main.main(build_args)
 
-    expected_format, expected_level = logging_kwargs
-    expected_handlers = (
-        (logging.StreamHandler, logging.NOTSET, sys.stdout),
-        (logging.StreamHandler, logging.WARNING, sys.stderr),
-    )
     m.assert_called_once()
     # args
     assert m.call_args.args == ()
@@ -168,54 +151,48 @@ def test_logging(verbose, logging_kwargs, mocker):
     kwargs = m.call_args.kwargs
     assert len(kwargs) == 3
     ## format
-    assert kwargs["format"] == expected_format
+    assert kwargs["format"] == "%(levelname)-8s : %(message)s"
     ## root logger level
-    assert kwargs["level"] == expected_level
+    assert kwargs["level"] == logging.INFO
     ## handlers
     actual_handlers = kwargs["handlers"]
-    assert len(actual_handlers) == 2
-    for expected_handler, actual_handler in zip(
-        expected_handlers,
-        actual_handlers,
-        strict=True,
-    ):
-        expected_type, expected_level, expected_stream = expected_handler
-        assert isinstance(actual_handler, expected_type)
-        assert actual_handler.level == expected_level
-        assert actual_handler.stream == expected_stream
+    assert len(actual_handlers) == 1
+    actual_handler = actual_handlers[0]
+    assert isinstance(actual_handler, logging.StreamHandler)
+    assert actual_handler.level == logging.NOTSET
+    assert actual_handler.stream == sys.stderr
 
 
 @pytest.mark.parametrize(
-    "level,destination",
-    (
-        ("critical", "stderr"),
-        ("error", "stderr"),
-        ("warning", "stderr"),
-        ("info", "stdout"),
-        ("debug", "stdout"),
-    ),
+    "verbose_option",
+    ("-v", "--verbose"),
+    ids=("short", "long"),
 )
-def test_logging_destination(level, destination):
-    code = textwrap.dedent(
-        f"""\
-            import logging
+@pytest.mark.usefixtures("mock_build_wheel")
+def test_logging_verbose(verbose_option, mocker):
+    """Check format and level of verbose logging"""
+    m = mocker.patch.object(project_main.logging, "basicConfig")
 
-            from pyproject_installer import __main__
+    build_args = [verbose_option, "build"]
+    project_main.main(build_args)
 
-            __main__.setup_logging(verbose=True)
-            logging.getLogger().{level}("{level}")
-        """,
-    )
-    cmd = [sys.executable, "-c", code]
-    result = subprocess.run(args=cmd, capture_output=True, check=True)
-    if destination == "stderr":
-        log_out = result.stderr
-        log_no_out = result.stdout
-    else:
-        log_out = result.stdout
-        log_no_out = result.stderr
-    assert log_out.endswith(b" " + level.encode("utf-8") + b"\n")
-    assert log_no_out == b""
+    m.assert_called_once()
+    # args
+    assert m.call_args.args == ()
+    # kwargs
+    kwargs = m.call_args.kwargs
+    assert len(kwargs) == 3
+    ## format
+    assert kwargs["format"] == "%(levelname)-8s : %(name)s : %(message)s"
+    ## root logger level
+    assert kwargs["level"] == logging.DEBUG
+    ## handlers
+    actual_handlers = kwargs["handlers"]
+    assert len(actual_handlers) == 1
+    actual_handler = actual_handlers[0]
+    assert isinstance(actual_handler, logging.StreamHandler)
+    assert actual_handler.level == logging.NOTSET
+    assert actual_handler.stream == sys.stderr
 
 
 def test_build_cli_default(mock_build_wheel):

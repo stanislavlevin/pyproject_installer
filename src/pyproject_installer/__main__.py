@@ -823,19 +823,9 @@ def main_parser(prog: str) -> MainArgumentParser:
     return parser
 
 
-def emit_less_than_warning(record: logging.LogRecord) -> bool:
-    # nonzero if record should be logged
-    return record.levelno < logging.WARNING
-
-
 def setup_logging(*, verbose: bool = False) -> None:
-    # emit WARNING, ERROR and CRITICAL to stderr
+    # emit all diagnostics to stderr; stdout is reserved for data output
     stderr_handler = logging.StreamHandler(sys.stderr)
-    stderr_handler.setLevel(logging.WARNING)
-
-    # emit DEBUG and INFO to stdout
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.addFilter(emit_less_than_warning)
 
     if verbose:
         log_level = logging.DEBUG
@@ -846,7 +836,7 @@ def setup_logging(*, verbose: bool = False) -> None:
 
     logging.basicConfig(
         format=log_format,
-        handlers=(stdout_handler, stderr_handler),
+        handlers=(stderr_handler,),
         level=log_level,
     )
 

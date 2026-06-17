@@ -1,9 +1,9 @@
 import json
+import logging
 import re
 import sys
 from collections import deque
 from collections.abc import Iterator, Mapping
-from contextlib import suppress
 from copy import deepcopy
 from pathlib import Path
 from string import Template
@@ -20,6 +20,8 @@ from .collectors import get_collector
 from .collectors.collector import Collector
 
 DEFAULT_CONFIG_NAME = "pyproject_deps.json"
+
+logger = logging.getLogger(__name__)
 
 
 class DepsConfigSourceBaseType(TypedDict):
@@ -118,6 +120,7 @@ class DepsSourcesConfig:
                     ) from e
                 self.validate_config(config)
                 self._config = config
+            logger.debug("Loaded config file %s", self.file)
         return self._config
 
     @config.setter
@@ -126,7 +129,7 @@ class DepsSourcesConfig:
         self.save()
 
     def set_default(self) -> None:
-        # default config
+        logger.debug("Initializing default config")
         self.config = {"sources": {}}
 
     def save(self) -> None:
@@ -134,6 +137,7 @@ class DepsSourcesConfig:
         # first parse the whole config
         json_config = self._to_json(self.config)
         self.file.write_text(json_config, encoding="utf-8")
+        logger.debug("Saved config file %s", self.file)
 
     def show(self, srcnames: tuple[str, ...] = ()) -> None:
         show_conf: DepsConfigType = {"sources": {}}
@@ -168,6 +172,7 @@ class DepsSourcesConfig:
         cannot be collected is not a usable source. Returns None when no
         candidate collects.
         """
+        logger.info("Resolving source candidates")
         validated: list[tuple[str, tuple[str, ...], Collector]] = []
         for candidate in candidates:
             srctype, srcargs = candidate[0], candidate[1:]
@@ -177,10 +182,21 @@ class DepsSourcesConfig:
             validated.append((srctype, srcargs, collector))
 
         for srctype, srcargs, collector in validated:
-            with suppress(Exception):
+            try:
                 # collectors collect lazily
                 deque(collector.collect(), maxlen=0)
-                return srctype, srcargs
+            except Exception as e:  # noqa: BLE001 - uncollectable: try next
+                logger.debug(
+                    "Skipped candidate source: %s (%s)",
+                    " ".join((srctype, *srcargs)),
+                    e,
+                )
+                continue
+            logger.debug(
+                "Picked candidate source: %s",
+                " ".join((srctype, *srcargs)),
+            )
+            return srctype, srcargs
         return None
 
     def add(
@@ -215,6 +231,8 @@ class DepsSourcesConfig:
         (verify, verify_excludes, verify_ignore_version) are forwarded to
         sync() and only apply when sync=True.
         """
+        logger.info("Configuring source %s", srcname)
+
         if all((candidates, srctype)):
             raise ValueError(
                 "srctype is mutually exclusive with candidates",
@@ -243,8 +261,16 @@ class DepsSourcesConfig:
                 self.sources[srcname]["srctype"] == srctype
                 and tuple(self.sources[srcname].get("srcargs", ())) == srcargs
             ):
+                logger.info(
+                    "Source %s already configured, keeping unchanged",
+                    srcname,
+                )
                 keep_existing = True
             else:
+                logger.info(
+                    "Source %s differs, reconfiguring (stored deps dropped)",
+                    srcname,
+                )
                 del self.sources[srcname]
 
         if not keep_existing:
@@ -252,6 +278,11 @@ class DepsSourcesConfig:
             if srcargs:
                 self.sources[srcname]["srcargs"] = srcargs
             self.save()
+            logger.info(
+                "Configured source %s: %s",
+                srcname,
+                " ".join((srctype, *srcargs)),
+            )
 
         if sync:
             self.sync(
@@ -264,8 +295,10 @@ class DepsSourcesConfig:
     def delete(self, srcname: str) -> None:
         if srcname not in self.sources:
             raise ValueError(f"Source {srcname} doesn't exist")
+        logger.info("Deleting source %s", srcname)
         del self.sources[srcname]
         self.save()
+        logger.info("Deleted source %s", srcname)
 
     def iter_sources(
         self,
@@ -327,13 +360,20 @@ class DepsSourcesConfig:
         if verify_ignore_version and not verify:
             raise ValueError("verify_ignore_version must be used with verify")
 
+        logger.info("Syncing sources")
+
         diff: dict[str, dict[str, list[str]]] = {}
         verify_excludes_regs = {re.compile(x) for x in verify_excludes}
 
-        def filter_verify_excludes(req: requirements.Requirement) -> bool:
-            """filter diff output"""
+        def matching_verify_exclude(
+            req: requirements.Requirement,
+        ) -> re.Pattern[str] | None:
+            """The first verify-exclude regex matching req's name, if any."""
             req_name = pep503_normalized_name(req.name)
-            return not any(reg.match(req_name) for reg in verify_excludes_regs)
+            return next(
+                (reg for reg in verify_excludes_regs if reg.match(req_name)),
+                None,
+            )
 
         def version_less_req(
             req: requirements.Requirement,
@@ -348,14 +388,17 @@ class DepsSourcesConfig:
             versionless.specifier = specifiers.SpecifierSet()
             return versionless
 
+        total = 0
+        updated = 0
         for srcname, source in self.iter_sources(srcnames):
+            total += 1
+            srctype = source["srctype"]
+            srcargs = source.get("srcargs", ())
+            logger.info("Syncing source %s", srcname)
             synced_deps = set(
                 map(
                     requirements.Requirement,
-                    self.collect(
-                        source["srctype"],
-                        srcargs=source.get("srcargs", ()),
-                    ),
+                    self.collect(srctype, srcargs=srcargs),
                 ),
             )
 
@@ -364,8 +407,11 @@ class DepsSourcesConfig:
             )
 
             if stored_deps == synced_deps:
+                logger.info("Source %s is in sync", srcname)
                 continue
 
+            updated += 1
+            logger.info("Updated source %s", srcname)
             source["deps"] = tuple(sorted(map(str, synced_deps)))
 
             if not verify:
@@ -397,12 +443,26 @@ class DepsSourcesConfig:
                 ("new_deps", new_deps),
                 ("extra_deps", extra_deps),
             ):
-                filtered_diff_deps = {
-                    req
-                    for req in diff_deps
-                    if filter_verify_excludes(req)
-                    and req not in version_changed_deps
-                }
+                filtered_diff_deps: set[requirements.Requirement] = set()
+                for req in diff_deps:
+                    exclude_match = matching_verify_exclude(req)
+                    if exclude_match is not None:
+                        logger.debug(
+                            "Excluded %s from %s diff: "
+                            "matches verify-exclude '%s'",
+                            req,
+                            srcname,
+                            exclude_match.pattern,
+                        )
+                        continue
+                    if req in version_changed_deps:
+                        logger.debug(
+                            "Excluded %s from %s diff: version-only change",
+                            req,
+                            srcname,
+                        )
+                        continue
+                    filtered_diff_deps.add(req)
 
                 if not filtered_diff_deps:
                     continue
@@ -414,8 +474,16 @@ class DepsSourcesConfig:
         self.save()
 
         if verify and diff:
+            logger.info("%d sources unsynced", len(diff))
             self._show(diff)
             raise DepsUnsyncedError
+
+        logger.info(
+            "Synced %d sources (%d updated, %d in sync)",
+            total,
+            updated,
+            total - updated,
+        )
 
     def depformat(
         self,
@@ -457,10 +525,13 @@ class DepsSourcesConfig:
     ) -> None:
         if depformatextra is not None and depformat is None:
             raise ValueError("depformatextra must be used with depformat")
+        logger.info("Evaluating dependencies")
         deps = set()
+        nsources = 0
         exclude_regexes = {re.compile(x) for x in excludes}
 
-        for _, source in self.iter_sources(srcnames):
+        for srcname, source in self.iter_sources(srcnames):
+            nsources += 1
             # instantiate the collector for its eval_env() marker contribution;
             # the type and args were already validated at config load
             collector = self.validate_collector(
@@ -488,11 +559,31 @@ class DepsSourcesConfig:
                         env = (env or {}) | source_env
                     marker_res = marker.evaluate(env)
                     if not marker_res:
+                        logger.debug(
+                            "Filtered out %s from %s: marker '%s' is false",
+                            parsed_req,
+                            srcname,
+                            marker,
+                        )
                         continue
 
                 # filtering
                 normalized_name = pep503_normalized_name(parsed_req.name)
-                if any(reg.match(normalized_name) for reg in exclude_regexes):
+                exclude_match = next(
+                    (
+                        reg
+                        for reg in exclude_regexes
+                        if reg.match(normalized_name)
+                    ),
+                    None,
+                )
+                if exclude_match is not None:
+                    logger.debug(
+                        "Filtered out %s from %s: matches exclude '%s'",
+                        parsed_req,
+                        srcname,
+                        exclude_match.pattern,
+                    )
                     continue
 
                 # formatting
@@ -511,3 +602,9 @@ class DepsSourcesConfig:
 
         for dep in sorted(deps):
             sys.stdout.write(dep + "\n")
+
+        logger.info(
+            "Evaluated %d dependencies from %d sources",
+            len(deps),
+            nsources,
+        )
