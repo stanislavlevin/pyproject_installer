@@ -133,6 +133,21 @@ These options are accepted by the top-level command and must appear
 >
 > *Example:* `python -m pyproject_installer -C /path/to/project build`
 
+> **`-v, --verbose`**
+>
+> Raise diagnostic output from the default `INFO` level to `DEBUG`.
+>
+> *Default:* `INFO`
+>
+> *Example:* `python -m pyproject_installer -v build`
+
+Diagnostics (progress and logging) are written to `stderr`, while
+`stdout` carries only a command's machine-readable data: the
+dependency list from `deps eval`, the JSON from `deps show`, and the
+diff from `deps sync --verify`. The separation holds at any verbosity,
+so the data on `stdout` can be captured or piped without interleaved
+log lines.
+
 ### Build
 
 Build project from source tree in current Python environment according to
