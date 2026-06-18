@@ -435,6 +435,8 @@ See `python -m pyproject_installer deps show --help` for full options.
 
 Configure source of Python dependencies. Supported sources: standardized formats like PEP 517, PEP 518, PEP 735 or core metadata are fully supported, while tool-specific formats like pip, tox, poetry, hatch, pdm or pipenv have limited support.
 
+The `metadata` and `metadata_extra` sources build the project's core metadata and cache it in `dist/metadata_cache` under the working directory, so repeated metadata builds for the same source tree (for example several `add ... --sync` calls, or `--candidates` probing followed by a sync) happen only once. Delete that file (or clean `dist/`) to force a rebuild.
+
 > **`<source name>`** (positional)
 >
 > Source name.

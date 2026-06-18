@@ -21,10 +21,8 @@ class MetadataExtraCollector(MetadataCollector):
 
     def collect(self) -> Iterator[str]:
         metadata = self.parsed_metadata()
-        provided = {
-            utils.canonicalize_name(e)
-            for e in metadata.get_all("Provides-Extra", [])
-        }
+        # Metadata.provides_extra is already PEP 503/685-normalized
+        provided = set(metadata.provides_extra or [])
         if utils.canonicalize_name(self.extra) not in provided:
             err_msg = (
                 f"{self.name}: extra '{self.extra}' not provided by project "
