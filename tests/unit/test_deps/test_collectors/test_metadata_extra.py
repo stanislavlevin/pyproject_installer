@@ -1,10 +1,15 @@
 import json
 import re
 from copy import deepcopy
+from pathlib import Path
+from typing import Any
 
 import pytest
 
 from pyproject_installer.deps_cmd import deps_command
+from pyproject_installer.deps_cmd.collectors import (
+    metadata as metadata_collector,
+)
 from pyproject_installer.errors import DepsSourcesConfigError
 
 
@@ -154,8 +159,10 @@ def test_metadata_extra_invalid_dep_raises(
 
     pyproject_metadata_extra(extra, reqs=(invalid_dep,))
 
-    expected_err = "^" + re.escape(
-        f"{collector}: invalid PEP508 Dependency Specifier: {invalid_dep}",
+    # depends on packaging error message
+    expected_err = (
+        f"^{collector}: invalid core metadata: .* "
+        "is invalid for 'requires-dist'"
     )
     with pytest.raises(ValueError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
@@ -213,3 +220,65 @@ def test_metadata_extra_extra_with_no_deps(
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
     assert actual_conf == input_conf
+
+
+def test_metadata_extra_prefers_cache_over_build(
+    pyproject_metadata_extra,
+    depsconfig,
+):
+    """metadata_extra reads dist/metadata_cache instead of building."""
+    srcname = "check"
+    extra = "tests"
+    input_conf = {
+        "sources": {
+            srcname: {"srctype": "metadata_extra", "srcargs": [extra]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    # the build would yield from-build; the cache must win
+    pyproject_metadata_extra(extra, reqs=("from-build",))
+
+    cache_path = Path.cwd() / "dist" / "metadata_cache"
+    cache_path.parent.mkdir(parents=True)
+    cache_path.write_text(
+        "Metadata-Version: 2.1\nName: foo\nVersion: 1.0\n"
+        f"Provides-Extra: {extra}\nRequires-Dist: from-cache\n",
+        encoding="utf-8",
+    )
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"][srcname]["deps"] = ["from-cache"]
+    assert actual_conf == expected_conf
+
+
+def test_metadata_extra_shares_cache_with_metadata(
+    pyproject_metadata_extra,
+    depsconfig,
+    mocker,
+):
+    """A metadata and a metadata_extra source share one build."""
+    extra = "tests"
+    input_conf: dict[str, Any] = {
+        "sources": {
+            "runtime": {"srctype": "metadata"},
+            "check": {"srctype": "metadata_extra", "srcargs": [extra]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    pyproject_metadata_extra(extra, reqs=("bar",))
+
+    spy = mocker.spy(metadata_collector, "build_metadata")
+
+    deps_command("sync", depsconfig_path, srcnames=[])
+
+    assert spy.call_count == 1
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = deepcopy(input_conf)
+    expected_conf["sources"]["runtime"]["deps"] = ["bar"]
+    expected_conf["sources"]["check"]["deps"] = ["bar"]
+    assert actual_conf == expected_conf
