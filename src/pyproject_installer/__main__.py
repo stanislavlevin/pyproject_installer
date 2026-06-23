@@ -90,13 +90,28 @@ def deps(
             parser.error("depformatextra option must be used with depformat")
 
         if hasattr(args, "candidates"):
-            if all((args.candidates, args.srctype)):
-                parser.error(
-                    "srctype positional is mutually exclusive "
-                    "with --candidates",
-                )
-            if not any((args.candidates, args.srctype)):
-                parser.error("either srctype or --candidates is required")
+            if args.sources is not None:
+                if any((args.srcname, args.srctype, args.srcargs)):
+                    parser.error("--sources takes no positional name/type/args")
+                if args.candidates is not None:
+                    parser.error(
+                        "--sources is mutually exclusive with --candidates",
+                    )
+            else:
+                if args.srcname is None:
+                    parser.error(
+                        "srcname positional is required with --candidates or "
+                        "srctype",
+                    )
+                if all((args.candidates, args.srctype)):
+                    parser.error(
+                        "srctype positional is mutually exclusive "
+                        "with --candidates",
+                    )
+                if not any((args.candidates, args.srctype)):
+                    parser.error(
+                        "either srctype or --candidates is required",
+                    )
 
         if (
             hasattr(args, "sync")
@@ -256,6 +271,43 @@ def parse_candidates(value: str) -> tuple[tuple[str, ...], ...]:
                 f"(choose from {', '.join(SUPPORTED_COLLECTORS)})",
             )
     return candidates
+
+
+def parse_sources(value: str) -> tuple[tuple[str, ...], ...]:
+    """Parse a ;-separated --sources list into (name, type, *args) tuples.
+
+    Each ;-separated entry is split on whitespace into a name, a type and
+    the type's args, and blank entries are dropped; surrounding or repeated
+    whitespace and a trailing ';' are therefore harmless. A malformed list
+    is rejected as a usage error rather than silently skipped: it is an
+    error when no entries are left after dropping blanks (an empty,
+    whitespace-only, or ';'-only value), when an entry has fewer than two
+    tokens (a name without a type), when an entry's type is not a known
+    collector, or when a name is repeated within the list.
+    """
+    sources = tuple(
+        tuple(parts) for entry in value.split(";") if (parts := entry.split())
+    )
+    if not sources:
+        raise argparse.ArgumentTypeError(f"no sources parsed from {value!r}")
+    seen: set[str] = set()
+    for srcname, *rest in sources:
+        if not rest:
+            raise argparse.ArgumentTypeError(
+                f"missing source type for {srcname!r}",
+            )
+        srctype = rest[0]
+        if srctype not in SUPPORTED_COLLECTORS:
+            raise argparse.ArgumentTypeError(
+                f"invalid source type for {srcname!r}: {srctype!r} "
+                f"(choose from {', '.join(SUPPORTED_COLLECTORS)})",
+            )
+        if srcname in seen:
+            raise argparse.ArgumentTypeError(
+                f"duplicate source name in a given list: {srcname!r}",
+            )
+        seen.add(srcname)
+    return sources
 
 
 def convert_config_settings(value: str | None) -> dict[str, Any] | None:
@@ -486,7 +538,9 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         subparser_add,
         destname,
         destname,
-        help="source name",
+        nargs="?",
+        default=None,
+        help="source name (omit when using --sources)",
     )
 
     destname = "srctype"
@@ -497,7 +551,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         nargs="?",
         default=None,
         choices=SUPPORTED_COLLECTORS,
-        help="source type (omit when using --candidates)",
+        help="source type (omit when using --candidates or --sources)",
     )
 
     destname = "srcargs"
@@ -508,7 +562,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         nargs="*",
         help=(
             "specific configuration options for source "
-            "(omit when using --candidates; default: [])"
+            "(omit when using --candidates or --sources; default: [])"
         ),
     )
 
@@ -527,6 +581,23 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
             "picked and supplies the recorded type/args. Mutually exclusive "
             "with the positional type/args; the source name is the only "
             "positional."
+        ),
+    )
+
+    destname = "sources"
+    add_deps_argument(
+        subparser_add,
+        destname,
+        f"--{destname}",
+        type=parse_sources,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Add a batch of explicitly named sources from a ';'-separated "
+            "list of '<name> <type> [args ...]' entries, each configured "
+            "(and, with --sync, synced and verified) in turn. Takes no "
+            "positional name/type/args and is mutually exclusive with "
+            "--candidates."
         ),
     )
 

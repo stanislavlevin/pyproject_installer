@@ -201,11 +201,12 @@ class DepsSourcesConfig:
 
     def add(
         self,
-        srcname: str,
+        srcname: str | None = None,
         srctype: str | None = None,
         srcargs: tuple[str, ...] = (),
         *,
         candidates: tuple[tuple[str, ...], ...] | None = None,
+        sources: tuple[tuple[str, ...], ...] | None = None,
         reconfigure: bool = False,
         sync: bool = False,
         verify: bool = False,
@@ -230,7 +231,39 @@ class DepsSourcesConfig:
         replaced), sync it in the same process. The verify options
         (verify, verify_excludes, verify_ignore_version) are forwarded to
         sync() and only apply when sync=True.
+
+        sources: an ordered tuple of (srcname, srctype, *srcargs) tuples for
+        adding a batch in one call. It cannot be combined with single source
+        configuration or candidates. Each entry is configured -- and, when
+        sync=True, synced and optionally verified -- in turn via this same
+        single-source path, so the first DepsUnsyncedError stops the rest (later
+        entries are left unconfigured).
         """
+        if sources is not None:
+            if any((srcname, srctype, srcargs, candidates)):
+                raise ValueError(
+                    "sources is mutually exclusive with "
+                    "single source configuration or candidates",
+                )
+            for src_name, src_type, *src_args in sources:
+                self.add(
+                    src_name,
+                    src_type,
+                    tuple(src_args),
+                    reconfigure=reconfigure,
+                    sync=sync,
+                    verify=verify,
+                    verify_excludes=verify_excludes,
+                    verify_ignore_version=verify_ignore_version,
+                )
+            return
+
+        if srcname is None:
+            raise ValueError(
+                "source name is required with --candidates or single source "
+                "configuration",
+            )
+
         logger.info("Configuring source %s", srcname)
 
         if all((candidates, srctype)):

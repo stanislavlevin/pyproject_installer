@@ -437,19 +437,25 @@ Configure source of Python dependencies. Supported sources: standardized formats
 
 The `metadata` and `metadata_extra` sources build the project's core metadata and cache it in `dist/metadata_cache` under the working directory, so repeated metadata builds for the same source tree (for example several `add ... --sync` calls, or `--candidates` probing followed by a sync) happen only once. Delete that file (or clean `dist/`) to force a rebuild.
 
-> **`<source name>`** (positional)
+There are three ways to add sources, exactly one per call:
+
+- `add <name> <type> [args]` -- one source of an explicit type;
+- `add <name> --candidates LIST` -- one source discovered from an ordered list (the first that collects wins);
+- `add --sources LIST` -- a batch of explicitly named sources, each `<name> <type> [args ...]`.
+
+> **`<source name>`** (positional, optional)
 >
-> Source name.
+> Source name. Omit when using `--sources`.
 
 > **`<source type>`** (positional, optional)
 >
-> Omit when using `--candidates`.
+> Omit when using `--candidates` or `--sources`.
 >
 > *Choices:* `pep517`, `pep518`, `pep735`, `metadata`, `metadata_extra`, `pip_reqfile`, `poetry`, `tox`, `hatch`, `pdm`, `pipenv`
 
 > **`<source-specific options>`** (positional, variadic)
 >
-> Omit when using `--candidates`.
+> Omit when using `--candidates` or `--sources`.
 >
 > Specific configuration options for source.
 >
@@ -464,6 +470,16 @@ The `metadata` and `metadata_extra` sources build the project's core metadata an
 > *Default:* disabled
 >
 > *Example:* `python -m pyproject_installer deps add check --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt' --reconfigure --sync --verify`
+
+> **`--sources LIST`**
+>
+> Add a batch of explicitly named sources in one call (the additive counterpart of `--candidates`). `LIST` is a `;`-separated string whose entries are each `<name> <type> [args ...]` (a positional `name type [args]` per entry). The entries are handled one at a time, in order: each is configured exactly as a regular `add <name> <type> [args]` (`--reconfigure` applies per entry), and with `--sync` it is synced and verified before the next, so one call equals running `add <name> <type> [args] --reconfigure --sync --verify` once per entry in a single process. A malformed list is a usage error, not a silent skip: an empty list, an entry without a type, an unknown type, or a name repeated within the list; a wrong argument count for a type is reported when that entry is configured (the same error as an explicit `add`).
+>
+> With `--verify`, the run stops at the first source that is out of sync and exits with code 4; the entries after it are not reached, so a failed run leaves the earlier entries configured and synced and the later ones untouched. Run without `--verify` to configure and sync the whole list in one pass; `--verify` is a check and keeps stopping at the first out-of-sync source. `--sources` takes no positional name/type/args and is mutually exclusive with `--candidates`; because there are no positionals, `--sources` and the verify options may be given in any order.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer deps add --sources 'check_pep735 pep735 test;check_meta metadata_extra tests' --reconfigure --sync --verify`
 
 > **`--reconfigure`**
 >
@@ -524,6 +540,12 @@ python -m pyproject_installer deps add check pipenv Pipfile packages
 # reconcile and verify it in one process
 python -m pyproject_installer deps add check \
     --candidates 'pep735 test;pep735 tests;pip_reqfile test-requirements.txt;metadata_extra tests' \
+    --reconfigure --sync --verify
+
+# add a declared set of named sources in one process, reconciling and
+# verifying each in turn (stops at the first that is out of sync)
+python -m pyproject_installer deps add \
+    --sources 'check_pep735 pep735 test;check_meta metadata_extra tests' \
     --reconfigure --sync --verify
 ```
 
