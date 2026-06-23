@@ -816,3 +816,273 @@ def test_config_add_candidates_with_srctype_errors(
             candidates=candidates,
         )
     assert not depsconfig_path.exists()
+
+
+def test_config_add_sources_batch(depsconfig_path):
+    """add(sources=...) configures every entry, in list order."""
+
+    action = "add"
+    sources = (("foo", "metadata"), ("bar", "pip_reqfile", "r.txt"))
+
+    deps_command(action, depsconfig_path, sources=sources)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            "foo": {"srctype": "metadata"},
+            "bar": {"srctype": "pip_reqfile", "srcargs": ["r.txt"]},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_with_srcname_errors(depsconfig_path):
+    """sources is mutually exclusive with a positional srcname."""
+
+    expected_err = (
+        r"^sources is mutually exclusive with single source configuration "
+        r"or candidates$"
+    )
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command(
+            "add",
+            depsconfig_path,
+            srcname="foo",
+            sources=(("bar", "metadata"),),
+        )
+    assert not depsconfig_path.exists()
+
+
+def test_config_add_sources_with_candidates_errors(depsconfig_path):
+    """sources is mutually exclusive with candidates."""
+
+    expected_err = (
+        r"^sources is mutually exclusive with single source configuration "
+        r"or candidates$"
+    )
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command(
+            "add",
+            depsconfig_path,
+            candidates=(("pep735", "test"),),
+            sources=(("bar", "metadata"),),
+        )
+    assert not depsconfig_path.exists()
+
+
+def test_config_add_sources_sync(depsconfig_path, mock_collector):
+    """sources with sync=True configures and syncs every entry."""
+
+    new_reqs = ["bar"]
+    sources = (("foo", "mock_collector"), ("baz", "mock_collector"))
+
+    mock_collector(new_reqs)
+    deps_command("add", depsconfig_path, sources=sources, sync=True)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            "foo": {"srctype": "mock_collector", "deps": new_reqs},
+            "baz": {"srctype": "mock_collector", "deps": new_reqs},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_sync_verify_fail_fast(
+    depsconfig_path,
+    mock_collector,
+):
+    """verify stops at the first out-of-sync entry; later ones untouched.
+
+    Both entries are freshly added (no stored deps), so the first verify
+    is out of sync and raises -- the second entry is never configured.
+    """
+
+    new_reqs = ["bar"]
+    sources = (("foo", "mock_collector"), ("baz", "mock_collector"))
+
+    mock_collector(new_reqs)
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            "add",
+            depsconfig_path,
+            sources=sources,
+            sync=True,
+            verify=True,
+        )
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {"foo": {"srctype": "mock_collector", "deps": new_reqs}},
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_verify_keeps_earlier_skips_later(
+    depsconfig,
+    mock_collector,
+):
+    """A later out-of-sync entry stops the run: an earlier in-sync entry
+    stays configured, the out-of-sync entry is configured and synced, and the
+    entry after it is never reached.
+
+    'a' is already configured with deps that match what the collector
+    yields, so its verify passes; 'b' is fresh and is out of sync.
+    """
+
+    reqs = ["bar"]
+    input_conf = {
+        "sources": {"a": {"srctype": "mock_collector", "deps": reqs}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+    sources = (
+        ("a", "mock_collector"),
+        ("b", "mock_collector"),
+        ("c", "mock_collector"),
+    )
+
+    mock_collector(reqs)
+    with pytest.raises(DepsUnsyncedError):
+        deps_command(
+            "add",
+            depsconfig_path,
+            sources=sources,
+            reconfigure=True,
+            sync=True,
+            verify=True,
+        )
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            "a": {"srctype": "mock_collector", "deps": reqs},
+            "b": {"srctype": "mock_collector", "deps": reqs},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_existing_without_reconfigure_stops(depsconfig):
+    """An existing name without reconfigure stops the run; earlier entries
+    are already written (partial), exactly as a per-entry add would do."""
+
+    input_conf = {
+        "sources": {"foo": {"srctype": "metadata", "deps": ["old_req"]}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+    sources = (("bar", "metadata"), ("foo", "metadata"))
+
+    with pytest.raises(ValueError, match=r"^Source foo already exists"):
+        deps_command("add", depsconfig_path, sources=sources)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            "foo": {"srctype": "metadata", "deps": ["old_req"]},
+            "bar": {"srctype": "metadata"},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_reconfigure_replaces(depsconfig):
+    """reconfigure applies per entry: a differing entry is replaced."""
+
+    input_conf = {
+        "sources": {"foo": {"srctype": "metadata", "deps": ["old"]}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+    sources = (("foo", "pip_reqfile", "r.txt"),)
+
+    deps_command("add", depsconfig_path, sources=sources, reconfigure=True)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {"foo": {"srctype": "pip_reqfile", "srcargs": ["r.txt"]}},
+    }
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_bad_args_stops(depsconfig_path):
+    """A wrong argument count is checked per entry when it is configured;
+    earlier entries are already written."""
+
+    sources = (("foo", "metadata"), ("bar", "pip_reqfile"))
+
+    expected_err = r"^Unsupported arguments of collector pip_reqfile"
+    with pytest.raises(DepsSourcesConfigError, match=expected_err):
+        deps_command("add", depsconfig_path, sources=sources)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {"sources": {"foo": {"srctype": "metadata"}}}
+    assert actual_conf == expected_conf
+
+
+def test_config_add_sources_sync_collect_failure_stops(
+    depsconfig_path,
+    pip_reqfile,
+):
+    """A source that cannot be collected fails at its sync step and stops the
+    run: the earlier entry is synced, the failing entry stays configured with
+    no deps, and the entry after it is never reached."""
+
+    reqfile = pip_reqfile("bar\n")
+    sources = (
+        ("a", "pip_reqfile", str(reqfile)),
+        ("b", "pip_reqfile", "missing.txt"),
+        ("c", "metadata"),
+    )
+
+    with pytest.raises(FileNotFoundError):
+        deps_command("add", depsconfig_path, sources=sources, sync=True)
+
+    actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
+    expected_conf = {
+        "sources": {
+            "a": {
+                "srctype": "pip_reqfile",
+                "srcargs": [str(reqfile)],
+                "deps": ["bar"],
+            },
+            "b": {"srctype": "pip_reqfile", "srcargs": ["missing.txt"]},
+        },
+    }
+    assert actual_conf == expected_conf
+
+
+@pytest.mark.parametrize(
+    "extra_kwargs",
+    ({"srctype": "metadata"}, {"srcargs": ("x",)}),
+    ids=("srctype", "srcargs"),
+)
+def test_config_add_sources_with_single_source_args_errors(
+    depsconfig_path,
+    extra_kwargs,
+):
+    """sources cannot be combined with srctype or srcargs either."""
+
+    expected_err = (
+        r"^sources is mutually exclusive with single source configuration "
+        r"or candidates$"
+    )
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command(
+            "add",
+            depsconfig_path,
+            sources=(("bar", "metadata"),),
+            **extra_kwargs,
+        )
+    assert not depsconfig_path.exists()
+
+
+def test_config_add_requires_srcname_or_sources(depsconfig_path):
+    """add() with neither a srcname nor sources is an error."""
+
+    expected_err = (
+        r"^source name is required with --candidates or single source "
+        r"configuration"
+    )
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command("add", depsconfig_path)
+    assert not depsconfig_path.exists()

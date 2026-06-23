@@ -106,6 +106,7 @@ DEFAULT_DEPS_ADD_CLI_KWARGS: dict[str, Any] = {
     "srctype": None,
     "srcargs": [],
     "candidates": None,
+    "sources": None,
     "reconfigure": False,
     "sync": False,
     "verify": False,
@@ -1880,6 +1881,28 @@ def test_deps_cli_add_sync_verify_drift_exits(mock_deps_command):
     assert exc.value.code == ExitCodes.SYNC_VERIFY_ERROR
 
 
+def test_deps_cli_add_sources_sync_verify_drift_exits(mock_deps_command):
+    """Run deps add --sources with sync and failed verify
+
+    - mock deps_command to raise DepsUnsyncedError (an out-of-sync entry)
+    - check the --sources path maps it to the same exit code
+    """
+    action = "add"
+    mock_deps_command.side_effect = project_main.DepsUnsyncedError
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        "a metadata;b metadata",
+        "--sync",
+        "--verify",
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.SYNC_VERIFY_ERROR
+
+
 @pytest.mark.parametrize(
     "verify_subcommand",
     (["--verify-exclude", "x$"], ["--verify-ignore-version"]),
@@ -2131,6 +2154,219 @@ def test_deps_cli_add_candidates_no_candidate_reports_and_exits(
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.ADD_NO_CANDIDATE_ERROR
     assert expected_message in caplog.text
+
+
+def test_deps_cli_add_sources(mock_deps_command):
+    """Run deps add with --sources
+
+    - the ;-list is parsed to (name, type, *args) tuples
+    - no positional name/type (srcname is None)
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        "a metadata;b pip_reqfile r.txt",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=None,
+        sources=(("a", "metadata"), ("b", "pip_reqfile", "r.txt")),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_sources_lenient_parsing(mock_deps_command):
+    """Run deps add with a sloppy but valid --sources list
+
+    - blank entries (trailing ';', whitespace-only) are dropped
+    - a multi-arg entry is split into (name, type, *args)
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        " a metadata ; b tox tox.ini testenv ;; c pip_reqfile r.txt ; ",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=None,
+        sources=(
+            ("a", "metadata"),
+            ("b", "tox", "tox.ini", "testenv"),
+            ("c", "pip_reqfile", "r.txt"),
+        ),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_sources_reconfigure_sync_verify(mock_deps_command):
+    """Run deps add --sources composed with --reconfigure/--sync/--verify
+
+    - check all options are forwarded with the parsed sources
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        "a metadata;b metadata",
+        "--reconfigure",
+        "--sync",
+        "--verify",
+        "--verify-exclude",
+        "excluded-dep",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=None,
+        sources=(("a", "metadata"), ("b", "metadata")),
+        reconfigure=True,
+        sync=True,
+        verify=True,
+        verify_excludes=["excluded-dep"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.parametrize(
+    "positionals",
+    (["foo"], ["foo", "metadata"], ["foo", "metadata", "x"]),
+    ids=("name", "name-type", "name-type-args"),
+)
+def test_deps_cli_add_sources_with_positional_is_error(
+    mock_deps_command,
+    capsys,
+    positionals,
+):
+    """Run deps add with --sources and any positional -> usage error"""
+    action = "add"
+    deps_args = ["deps", action, *positionals, "--sources", "a metadata"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "--sources takes no positional name/type/args"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sources_with_candidates_is_error(
+    mock_deps_command,
+    capsys,
+):
+    """Run deps add with both --sources and --candidates -> usage error"""
+    action = "add"
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        "a metadata",
+        "--candidates",
+        "pep735 test",
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "--sources is mutually exclusive with --candidates"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sources_empty_is_error(mock_deps_command, capsys):
+    """Run deps add with an empty --sources list -> usage error"""
+    action = "add"
+    sources = " ; "
+    deps_args = ["deps", action, "--sources", sources]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = f"no sources parsed from {sources!r}"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sources_name_without_type_is_error(
+    mock_deps_command,
+    capsys,
+):
+    """Run deps add with an entry that has only a name -> usage error"""
+    action = "add"
+    deps_args = ["deps", action, "--sources", "a metadata;loner"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "missing source type for 'loner'"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sources_unknown_type_is_error(mock_deps_command, capsys):
+    """Run deps add with an unknown type in --sources -> usage error"""
+    action = "add"
+    deps_args = ["deps", action, "--sources", "a metadata;b bogus"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "invalid source type for 'b': 'bogus'"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_sources_duplicate_name_is_error(
+    mock_deps_command,
+    capsys,
+):
+    """Run deps add with a name repeated within --sources -> usage error"""
+    action = "add"
+    deps_args = ["deps", action, "--sources", "a metadata;a pip_reqfile r.txt"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = "duplicate source name in a given list: 'a'"
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
+
+
+def test_deps_cli_add_requires_name(mock_deps_command, capsys):
+    """Run deps add without a name and without --sources -> usage error
+
+    The name positional is optional now (omitted with --sources), so a
+    missing name in the positional/candidates modes is caught here.
+    """
+    action = "add"
+    deps_args = ["deps", action, "--candidates", "pep735 test"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    expected_message = (
+        "srcname positional is required with --candidates or srctype"
+    )
+    assert expected_message in capsys.readouterr().err
+    mock_deps_command.assert_not_called()
 
 
 def test_deps_cli_delete_help(capsys):
