@@ -150,6 +150,9 @@ class DepsSourcesConfig:
 
     def _show(self, conf: Mapping[str, Any]) -> None:
         sys.stdout.write(self._to_json(conf))
+        # flush data (stdout) so it precedes any later diagnostics (stderr) in
+        # a merged stream, regardless of stdout block-buffering when piped
+        sys.stdout.flush()
 
     @property
     def sources(self) -> dict[str, DepsConfigSourceSpec]:
@@ -273,9 +276,16 @@ class DepsSourcesConfig:
 
         if candidates is not None:
             if (picked := self._resolve_candidate(candidates)) is None:
+                logger.error(
+                    "Autodiscovery failed for source %s: no candidate "
+                    "source could be collected (tried: %s)",
+                    srcname,
+                    ", ".join(" ".join(c) for c in candidates),
+                )
                 raise DepsNoCandidateError(
                     f"No candidate source matched for {srcname}",
                 )
+
             srctype, srcargs = picked
         elif srctype is None:
             raise ValueError("add requires either srctype or candidates")
@@ -509,6 +519,13 @@ class DepsSourcesConfig:
         if verify and diff:
             logger.info("%d sources unsynced", len(diff))
             self._show(diff)
+            logger.error(
+                "Dependencies of %d source(s) changed since last check: %s.\n"
+                'The configuration was synced and saved into "%s"',
+                len(diff),
+                ", ".join(sorted(diff)),
+                self.file,
+            )
             raise DepsUnsyncedError
 
         logger.info(
@@ -635,6 +652,9 @@ class DepsSourcesConfig:
 
         for dep in sorted(deps):
             sys.stdout.write(dep + "\n")
+        # flush data (stdout) so it precedes the diagnostic below (stderr) in a
+        # merged stream, regardless of stdout block-buffering when piped
+        sys.stdout.flush()
 
         logger.info(
             "Evaluated %d dependencies from %d sources",
