@@ -136,9 +136,8 @@ def deps(
         except DepsUnsyncedError:
             # sync --verify error
             sys.exit(ExitCodes.SYNC_VERIFY_ERROR)
-        except DepsNoCandidateError as e:
-            # add --candidates with no candidate picked: report and exit
-            logger.info("%s", e)
+        except DepsNoCandidateError:
+            # add --candidates with no candidate picked
             sys.exit(ExitCodes.ADD_NO_CANDIDATE_ERROR)
 
     return wrapped

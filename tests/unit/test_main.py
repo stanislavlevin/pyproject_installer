@@ -2132,28 +2132,20 @@ def test_deps_cli_add_candidates_unknown_type_is_error(
 
 def test_deps_cli_add_candidates_no_candidate_reports_and_exits(
     mock_deps_command,
-    caplog,
 ):
     """Run deps add --candidates when no candidate matches
 
     - mock deps_command to raise DepsNoCandidateError
-    - check the error is reported and the dedicated exit code is used
+    - check the dedicated exit code is used
     """
     action = "add"
     srcname = "check"
-    expected_message = f"No candidate source matched for {srcname}"
-    mock_deps_command.side_effect = project_main.DepsNoCandidateError(
-        expected_message,
-    )
+    mock_deps_command.side_effect = project_main.DepsNoCandidateError
     deps_args = ["deps", action, srcname, "--candidates", "pep735 test"]
 
-    with (
-        caplog.at_level(logging.INFO),
-        pytest.raises(SystemExit) as exc,
-    ):
+    with pytest.raises(SystemExit) as exc:
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.ADD_NO_CANDIDATE_ERROR
-    assert expected_message in caplog.text
 
 
 def test_deps_cli_add_sources(mock_deps_command):
