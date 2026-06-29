@@ -1,3 +1,4 @@
+import argparse
 import logging
 import subprocess
 import sys
@@ -100,6 +101,52 @@ def invalid_choice_messages(choice, *, choices):
             ", ".join(f"'{x}'" for x in choices),
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "argv, option",
+    ((["--foo", "x"], "x"), (["--foo"], None)),
+    ids=("str", "none"),
+)
+def test_deduplicating_action_rejects_non_list_values(argv, option):
+    """Check if DeduplicatingAction rejects non multi-value (nargs) options"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--foo",
+        nargs="?",
+        action=project_main.DeduplicatingAction,
+    )
+    with pytest.raises(
+        TypeError,
+        match=f"expects a list of values from an nargs option, got {option!r}",
+    ):
+        parser.parse_args(argv)
+
+
+def test_deduplicating_action_deduplicates_keeping_order():
+    """DeduplicatingAction collapses repeats in an nargs option, keeps order."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--foo",
+        nargs="+",
+        action=project_main.DeduplicatingAction,
+    )
+
+    args = parser.parse_args(["--foo", "a", "b", "a", "c", "b"])
+    assert args.foo == ["a", "b", "c"]
+
+
+def test_deduplicating_action_allows_empty_list():
+    """An nargs="*" option given with no values is [] -- the Action keeps it."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--foo",
+        nargs="*",
+        action=project_main.DeduplicatingAction,
+    )
+
+    args = parser.parse_args(["--foo"])
+    assert args.foo == []
 
 
 DEFAULT_DEPS_ADD_CLI_KWARGS: dict[str, Any] = {
@@ -612,6 +659,35 @@ def test_install_cli_exclude_paths_multiple(mock_install_wheel):
 
 
 @pytest.mark.usefixtures("mock_read_tracker")
+def test_install_cli_exclude_paths_deduplicated(mock_install_wheel):
+    """
+    Repeated --exclude-paths patterns collapse, first-occurrence order kept.
+    """
+    install_args = [
+        "install",
+        "--exclude-paths",
+        "tests/*",
+        "*/tests/*",
+        "tests/*",
+    ]
+
+    destdir = Path("/")
+    wheel = Path.cwd() / "dist" / "foo.whl"
+    i_args = (wheel,)
+    i_kwargs = {
+        "destdir": destdir,
+        "installer": None,
+        "strip_dist_info": True,
+        "rpm_filelist": None,
+        "force_site": None,
+        "exclude_paths": ["tests/*", "*/tests/*"],
+    }
+
+    project_main.main(install_args)
+    mock_install_wheel.assert_called_once_with(*i_args, **i_kwargs)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
 def test_install_cli_exclude_paths_single(mock_install_wheel):
     """
     Run install with --exclude-paths passing a single pattern.
@@ -878,6 +954,68 @@ def test_deps_cli_show_selected(mock_deps_command, srcnames):
 
     r_args = (action, Path(depsconfig))
     r_kwargs = {"srcnames": srcnames}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_show_srcnames_deduplicated(mock_deps_command):
+    """Run deps show with repeated source names
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "show"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "foo", "bar", "foo", "baz", "bar"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {"srcnames": ["foo", "bar", "baz"]}
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_sync_srcnames_deduplicated(mock_deps_command):
+    """Run deps sync with repeated source names
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "foo", "bar", "foo", "baz", "bar"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": ["foo", "bar", "baz"],
+        "verify": False,
+        "verify_excludes": [],
+        "verify_ignore_version": False,
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_srcnames_deduplicated(mock_deps_command):
+    """Run deps eval with repeated source names
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "foo", "bar", "foo", "baz", "bar"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": ["foo", "bar", "baz"],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": [],
+    }
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -1355,6 +1493,73 @@ def test_deps_cli_sync_verify_excludes(excludes, mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
+def test_deps_cli_sync_verify_excludes_deduplicated(mock_deps_command):
+    """Run deps sync with repeated --verify-exclude patterns
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "sync"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--verify",
+        "--verify-exclude",
+        "foo",
+        "bar",
+        "foo",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "verify": True,
+        "verify_excludes": ["foo", "bar"],
+        "verify_ignore_version": False,
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_verify_excludes_deduplicated(mock_deps_command):
+    """Run deps add with repeated --verify-exclude patterns
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    srctype = "metadata"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        srctype,
+        "--sync",
+        "--verify",
+        "--verify-exclude",
+        "foo",
+        "bar",
+        "foo",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        srctype=srctype,
+        sync=True,
+        verify=True,
+        verify_excludes=["foo", "bar"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
 @pytest.mark.usefixtures("mock_deps_command")
 def test_deps_cli_sync_verify_excludes_without_verify(capsys):
     """Run deps sync with verify_excludes and without verify
@@ -1602,6 +1807,29 @@ def test_deps_cli_eval_extra(mock_deps_command):
         "depformatextra": None,
         "extra": extra,
         "excludes": [],
+    }
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_exclude_deduplicated(mock_deps_command):
+    """Run deps eval with repeated --exclude patterns
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = ["deps", action, "--exclude", "foo", "bar", "foo"]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = {
+        "srcnames": [],
+        "depformat": None,
+        "depformatextra": None,
+        "extra": None,
+        "excludes": ["foo", "bar"],
     }
 
     project_main.main(deps_args)
@@ -2000,6 +2228,64 @@ def test_deps_cli_add_candidates_lenient_parsing(mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
+def test_deps_cli_add_candidates_deduplicated(mock_deps_command):
+    """Run deps add with identical entries repeated in --candidates
+
+    - mock deps_command
+    - identical (type, *args) entries collapse to one, first-occurrence
+      order preserved (first-wins discovery is unaffected)
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        "pep735 test;pip_reqfile r.txt;pep735 test",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        candidates=(("pep735", "test"), ("pip_reqfile", "r.txt")),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_add_candidates_same_type_not_deduplicated(mock_deps_command):
+    """Run deps add with the same type but different args in --candidates
+
+    - mock deps_command
+    - entries dedup by the full (type, *args) tuple, so the same type with
+      different args is kept
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    srcname = "check"
+    deps_args = [
+        "deps",
+        action,
+        srcname,
+        "--candidates",
+        "pep735 test;pep735 other",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=srcname,
+        candidates=(("pep735", "test"), ("pep735", "other")),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
 def test_deps_cli_add_candidates_reconfigure_sync_verify(mock_deps_command):
     """Run deps add --candidates composed with --reconfigure/--sync/--verify
 
@@ -2204,6 +2490,33 @@ def test_deps_cli_add_sources_lenient_parsing(mock_deps_command):
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
 
 
+def test_deps_cli_add_sources_deduplicated(mock_deps_command):
+    """Run deps add with identical entries repeated in --sources
+
+    - mock deps_command
+    - identical (name, type, *args) entries collapse to one, first-occurrence
+      order preserved
+    """
+    action = "add"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--sources",
+        "a metadata;b pip_reqfile r.txt;a metadata",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_ADD_CLI_KWARGS,
+        srcname=None,
+        sources=(("a", "metadata"), ("b", "pip_reqfile", "r.txt")),
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
 def test_deps_cli_add_sources_reconfigure_sync_verify(mock_deps_command):
     """Run deps add --sources composed with --reconfigure/--sync/--verify
 
@@ -2326,18 +2639,22 @@ def test_deps_cli_add_sources_unknown_type_is_error(mock_deps_command, capsys):
     mock_deps_command.assert_not_called()
 
 
-def test_deps_cli_add_sources_duplicate_name_is_error(
+def test_deps_cli_add_sources_conflicting_name_is_error(
     mock_deps_command,
     capsys,
 ):
-    """Run deps add with a name repeated within --sources -> usage error"""
+    """Run deps add --sources with a name repeated with different type/args
+
+    Identical entries collapse, but a name reused with a different type/args
+    is a genuine conflict.
+    """
     action = "add"
     deps_args = ["deps", action, "--sources", "a metadata;a pip_reqfile r.txt"]
 
     with pytest.raises(SystemExit) as exc:
         project_main.main(deps_args)
     assert exc.value.code == ExitCodes.WRONG_USAGE
-    expected_message = "duplicate source name in a given list: 'a'"
+    expected_message = "conflicting source definition for 'a' in a given list"
     assert expected_message in capsys.readouterr().err
     mock_deps_command.assert_not_called()
 

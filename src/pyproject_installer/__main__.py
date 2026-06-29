@@ -247,6 +247,24 @@ def default_built_wheel() -> Path:
     return default_wheel_dir / wheel_filename
 
 
+class DeduplicatingAction(argparse.Action):
+    """Store the option's values with duplicates removed, keeping order."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,  # noqa: ARG002 (Action signature)
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,  # noqa: ARG002 (Action signature)
+    ) -> None:
+        if values is None or isinstance(values, str):
+            raise TypeError(
+                f"{type(self).__name__} expects a list of values from an "
+                f"nargs option, got {values!r}",
+            )
+        setattr(namespace, self.dest, list(dict.fromkeys(values)))
+
+
 def parse_candidates(value: str) -> tuple[tuple[str, ...], ...]:
     """Parse a ;-separated --candidates list into (type, *args) tuples.
 
@@ -256,13 +274,16 @@ def parse_candidates(value: str) -> tuple[tuple[str, ...], ...]:
     ('pep735', 'test') entry). A malformed candidate list is rejected as a
     usage error rather than silently skipped: it is an error when no entries
     are left after dropping blanks (an empty, whitespace-only, or ';'-only
-    value), or when an entry's type is not a known collector.
+    value), or when an entry's type is not a known collector. Identical
+    '<type> [args ...]' entries are collapsed to one (keeping order).
     """
     candidates = tuple(
         tuple(parts) for entry in value.split(";") if (parts := entry.split())
     )
     if not candidates:
         raise argparse.ArgumentTypeError(f"no candidates parsed from {value!r}")
+    # deduplication with preserving order
+    candidates = tuple(dict.fromkeys(candidates))
     for srctype, *_ in candidates:
         if srctype not in SUPPORTED_COLLECTORS:
             raise argparse.ArgumentTypeError(
@@ -282,13 +303,17 @@ def parse_sources(value: str) -> tuple[tuple[str, ...], ...]:
     error when no entries are left after dropping blanks (an empty,
     whitespace-only, or ';'-only value), when an entry has fewer than two
     tokens (a name without a type), when an entry's type is not a known
-    collector, or when a name is repeated within the list.
+    collector, or when entries have the same name but different type/args.
+    Identical '<name> <type> [args ...]' entries are collapsed to one (keeping
+    order).
     """
     sources = tuple(
         tuple(parts) for entry in value.split(";") if (parts := entry.split())
     )
     if not sources:
         raise argparse.ArgumentTypeError(f"no sources parsed from {value!r}")
+    # deduplication with preserving order
+    sources = tuple(dict.fromkeys(sources))
     seen: set[str] = set()
     for srcname, *rest in sources:
         if not rest:
@@ -303,7 +328,8 @@ def parse_sources(value: str) -> tuple[tuple[str, ...], ...]:
             )
         if srcname in seen:
             raise argparse.ArgumentTypeError(
-                f"duplicate source name in a given list: {srcname!r}",
+                f"conflicting source definition for {srcname!r} "
+                "in a given list",
             )
         seen.add(srcname)
     return sources
@@ -397,6 +423,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
             dest=destname,
             nargs="+",
             default=[],
+            action=DeduplicatingAction,
             help=(
                 "Regex patterns; exclude from diff requirements whose "
                 "PEP503-normalized names match one of the patterns "
@@ -432,6 +459,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         destname,
         help="source names (default: all)",
         nargs="*",
+        action=DeduplicatingAction,
     )
 
     # sync
@@ -448,6 +476,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         destname,
         help="source names (default: all)",
         nargs="*",
+        action=DeduplicatingAction,
     )
 
     add_sync_options(subparser_sync)
@@ -469,6 +498,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         destname,
         help="source names (default: all)",
         nargs="*",
+        action=DeduplicatingAction,
     )
 
     destname = "depformat"
@@ -513,9 +543,10 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         dest=destname,
         nargs="+",
         default=[],
+        action=DeduplicatingAction,
         help=(
-            "regexes patterns, exclude requirement having PEP503-normalized "
-            "name that matches one of these patterns (default: [])"
+            "Regex patterns; exclude requirements whose PEP503-normalized "
+            "names match one of these patterns (default: [])"
         ),
     )
 
@@ -792,6 +823,7 @@ def main_parser(prog: str) -> MainArgumentParser:
         dest="exclude_paths",
         nargs="+",
         default=[],
+        action=DeduplicatingAction,
         metavar="PATTERN",
         help=(
             "fnmatch glob patterns. Files whose wheel-relative POSIX path "

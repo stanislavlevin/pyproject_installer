@@ -317,7 +317,7 @@ python -m pyproject_installer install
 
 > **`--exclude-paths PATTERN [PATTERN ...]`**
 >
-> One or more `fnmatch` glob patterns. Files whose wheel-relative POSIX path matches any pattern are excluded from installation. Pattern syntax follows Python's [`fnmatch`](https://docs.python.org/3/library/fnmatch.html) module: `*` matches any run of characters including `/`; `?` matches one character; `[seq]` / `[!seq]` are character classes.
+> One or more `fnmatch` glob patterns. Files whose wheel-relative POSIX path matches any pattern are excluded from installation. Pattern syntax follows Python's [`fnmatch`](https://docs.python.org/3/library/fnmatch.html) module: `*` matches any run of characters including `/`; `?` matches one character; `[seq]` / `[!seq]` are character classes. Identical patterns are collapsed (first occurrence kept).
 >
 > *Path format:* patterns are matched against the wheel's ZIP `namelist()` entries verbatim. Those entries are always forward-slash separated POSIX paths with no leading `/` and no `./` prefix, regardless of host operating system. Examples of what a pattern matches against: `pkg/__init__.py`, `pkg/sub/foo.py`, `pkg-1.0.dist-info/METADATA`, `pkg-1.0.data/scripts/cli`.
 >
@@ -423,7 +423,7 @@ Show configuration and data of dependencies' sources.
 
 > **`<source names>`** (positional)
 >
-> Source names to show.
+> Source names to show. Repeated names are collapsed (first occurrence kept).
 >
 > *Default:* all
 >
@@ -463,7 +463,7 @@ There are three ways to add sources, exactly one per call:
 
 > **`--candidates LIST`**
 >
-> Discover the source from an ordered list instead of a fixed type. `LIST` is a `;`-separated string whose entries are each `<type> [args ...]` (the same shape as the positional type/args). The walk goes left to right and the first candidate that *collects successfully* (its source is present and collectable) wins, even if it has zero dependencies; its type and args are recorded under the source name. A candidate is skipped when its source cannot be collected (for example a missing file or group); a malformed candidate list (an unknown type or the wrong number of arguments) is an error, not a silent skip. It is mutually exclusive with the positional type/args (giving both is a usage error), so the source name is the only positional; every other aspect of `add` (add-only by default, `--reconfigure`, `--sync` and its verify options) behaves exactly as with an explicit type. Because `--verify-exclude` takes one or more values, keep the source name *before* it.
+> Discover the source from an ordered list instead of a fixed type. `LIST` is a `;`-separated string whose entries are each `<type> [args ...]` (the same shape as the positional type/args). The walk goes left to right and the first candidate that *collects successfully* (its source is present and collectable) wins, even if it has zero dependencies; its type and args are recorded under the source name. A candidate is skipped when its source cannot be collected (for example a missing file or group); a malformed candidate list (an unknown type or the wrong number of arguments) is an error, not a silent skip. Identical entries (same type and args) are collapsed (first occurrence kept). It is mutually exclusive with the positional type/args (giving both is a usage error), so the source name is the only positional; every other aspect of `add` (add-only by default, `--reconfigure`, `--sync` and its verify options) behaves exactly as with an explicit type. Because `--verify-exclude` takes one or more values, keep the source name *before* it.
 >
 > When no candidate is picked, `add` reports it and exits with code 5 in every case, whether or not `name` is already configured and whether or not `--reconfigure` is given; any existing source under `name` is left untouched. `--sync` (and the `--verify` that depends on it) never runs on a no-candidate branch.
 >
@@ -473,7 +473,7 @@ There are three ways to add sources, exactly one per call:
 
 > **`--sources LIST`**
 >
-> Add a batch of explicitly named sources in one call (the additive counterpart of `--candidates`). `LIST` is a `;`-separated string whose entries are each `<name> <type> [args ...]` (a positional `name type [args]` per entry). The entries are handled one at a time, in order: each is configured exactly as a regular `add <name> <type> [args]` (`--reconfigure` applies per entry), and with `--sync` it is synced and verified before the next, so one call equals running `add <name> <type> [args] --reconfigure --sync --verify` once per entry in a single process. A malformed list is a usage error, not a silent skip: an empty list, an entry without a type, an unknown type, or a name repeated within the list; a wrong argument count for a type is reported when that entry is configured (the same error as an explicit `add`).
+> Add a batch of explicitly named sources in one call (the additive counterpart of `--candidates`). `LIST` is a `;`-separated string whose entries are each `<name> <type> [args ...]` (a positional `name type [args]` per entry). The entries are handled one at a time, in order: each is configured exactly as a regular `add <name> <type> [args]` (`--reconfigure` applies per entry), and with `--sync` it is synced and verified before the next, so one call equals running `add <name> <type> [args] --reconfigure --sync --verify` once per entry in a single process. A malformed list is a usage error, not a silent skip: an empty list, an entry without a type, an unknown type, or a name repeated with a different type/args; a wrong argument count for a type is reported when that entry is configured (the same error as an explicit `add`). Identical entries (same name, type and args) are collapsed (first occurrence kept).
 >
 > With `--verify`, the run stops at the first source that is out of sync and exits with code 4; the entries after it are not reached, so a failed run leaves the earlier entries configured and synced and the later ones untouched. Run without `--verify` to configure and sync the whole list in one pass; `--verify` is a check and keeps stopping at the first out-of-sync source. `--sources` takes no positional name/type/args and is mutually exclusive with `--candidates`; because there are no positionals, `--sources` and the verify options may be given in any order.
 >
@@ -557,7 +557,7 @@ Sync stored requirements to configured sources.
 
 > **`<source names>`** (positional)
 >
-> Source names to sync.
+> Source names to sync. Repeated names are collapsed (first occurrence kept).
 >
 > *Default:* all
 >
@@ -573,7 +573,7 @@ Sync stored requirements to configured sources.
 
 > **`--verify-exclude`**
 >
-> Regex patterns; exclude from diff requirements whose PEP 503-normalized names match one of the patterns. Requires `--verify`.
+> Regex patterns; exclude from diff requirements whose PEP 503-normalized names match one of the patterns. Requires `--verify`. Repeated patterns are collapsed (first occurrence kept).
 >
 > *Default:* `[]`
 >
@@ -595,7 +595,7 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 
 > **`<source names>`** (positional)
 >
-> Source names to evaluate.
+> Source names to evaluate. Repeated names are collapsed (first occurrence kept).
 >
 > *Default:* all
 >
@@ -629,7 +629,7 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 
 > **`--exclude`**
 >
-> Regex patterns; exclude requirement having PEP 503-normalized name that matches one of these patterns.
+> Regex patterns; exclude requirements whose PEP 503-normalized names match one of these patterns. Repeated patterns are collapsed (first occurrence kept).
 >
 > *Default:* `[]`
 >
