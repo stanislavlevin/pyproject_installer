@@ -183,6 +183,7 @@ select = [
 ignore = [
     "ANN",  # flake8-annotations
     "EM",  # flake8-errmsg
+    "CPY",  # flake8-copyright: no copyright headers in this project
     "D",  # pydocstyle
     "PYI",  # flake8-pyi
     "TID252",  # relative-imports
@@ -191,6 +192,7 @@ ignore = [
     "PLR0912",  # too-many-branches
     "PLR0913",  # too-many-arguments
     "PLR0915",  # too-many-statements
+    "PLR0917",  # too-many-positional-arguments
     "C901",  # complex-structure
 ]
 
