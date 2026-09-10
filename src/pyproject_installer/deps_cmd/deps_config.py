@@ -559,7 +559,11 @@ class DepsSourcesConfig:
             for extra in req.extras:
                 yield template.safe_substitute(
                     depsubsts,
-                    fextra=extratemplate.safe_substitute(extra=extra),
+                    fextra=extratemplate.safe_substitute(
+                        extra=extra,
+                        # PEP685 normalizes an extra with the PEP503 rules
+                        nextra=pep503_normalized_name(extra),
+                    ),
                 )
         else:
             yield template.safe_substitute(depsubsts)

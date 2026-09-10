@@ -951,6 +951,28 @@ def test_config_eval_nonexistent_source(select_data, depsconfig, capsys):
             None,
             ["project-bar", "project-foo"],
         ),
+        (["project-foo [Foo_Bar]"], "$fextra", "+$extra", ["+Foo_Bar"]),
+        (["project-foo [Foo_Bar]"], "$fextra", "+$nextra", ["+foo-bar"]),
+        # differently spelled extras normalize to the same name
+        (
+            ["project-foo [Foo_Bar,foo-bar,FOO.BAR]"],
+            "$fextra",
+            "+$nextra",
+            ["+foo-bar"],
+        ),
+        (["project-foo [foo]"], "$fextra", "+$nextra", ["+foo"]),
+        (
+            ["project-foo [Foo_Bar,baz]"],
+            "$nname$fextra",
+            "+$nextra",
+            ["project-foo+baz", "project-foo+foo-bar"],
+        ),
+        (
+            ["project-foo [Foo_Bar]"],
+            "$fextra",
+            "$extra=$nextra",
+            ["Foo_Bar=foo-bar"],
+        ),
     ),
 )
 def test_config_eval_formatting(data, depsconfig, capsys):

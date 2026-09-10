@@ -603,19 +603,44 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 
 > **`--depformat`**
 >
-> Format of dependency to print. Supported substitutions: `$name` - project's name; `$nname` - PEP 503 normalized project's name; `$fextra` - project's extras (expanded first with `--depformatextra`).
+> Format of dependency to print. Supported substitutions:
+>
+> - `$name` - project name as written
+> - `$nname` - project name, PEP 503 normalized
+> - `$fextra` - project's extras (expanded first with `--depformatextra`)
 >
 > *Default:* PEP 508 format
 >
-> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nn'`
+> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nname'`
+>
+> *Example output* - the `build` source storing `Project_Foo >=3.2,<4` and `project-bar[Extra_Baz]`:
+>
+> ```
+> python3-project-bar
+> python3-project-foo
+> ```
+>
+> Without `--depformatextra` the extras of `project-bar[Extra_Baz]` are dropped: `$fextra` is not in the format and one name is printed per dependency.
 
 > **`--depformatextra`**
 >
-> Format of extras to print (one extra of dependencies per line). Result is expanded in the format specified by `--depformat` as `$fextra`. Supported substitutions: `$extra`.
+> Format of extras to print (one extra of dependencies per line). Result is expanded in the format specified by `--depformat` as `$fextra`. Supported substitutions:
+>
+> - `$extra` - extra name as written
+> - `$nextra` - extra name, PEP 503/685 normalized
 >
 > *Default:* `''`
 >
-> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nn$fextra' --depformatextra='+$extra'`
+> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nname$fextra' --depformatextra='+$nextra'`
+>
+> *Example output* - the same `build` source storing `Project_Foo >=3.2,<4` and `project-bar[Extra_Baz]`:
+>
+> ```
+> python3-project-bar+extra-baz
+> python3-project-foo
+> ```
+>
+> One line is printed per extra, so a dependency with several extras yields several lines. `$nextra` normalizes `Extra_Baz` to `extra-baz`; `$extra` would have printed `python3-project-bar+Extra_Baz`.
 
 > **`--extra`**
 >

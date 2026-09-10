@@ -509,8 +509,8 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         help=(
             "format of dependency to print (default: PEP508 format). "
             "Supported substitutions: "
-            "$name - project's name, "
-            "$nname - PEP503 normalized project's name, "
+            "$name - project name as written; "
+            "$nname - project name, PEP503 normalized; "
             "$fextra - project's extras (expanded first with --depformatextra)."
         ),
     )
@@ -522,7 +522,9 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         help=(
             "format of extras to print (one extra of dependencies per line). "
             "Result is expanded in format specified by --depformat as $fextra "
-            "(default: ''). Supported substitutions: $extra."
+            "(default: ''). Supported substitutions: "
+            "$extra - extra name as written; "
+            "$nextra - extra name, PEP503/685 normalized."
         ),
     )
 
