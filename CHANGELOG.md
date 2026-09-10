@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 History for releases prior to the first entry below is not captured here —
 see git tags and commit history for earlier changes.
 
+## [0.6.1] - 2026-09-10
+
+### Added
+- feat(deps): add $nextra to --depformatextra ([#179](https://github.com/stanislavlevin/pyproject_installer/issues/179))
+
+### Changed
+- maint: ruff: make code compatible with ruff 0.16.0 ([#176](https://github.com/stanislavlevin/pyproject_installer/issues/176))
+
 ## [0.6.0] - 2026-07-10
 
 ### Added
