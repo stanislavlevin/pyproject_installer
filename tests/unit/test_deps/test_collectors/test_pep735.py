@@ -6,7 +6,11 @@ from copy import deepcopy
 import pytest
 
 from pyproject_installer.deps_cmd import deps_command
-from pyproject_installer.lib import dependency_groups
+from pyproject_installer.lib import (
+    dependency_groups,
+    is_pep508_requirement,
+    requirements,
+)
 
 if sys.version_info >= (3, 11):
     RaisesGroup = pytest.RaisesGroup
@@ -406,7 +410,12 @@ def test_pep735_collector_invalid_pep508_deps(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with pytest.raises(ValueError, match=expected_err):
+    # one InvalidRequirement per invalid specifier
+    invalid_count = sum(not is_pep508_requirement(x) for x in in_reqs)
+    with RaisesGroup(
+        *[requirements.InvalidRequirement] * invalid_count,
+        match=expected_err,
+    ):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -543,7 +552,7 @@ def test_pep735_collector_invalid_dep_group_include(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with pytest.raises(TypeError, match=expected_err):
+    with RaisesGroup(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))

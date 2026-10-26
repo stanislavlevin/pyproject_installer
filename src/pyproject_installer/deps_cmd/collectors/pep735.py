@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
-from ...lib import dependency_groups, errors, requirements, tomllib
+from ...lib import dependency_groups, errors, tomllib
 from .collector import Collector
 
 
@@ -57,10 +57,3 @@ class Pep735Collector(Collector):
                 f"{self.name}: {eg.message}",
                 eg.exceptions,
             ) from None
-        except requirements.InvalidRequirement as e:
-            raise ValueError(f"{self.name}: {e}") from None
-        except TypeError as e:
-            # Raised when an `include-group` value is not a string:
-            # packaging propagates this raw rather than collecting
-            # it into the ExceptionGroup above.
-            raise TypeError(f"{self.name}: {e}") from None
