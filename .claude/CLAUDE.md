@@ -10,7 +10,7 @@ Builds/installs PEP 517/518 projects in network-isolated envs (RPM packaging). R
 - Unit + coverage: `COVERAGE_PROCESS_START="$(pwd)/pyproject.toml" pytest -vra --cov --cov-config=pyproject.toml tests/unit` (env var required for subprocess coverage).
 - Self-run tests (system interpreter, NOT inside `.venv`): `pip install --group test && pip install . && python3 -m pyproject_installer -v build && python3 -m pyproject_installer -v run -- pytest -vra tests/unit`.
 - Integration: `pytest -vra tests/integration`.
-- CI matrix: Python 3.10–3.14 (min version floor).
+- CI matrix: Python 3.10–3.15 (min version floor).
 - Vendored bump: edit `backend/vendored.txt` + `src/pyproject_installer/vendored.txt`, run `python3 tools/vendored.py`.
 
 ## Constraints
