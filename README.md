@@ -139,12 +139,38 @@ These options are accepted by the top-level command and must appear
 >
 > *Example:* `python -m pyproject_installer -v build`
 
+> **`--debug`**
+>
+> Show the traceback of an error. Without it, only the error message
+> is reported.
+>
+> *Default:* disabled
+>
+> *Example:* `python -m pyproject_installer --debug build`
+
 Diagnostics (progress and logging) are written to `stderr`, while
 `stdout` carries only a command's machine-readable data: the
 dependency list from `deps eval`, the JSON from `deps show`, and the
 diff from `deps sync --verify`. The separation holds at any verbosity,
 so the data on `stdout` can be captured or piped without interleaved
 log lines.
+
+### Errors
+
+An error is reported as an `ERROR` message on `stderr` and the
+command exits with code `1`. The traceback is printed only with `--debug`.
+
+Exit codes:
+
+- `0` - success
+- `1` - command failed (for `run` also a non-zero exit of the wrapped
+  command)
+- `2` - usage error
+- `3` - `run`: internal error
+- `4` - `deps sync --verify` (also via `deps add --sync --verify`):
+  sources were unsynced
+- `5` - `deps add --candidates`: no candidate source matched
+- `130` - interrupted with Ctrl-C (128 + SIGINT)
 
 ### Build
 

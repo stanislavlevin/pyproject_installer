@@ -15,9 +15,10 @@ def run_command(
     command: Sequence[str],
     venv_name: str = ".run_venv",
     capture_output: bool = False,
+    debug: bool = False,
 ) -> subprocess.CompletedProcess[bytes]:
     try:
-        run_env = PyprojectVenv(wheel)
+        run_env = PyprojectVenv(wheel, debug=debug)
         run_env.create(venv_name)
     except RunCommandEnvError:
         raise

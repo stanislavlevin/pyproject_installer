@@ -38,6 +38,9 @@ from .run_cmd import run_command
 
 logger = logging.getLogger(Path(__file__).parent.name)
 
+DEBUG_HINT = "Re-run with --debug to see the full traceback"
+CANCELLED_MSG = "Operation cancelled by user"
+
 
 def build(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     srcdir = args.srcdir or Path.cwd()
@@ -152,13 +155,15 @@ class RunnerResult:
         log: Callable[..., None],
         *,
         exception: BaseException | None = None,
-        print_traceback: bool = False,
+        debug: bool = False,
+        debug_hint: bool = True,
     ) -> None:
         self.status = status
         self.message = message
         self.log = log
         self.exception = exception
-        self.print_traceback = print_traceback
+        self.debug = debug
+        self.debug_hint = debug_hint
 
     def report(self) -> None:
         status_msg = "Command's result: %(status)s"
@@ -171,10 +176,16 @@ class RunnerResult:
 
         if self.exception is not None:
             error_msg = "Command's error:"
-            if self.print_traceback:
+            if self.debug:
                 self.log(error_msg, exc_info=self.exception)
             else:
-                self.log(f"{error_msg} %s", str(self.exception))
+                self.log(
+                    f"{error_msg} %s",
+                    "\n".join(error_lines(self.exception)),
+                )
+
+        if self.status != ExitCodes.OK and not self.debug and self.debug_hint:
+            self.log(DEBUG_HINT)
 
 
 def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -184,14 +195,14 @@ def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
         parser.error(str(e))
 
     try:
-        run_command(wheel, command=args.command)
+        run_command(wheel, command=args.command, debug=args.debug)
     except RunCommandEnvError as e:
         result = RunnerResult(
             status=ExitCodes.FAILURE,
             message="virtual env setup failed",
             log=logger.info,
             exception=e,
-            print_traceback=True,
+            debug=args.debug,
         )
     except RunCommandError as e:
         result = RunnerResult(
@@ -199,7 +210,17 @@ def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
             message=None,
             log=logger.info,
             exception=e,
-            print_traceback=False,
+            debug=args.debug,
+            # the wrapped command failed, its traceback is of no use
+            debug_hint=False,
+        )
+    except KeyboardInterrupt as e:
+        result = RunnerResult(
+            status=ExitCodes.INTERRUPTED,
+            message=CANCELLED_MSG,
+            log=logger.error,
+            exception=e if args.debug else None,
+            debug=args.debug,
         )
     except BaseException as e:  # noqa: BLE001
         result = RunnerResult(
@@ -207,7 +228,7 @@ def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
             message="internal error happened",
             log=logger.error,
             exception=e,
-            print_traceback=True,
+            debug=args.debug,
         )
     else:
         result = RunnerResult(
@@ -692,6 +713,11 @@ def main_parser(prog: str) -> MainArgumentParser:
         help="verbose output",
     )
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="show the traceback of an error",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=project_version,
@@ -945,6 +971,27 @@ def setup_logging(*, verbose: bool = False) -> None:
     )
 
 
+def error_lines(e: BaseException, indent: str = "") -> list[str]:
+    """Message lines of an error.
+
+    - an exception group: str() gives only its own message, so each inner
+      error gets its own line, indented under the group;
+    - an error without a message: shown by its type;
+    - a KeyError (only a key in quotes): shown by its type and the key.
+    """
+    text = e.message if isinstance(e, BaseExceptionGroup) else str(e)
+    if not text:
+        text = type(e).__name__
+    elif isinstance(e, KeyError):
+        text = f"{type(e).__name__}: {text}"
+    lines = [f"{indent}{text}"]
+    if not isinstance(e, BaseExceptionGroup):
+        return lines
+    for inner in e.exceptions:
+        lines.extend(error_lines(inner, indent=f"{indent}  "))
+    return lines
+
+
 def main(
     cli_args: Sequence[str],
     prog: str = f"python -m {__package__}",
@@ -960,7 +1007,23 @@ def main(
             parser.error(f"-C: {e}")
         logger.debug("changed working directory to %s", args.cwd)
 
-    args.main(args, parser)
+    try:
+        args.main(args, parser)
+    except KeyboardInterrupt as e:
+        logger.error(CANCELLED_MSG, exc_info=args.debug and e)  # noqa: TRY400
+        if not args.debug:
+            logger.error(DEBUG_HINT)  # noqa: TRY400
+        sys.exit(ExitCodes.INTERRUPTED)
+    except Exception as e:
+        # one line by default, the traceback only with --debug
+        logger.error(  # noqa: TRY400
+            "%s",
+            "\n".join(error_lines(e)),
+            exc_info=args.debug and e,
+        )
+        if not args.debug:
+            logger.error(DEBUG_HINT)  # noqa: TRY400
+        sys.exit(ExitCodes.FAILURE)
 
 
 def cli_entry() -> None:
