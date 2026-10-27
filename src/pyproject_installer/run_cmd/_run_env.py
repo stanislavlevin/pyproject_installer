@@ -32,16 +32,19 @@ class VenvContextType(Protocol):
 
 
 class PyprojectVenv(EnvBuilder):
-    def __init__(self, wheel: str | Path) -> None:
+    def __init__(self, wheel: str | Path, *, debug: bool = False) -> None:
         """
         Build Python virtual environment
         - clean up existed environment on filesystem
         - create virtual environment with stdlib's venv
         - generate console scripts of system site packages
         - install package (wheel) into venv
+
+        debug: show the traceback if installation of package fails
         """
         self.context: VenvContextType | None = None
         self.wheel = Path(wheel)
+        self.debug = debug
         super().__init__(
             system_site_packages=True,
             clear=True,
@@ -119,13 +122,16 @@ class PyprojectVenv(EnvBuilder):
             context.env_exec_cmd,
             "-m",
             "pyproject_installer",
+            *(["--debug"] if self.debug else []),
             "install",
             str(self.wheel),
         ]
         try:
             self.run(install_args, capture_output=True)
         except RunCommandError as e:
-            raise RunCommandEnvError("Installation of package failed") from e
+            raise RunCommandEnvError(
+                f"Installation of package failed: {e}",
+            ) from e
 
     def create(self, *args: Any, **kwargs: Any) -> None:
         """Calls `post_create` hook after `venv` creation

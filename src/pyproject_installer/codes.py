@@ -1,3 +1,4 @@
+import signal
 from enum import IntEnum
 
 
@@ -15,3 +16,5 @@ class ExitCodes(IntEnum):
     # add --candidates: no candidate matched (reported; existing source,
     # if any, left untouched)
     ADD_NO_CANDIDATE_ERROR = 5
+    # Ctrl-C: the shell's code for a process stopped by SIGINT
+    INTERRUPTED = 128 + signal.SIGINT

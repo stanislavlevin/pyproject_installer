@@ -257,6 +257,181 @@ def test_build_cli_default(mock_build_wheel):
     mock_build_wheel.assert_called_once_with(*b_args, **b_kwargs)
 
 
+def test_cli_error(mock_build_wheel, caplog):
+    """An error exits FAILURE: one line and a hint about --debug"""
+    exc_msg = "some error"
+    mock_build_wheel.side_effect = ValueError(exc_msg)
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, exc_msg),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_error_debug(mock_build_wheel, caplog):
+    """An error with --debug exits FAILURE and shows the traceback"""
+    exc_msg = "some error"
+    mock_build_wheel.side_effect = ValueError(exc_msg)
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["--debug", "build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, exc_msg),
+    ]
+    assert caplog.records[0].exc_info
+
+
+def test_cli_error_verbose_no_traceback(mock_build_wheel, caplog):
+    """-v only raises the log level, it does not show the traceback"""
+    mock_build_wheel.side_effect = ValueError("some error")
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["-v", "build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    logger_name = project_main.logger.name
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, "some error"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_error_group(mock_build_wheel, caplog):
+    """An exception group shows every inner error, nested ones included"""
+    mock_build_wheel.side_effect = ExceptionGroup(
+        "outer",
+        [
+            ValueError("first"),
+            ExceptionGroup("nested", [TypeError("second")]),
+        ],
+    )
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, "outer\n  first\n  nested\n    second"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_error_empty(mock_build_wheel, caplog):
+    """An error without a message is shown by its type"""
+    mock_build_wheel.side_effect = AssertionError()
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, "AssertionError"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_error_key_error(mock_build_wheel, caplog):
+    """A KeyError is shown by its type and the key"""
+    mock_build_wheel.side_effect = KeyError("requires")
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, "KeyError: 'requires'"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_error_empty_group(mock_build_wheel, caplog):
+    """An exception group without a message is shown by its type"""
+    mock_build_wheel.side_effect = ExceptionGroup("", [AssertionError()])
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.FAILURE
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, "ExceptionGroup\n  AssertionError"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_keyboard_interrupt(mock_build_wheel, caplog):
+    """Ctrl-C exits 130: one line, no traceback"""
+    mock_build_wheel.side_effect = KeyboardInterrupt
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["build"])
+    assert exc.value.code == ExitCodes.INTERRUPTED
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, project_main.CANCELLED_MSG),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_cli_keyboard_interrupt_debug(mock_build_wheel, caplog):
+    """Ctrl-C with --debug exits 130 and shows the traceback"""
+    mock_build_wheel.side_effect = KeyboardInterrupt
+    logger_name = project_main.logger.name
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["--debug", "build"])
+    assert exc.value.code == ExitCodes.INTERRUPTED
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, project_main.CANCELLED_MSG),
+    ]
+    assert caplog.records[0].exc_info
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_keyboard_interrupt(mock_run_command, caplog):
+    """Ctrl-C during run exits 130: the result line, no traceback"""
+    mock_run_command.side_effect = KeyboardInterrupt
+    logger_name = project_main.logger.name
+    result_msg = f"Command's result: INTERRUPTED ({project_main.CANCELLED_MSG})"
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["run", "some command"])
+    assert exc.value.code == ExitCodes.INTERRUPTED
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, result_msg),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_keyboard_interrupt_debug(mock_run_command, caplog):
+    """Ctrl-C during run with --debug exits 130 and shows the traceback"""
+    mock_run_command.side_effect = KeyboardInterrupt
+    logger_name = project_main.logger.name
+    result_msg = f"Command's result: INTERRUPTED ({project_main.CANCELLED_MSG})"
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["--debug", "run", "some command"])
+    assert exc.value.code == ExitCodes.INTERRUPTED
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.ERROR, result_msg),
+        (logger_name, logging.ERROR, "Command's error:"),
+    ]
+    assert caplog.records[1].exc_info
+
+
 def test_build_cli_srcdir(mock_build_wheel):
     srcdir = Path("/srcdir")
     outdir = srcdir / "dist"
@@ -739,6 +914,7 @@ def test_run_cli_default(mock_run_command, mock_read_tracker, caplog):
     r_args = (wheel,)
     r_kwargs = {
         "command": ["foo"],
+        "debug": False,
     }
 
     caplog.set_level(logging.INFO)
@@ -767,6 +943,7 @@ def test_run_cli_wheel(mock_run_command, mock_read_tracker, caplog):
     r_args = (wheel,)
     r_kwargs = {
         "command": ["foo"],
+        "debug": False,
     }
 
     caplog.set_level(logging.INFO)
@@ -778,6 +955,23 @@ def test_run_cli_wheel(mock_run_command, mock_read_tracker, caplog):
     assert "Command's result: OK" in caplog.text
     mock_run_command.assert_called_once_with(*r_args, **r_kwargs)
     # check if wheel path was not read from tracker
+    mock_read_tracker.assert_not_called()
+
+
+def test_run_cli_debug(mock_run_command, mock_read_tracker):
+    """Run run with `--debug` passes it to run_command"""
+    wheel = Path("/wheel.whl")
+    run_args = ["--debug", "run", "--wheel", str(wheel), "foo"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(run_args)
+    assert exc.value.code == ExitCodes.OK
+
+    mock_run_command.assert_called_once_with(
+        wheel,
+        command=["foo"],
+        debug=True,
+    )
     mock_read_tracker.assert_not_called()
 
 
@@ -866,6 +1060,127 @@ def test_run_cli_internal_error(mock_run_command, caplog):
     ) in caplog.text
     assert "Command's error:" in caplog.text
     assert exc_msg in caplog.text
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_command_error_no_hint(mock_run_command, caplog):
+    """A failed wrapped command is one line, with no hint about --debug"""
+    exc_msg = "some error"
+    mock_run_command.side_effect = RunCommandError(exc_msg)
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["run", "some command"])
+
+    assert caplog.record_tuples == [
+        (logger_name, logging.INFO, "Command's result: FAILURE"),
+        (logger_name, logging.INFO, f"Command's error: {exc_msg}"),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_venv_error_no_traceback(mock_run_command, caplog):
+    """A venv setup error is one line and a hint about --debug"""
+    exc_msg = "some error"
+    mock_run_command.side_effect = RunCommandEnvError(exc_msg)
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["run", "some command"])
+
+    assert caplog.record_tuples == [
+        (
+            logger_name,
+            logging.INFO,
+            "Command's result: FAILURE (virtual env setup failed)",
+        ),
+        (logger_name, logging.INFO, f"Command's error: {exc_msg}"),
+        (logger_name, logging.INFO, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_internal_error_no_traceback(mock_run_command, caplog):
+    """An internal error is one line and a hint about --debug"""
+    exc_msg = "some error"
+    mock_run_command.side_effect = Exception(exc_msg)
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["run", "some command"])
+
+    assert caplog.record_tuples == [
+        (
+            logger_name,
+            logging.ERROR,
+            "Command's result: INTERNAL_ERROR (internal error happened)",
+        ),
+        (logger_name, logging.ERROR, f"Command's error: {exc_msg}"),
+        (logger_name, logging.ERROR, project_main.DEBUG_HINT),
+    ]
+    assert not any(r.exc_info for r in caplog.records)
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_command_error_debug(mock_run_command, caplog):
+    """A failed wrapped command with --debug shows the traceback"""
+    mock_run_command.side_effect = RunCommandError("some error")
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["--debug", "run", "some command"])
+
+    assert caplog.record_tuples == [
+        (
+            logger_name,
+            logging.INFO,
+            "Command's result: FAILURE",
+        ),
+        (logger_name, logging.INFO, "Command's error:"),
+    ]
+    assert caplog.records[1].exc_info
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_venv_error_debug(mock_run_command, caplog):
+    """A venv setup error with --debug shows the traceback and no hint"""
+    mock_run_command.side_effect = RunCommandEnvError("some error")
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["--debug", "run", "some command"])
+
+    assert caplog.record_tuples == [
+        (
+            logger_name,
+            logging.INFO,
+            "Command's result: FAILURE (virtual env setup failed)",
+        ),
+        (logger_name, logging.INFO, "Command's error:"),
+    ]
+    assert caplog.records[1].exc_info
+
+
+@pytest.mark.usefixtures("mock_read_tracker")
+def test_run_cli_internal_error_debug(mock_run_command, caplog):
+    """An internal error with --debug shows the traceback and no hint"""
+    mock_run_command.side_effect = Exception("some error")
+    logger_name = project_main.logger.name
+    caplog.set_level(logging.INFO)
+    with pytest.raises(SystemExit):
+        project_main.main(["--debug", "run", "some command"])
+
+    assert caplog.record_tuples == [
+        (
+            logger_name,
+            logging.ERROR,
+            "Command's result: INTERNAL_ERROR (internal error happened)",
+        ),
+        (logger_name, logging.ERROR, "Command's error:"),
+    ]
+    assert caplog.records[1].exc_info
 
 
 def test_deps_cli_help(capsys):

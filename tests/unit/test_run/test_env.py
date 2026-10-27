@@ -12,6 +12,7 @@ from sysconfig import get_path, get_paths
 import pytest
 
 import pyproject_installer
+from pyproject_installer import __main__ as project_main
 from pyproject_installer.errors import RunCommandEnvError, RunCommandError
 from pyproject_installer.install_cmd import install_wheel
 from pyproject_installer.lib.scripts import SCRIPT_TEMPLATE, build_shebang
@@ -306,6 +307,56 @@ def test_env_installation_failed():
             command=command,
             capture_output=True,
         )
+
+
+def test_env_installation_failed_reason():
+    """The error of a failed installation includes the installer's output"""
+    with pytest.raises(RunCommandEnvError) as exc:
+        run_command(
+            "nonexistent-1.0-py3-none-any.whl",
+            command=["any_command"],
+            capture_output=True,
+        )
+
+    # the installer's stderr text itself follows the heading
+    assert re.search(r"Command's stderr:\n\S", str(exc.value))
+
+
+def test_env_installation_failed_keeps_cause():
+    """The error of a failed installation keeps the inner error as cause"""
+    with pytest.raises(RunCommandEnvError) as exc:
+        run_command(
+            "nonexistent-1.0-py3-none-any.whl",
+            command=["any_command"],
+            capture_output=True,
+        )
+
+    assert isinstance(exc.value.__cause__, RunCommandError)
+
+
+def test_env_installation_failed_debug():
+    """With debug the installer is run with --debug and gives no hint"""
+    with pytest.raises(RunCommandEnvError) as exc:
+        run_command(
+            "nonexistent-1.0-py3-none-any.whl",
+            command=["any_command"],
+            capture_output=True,
+            debug=True,
+        )
+
+    assert project_main.DEBUG_HINT not in str(exc.value)
+
+
+def test_env_installation_failed_no_debug():
+    """Without debug the installer is run without --debug and gives a hint"""
+    with pytest.raises(RunCommandEnvError) as exc:
+        run_command(
+            "nonexistent-1.0-py3-none-any.whl",
+            command=["any_command"],
+            capture_output=True,
+        )
+
+    assert project_main.DEBUG_HINT in str(exc.value)
 
 
 @pytest.mark.parametrize(
