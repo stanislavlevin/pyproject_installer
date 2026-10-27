@@ -27,14 +27,8 @@ import datetime as dt
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    # Python 3.10 — reuse the project's vendored tomli under backend/_vendor.
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
-    from _vendor import tomli as tomllib  # type: ignore[no-redef]
 
 NOISE_PREFIXES = frozenset(
     {

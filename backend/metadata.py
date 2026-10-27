@@ -1,5 +1,5 @@
 import ast
-import sys
+import tomllib
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from contextlib import suppress
@@ -10,10 +10,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal, TypedDict, get_args
 
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    from ._vendor import tomli as tomllib
 from .config import BackendConfigType
 
 WheelMetadataType = TypedDict(

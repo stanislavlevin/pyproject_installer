@@ -4,7 +4,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ...build_cmd import build_metadata
-from ...lib import errors
 from ...lib import metadata as core_metadata
 from .collector import Collector
 
@@ -79,7 +78,7 @@ class MetadataCollector(Collector):
                 metadata_text,
                 validate=True,
             )
-        except errors.ExceptionGroup as exc_group:
+        except ExceptionGroup as exc_group:
             detail = "; ".join(str(exc) for exc in exc_group.exceptions)
             err_msg = f"{self.name}: invalid core metadata: {detail}"
             raise ValueError(err_msg) from None

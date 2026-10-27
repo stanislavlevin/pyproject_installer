@@ -1,6 +1,5 @@
 import json
 import re
-import sys
 from copy import deepcopy
 
 import pytest
@@ -11,60 +10,6 @@ from pyproject_installer.lib import (
     is_pep508_requirement,
     requirements,
 )
-
-if sys.version_info >= (3, 11):
-    RaisesGroup = pytest.RaisesGroup
-else:
-    from pyproject_installer.lib import errors
-
-    class RaisesGroup:
-        """Python-3.10 fallback for ``pytest.RaisesGroup``.
-
-        On 3.10 ``packaging.errors.ExceptionGroup`` is a plain ``Exception``
-        subclass (PEP 654 lands in 3.11), so ``pytest.RaisesGroup`` — which
-        does ``isinstance(exc, BaseExceptionGroup)`` — refuses to match.
-        This shim asserts the same shape (one ``ExceptionGroup`` whose
-        ``.exceptions`` are positionally instances of the given types and
-        whose ``.message`` matches ``match``) using only the attributes
-        packaging's shim provides.
-        """
-
-        def __init__(self, *expected_types, match=None):
-            self._expected_types = expected_types
-            self._match = match
-            self._cm = pytest.raises(errors.ExceptionGroup)
-            self._info: pytest.ExceptionInfo[errors.ExceptionGroup] | None = (
-                None
-            )
-
-        def __enter__(self):
-            self._info = self._cm.__enter__()
-            return self
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            handled = self._cm.__exit__(exc_type, exc_val, exc_tb)
-            assert self._info is not None
-            eg = self._info.value
-            if self._match is not None:
-                matched = re.search(self._match, eg.message)
-                assert (
-                    matched
-                ), f"message {eg.message!r} does not match {self._match!r}"
-            actual = list(eg.exceptions)
-            assert len(actual) == len(self._expected_types), (
-                f"got {len(actual)} inner exceptions, "
-                f"expected {len(self._expected_types)}"
-            )
-            for got, expected in zip(
-                actual,
-                self._expected_types,
-                strict=True,
-            ):
-                assert isinstance(got, expected), (
-                    f"inner exception {got!r} is not an instance of "
-                    f"{expected!r}"
-                )
-            return handled
 
 
 @pytest.fixture
@@ -186,7 +131,7 @@ def test_pep735_collector_no_groups(pep735_deps, pep735_depsconfig):
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(LookupError, match=expected_err):
+    with pytest.RaisesGroup(LookupError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -217,7 +162,7 @@ def test_pep735_collector_missing_group(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(LookupError, match=expected_err):
+    with pytest.RaisesGroup(LookupError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -250,7 +195,7 @@ def test_pep735_collector_duplicate_names(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(
+    with pytest.RaisesGroup(
         dependency_groups.DuplicateGroupNames,
         match=expected_err,
     ):
@@ -285,7 +230,7 @@ def test_pep735_collector_invalid_type_groupdeps(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(TypeError, match=expected_err):
+    with pytest.RaisesGroup(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -321,7 +266,7 @@ def test_pep735_collector_invalid_type_depslist(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(TypeError, match=expected_err):
+    with pytest.RaisesGroup(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -344,7 +289,7 @@ def test_pep735_collector_multiple_errors_in_exceptiongroup(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(TypeError, TypeError, match=expected_err):
+    with pytest.RaisesGroup(TypeError, TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -412,7 +357,7 @@ def test_pep735_collector_invalid_pep508_deps(
     expected_err = f"^{expected_err}"
     # one InvalidRequirement per invalid specifier
     invalid_count = sum(not is_pep508_requirement(x) for x in in_reqs)
-    with RaisesGroup(
+    with pytest.RaisesGroup(
         *[requirements.InvalidRequirement] * invalid_count,
         match=expected_err,
     ):
@@ -516,7 +461,7 @@ def test_pep735_collector_invalid_dep_object_specifiers(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(
+    with pytest.RaisesGroup(
         dependency_groups.InvalidDependencyGroupObject,
         match=expected_err,
     ):
@@ -552,7 +497,7 @@ def test_pep735_collector_invalid_dep_group_include(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(TypeError, match=expected_err):
+    with pytest.RaisesGroup(TypeError, match=expected_err):
         deps_command("sync", depsconfig_path, srcnames=[])
 
     actual_conf = json.loads(depsconfig_path.read_text(encoding="utf-8"))
@@ -590,7 +535,7 @@ def test_pep735_collector_include_cycle(
 
     expected_err = re.escape("pep735: ")
     expected_err = f"^{expected_err}"
-    with RaisesGroup(
+    with pytest.RaisesGroup(
         dependency_groups.CyclicDependencyGroup,
         match=expected_err,
     ):

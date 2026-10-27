@@ -41,32 +41,6 @@ class DepsConfigType(TypedDict):
     sources: dict[str, DepsConfigSourceSpec]
 
 
-def _get_identifiers_py310(template: Template) -> list[str]:  # pragma: no cover
-    """Backport of CPython 3.11 Template.get_identifiers for Python 3.10."""
-    ids = []
-    for mo in template.pattern.finditer(template.template):
-        named = mo.group("named") or mo.group("braced")
-        if named is not None and named not in ids:
-            ids.append(named)
-        elif (
-            named is None
-            and mo.group("invalid") is None
-            and mo.group("escaped") is None
-        ):
-            raise ValueError(
-                "Unrecognized named group in pattern",
-                template.pattern,
-            )
-    return ids
-
-
-def get_identifiers(template: Template) -> list[str]:
-    """Compat get_identifiers (added in Python 3.11)"""
-    if hasattr(template, "get_identifiers"):  # pragma: no cover
-        return template.get_identifiers()  # type: ignore[no-any-return]
-    return _get_identifiers_py310(template)  # pragma: no cover
-
-
 class DepsSourcesConfig:
     def __init__(self, file: str | Path | None = None) -> None:
         self.file = (
@@ -542,7 +516,7 @@ class DepsSourcesConfig:
         depformatextra: str | None,
     ) -> Iterator[str]:
         template = Template(depformat)
-        identifiers = get_identifiers(template)
+        identifiers = template.get_identifiers()
 
         depsubsts = {
             "name": req.name,
