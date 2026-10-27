@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 History for releases prior to the first entry below is not captured here —
 see git tags and commit history for earlier changes.
 
+## [0.7.0] - 2026-10-27
+
+### Changed
+- maint: drop support for EOL-d Python 3.10 ([#184](https://github.com/stanislavlevin/pyproject_installer/issues/184))
+- maint: declare Python 3.15 support ([#183](https://github.com/stanislavlevin/pyproject_installer/issues/183))
+- vendor: update packaging to 26.3 ([#178](https://github.com/stanislavlevin/pyproject_installer/issues/178))
+
+### Fixed
+- fix(deps): pep735: expect packaging 26.3 errors in ExceptionGroup ([#178](https://github.com/stanislavlevin/pyproject_installer/issues/178))
+
 ## [0.6.1] - 2026-09-10
 
 ### Added
