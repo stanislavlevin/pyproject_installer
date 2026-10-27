@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/stanislavlevin/pyproject_installer/actions/workflows/pipelines.yml/badge.svg)](https://github.com/stanislavlevin/pyproject_installer/actions/workflows/pipelines.yml)
 [![PyPI version](https://img.shields.io/pypi/v/pyproject-installer.svg)](https://pypi.org/project/pyproject-installer/)
-[![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14%20%7C%203.15-blue.svg)](https://github.com/stanislavlevin/pyproject_installer/blob/main/.github/workflows/pipelines.yml)
+[![Python versions](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14%20%7C%203.15-blue.svg)](https://github.com/stanislavlevin/pyproject_installer/blob/main/.github/workflows/pipelines.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Linted with Ruff](https://img.shields.io/badge/linted-Ruff-261230.svg)](https://github.com/astral-sh/ruff)
@@ -61,8 +61,6 @@
 - Only stdlib or vendored dependencies can be used in runtime for bootstrapping
   any Python project.
   Current vendored packages:
-  - `tomli` (used for parsing `pyproject.toml` configuration file).
-     Note: `tomli` is the part of stdlib since Python 3.11.
   - `packaging` (used for parsing PEP508 dependencies)
 
 - Installation of build dependencies is up to the caller.

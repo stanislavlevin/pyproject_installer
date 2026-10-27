@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
-from ...lib import dependency_groups, errors, tomllib
+from ...lib import dependency_groups, tomllib
 from .collector import Collector
 
 
@@ -47,13 +47,13 @@ class Pep735Collector(Collector):
                 groups_data,
                 self.group,
             )
-        except errors.ExceptionGroup as eg:
+        except ExceptionGroup as eg:
             # Packaging's resolver accumulates per-item errors and
             # surfaces them as a single ExceptionGroup, so one bad
             # config may carry several inner exceptions. Re-raise
             # as a fresh group with our prefix on the outer
             # message; inner exceptions are preserved as-is.
-            raise errors.ExceptionGroup(
+            raise ExceptionGroup(
                 f"{self.name}: {eg.message}",
                 eg.exceptions,
             ) from None

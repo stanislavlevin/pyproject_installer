@@ -1,14 +1,8 @@
 import contextlib
-import sys
-
-if sys.version_info >= (3, 11):  # pragma: no cover
-    import tomllib
-else:  # pragma: no cover
-    from .._vendor import tomli as tomllib
+import tomllib
 
 from .._vendor.packaging import (
     dependency_groups,
-    errors,
     markers,
     metadata,
     requirements,
@@ -18,7 +12,6 @@ from .._vendor.packaging import (
 
 __all__ = [
     "dependency_groups",
-    "errors",
     "is_pep508_requirement",
     "markers",
     "metadata",

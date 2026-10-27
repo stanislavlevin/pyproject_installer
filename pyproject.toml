@@ -2,7 +2,7 @@
 name = "pyproject-installer"
 description = "Pyproject installer"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
   {name = "Stanislav Levin", email = "slev@altlinux.org"},
@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: Unix",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -172,7 +171,6 @@ filterwarnings = [
 line-length = 80
 extend-exclude = [
     "src/pyproject_installer/_vendor/*",
-    "backend/_vendor/*",
     ".venv/*",
     ".run_venv/*",
 ]
@@ -209,7 +207,7 @@ parametrize-names-type = "csv"
 
 [tool.mypy]
 strict = true
-python_version = "3.10"
+python_version = "3.11"
 files = ["src", "backend", "tests"]
 exclude = ['_vendor/', '\.venv', '\.run_venv', 'build/', '\.tox/']
 

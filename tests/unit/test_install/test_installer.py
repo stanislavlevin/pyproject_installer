@@ -89,20 +89,15 @@ def sub_execs(tmpdir, request):
 
 
 @pytest.fixture
-def wheel_dir(tmpdir):
+def wheel_dir():
     """
-    Compat make dir in wheel:
+    Make dir in wheel:
     https://docs.python.org/3/library/zipfile.html#zipfile.ZipFile.mkdir
     """
 
     def _wheel_dir(whl, dirname):
         with ZipFile(whl, "a") as z:
-            if sys.version_info >= (3, 11):
-                # pylint: disable-next=no-member,useless-suppression
-                z.mkdir(dirname)
-            else:
-                (dir_path := tmpdir / dirname).mkdir()
-                z.write(dir_path, dirname)
+            z.mkdir(dirname)
 
     return _wheel_dir
 
