@@ -121,7 +121,7 @@ def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
     try:
         requires = build_system["requires"]
     except KeyError:
-        raise KeyError(
+        raise ValueError(
             f"Missing mandatory build-system.requires in {pyproject_file}",
         ) from None
 
