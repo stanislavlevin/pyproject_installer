@@ -90,7 +90,7 @@ class DepsSourcesConfig:
                     config = json.load(f)
                 except json.JSONDecodeError as e:
                     raise DepsSourcesConfigError(
-                        f"Invalid config file: {self.file}",
+                        f"Invalid config file: {self.file}: {e}",
                     ) from e
                 self.validate_config(config)
                 self._config = config
@@ -219,8 +219,8 @@ class DepsSourcesConfig:
         if sources is not None:
             if any((srcname, srctype, srcargs, candidates)):
                 raise ValueError(
-                    "sources is mutually exclusive with "
-                    "single source configuration or candidates",
+                    "'sources' is mutually exclusive with "
+                    "single source configuration or 'candidates'",
                 )
             for src_name, src_type, *src_args in sources:
                 self.add(
@@ -237,7 +237,7 @@ class DepsSourcesConfig:
 
         if srcname is None:
             raise ValueError(
-                "source name is required with --candidates or single source "
+                "'srcname' is required with 'candidates' or single source "
                 "configuration",
             )
 
@@ -245,7 +245,7 @@ class DepsSourcesConfig:
 
         if all((candidates, srctype)):
             raise ValueError(
-                "srctype is mutually exclusive with candidates",
+                "'srctype' is mutually exclusive with 'candidates'",
             )
 
         if candidates is not None:
@@ -262,7 +262,9 @@ class DepsSourcesConfig:
 
             srctype, srcargs = picked
         elif srctype is None:
-            raise ValueError("add requires either srctype or candidates")
+            raise ValueError(
+                "Either 'srctype' or 'candidates' is required for add",
+            )
 
         if not self.file.is_file():
             # allow new file
@@ -372,10 +374,14 @@ class DepsSourcesConfig:
         diff (requires verify=True).
         """
         if verify_excludes and not verify:
-            raise ValueError("verify_excludes must be used with verify")
+            raise ValueError(
+                "'verify_excludes' must be used with 'verify'",
+            )
 
         if verify_ignore_version and not verify:
-            raise ValueError("verify_ignore_version must be used with verify")
+            raise ValueError(
+                "'verify_ignore_version' must be used with 'verify'",
+            )
 
         logger.info("Syncing sources")
 
@@ -466,7 +472,7 @@ class DepsSourcesConfig:
                     if exclude_match is not None:
                         logger.debug(
                             "Excluded %s from %s diff: "
-                            "matches verify-exclude '%s'",
+                            "matches 'verify_excludes' pattern '%s'",
                             req,
                             srcname,
                             exclude_match.pattern,
@@ -552,7 +558,9 @@ class DepsSourcesConfig:
         excludes: tuple[str, ...] = (),
     ) -> None:
         if depformatextra is not None and depformat is None:
-            raise ValueError("depformatextra must be used with depformat")
+            raise ValueError(
+                "'depformatextra' must be used with 'depformat'",
+            )
         logger.info("Evaluating dependencies")
         deps = set()
         nsources = 0
@@ -607,7 +615,8 @@ class DepsSourcesConfig:
                 )
                 if exclude_match is not None:
                     logger.debug(
-                        "Filtered out %s from %s: matches exclude '%s'",
+                        "Filtered out %s from %s: "
+                        "matches 'excludes' pattern '%s'",
                         parsed_req,
                         srcname,
                         exclude_match.pattern,

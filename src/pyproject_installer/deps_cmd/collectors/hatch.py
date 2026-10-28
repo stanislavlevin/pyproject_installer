@@ -54,7 +54,8 @@ class HatchCollector(Collector):
                 deps = data["extra-dependencies"]
             except KeyError:
                 raise ValueError(
-                    f"Hatch dependencies are not configured for {self.hatchenv}"
+                    f"{self.name}: dependencies are not configured for "
+                    f"{self.hatchenv}"
                     f": missing {self.hatchenv}.dependencies and "
                     f"{self.hatchenv}.extra-dependencies",
                 ) from None

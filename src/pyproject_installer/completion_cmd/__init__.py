@@ -15,5 +15,5 @@ def completion_command(shell: str) -> None:
     try:
         emitter = SUPPORTED_SHELLS[shell]
     except KeyError:
-        raise ValueError(f"unsupported shell: {shell!r}") from None
+        raise ValueError(f"Unsupported shell: {shell!r}") from None
     emitter()

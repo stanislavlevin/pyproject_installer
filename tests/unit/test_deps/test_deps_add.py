@@ -787,7 +787,7 @@ def test_config_add_requires_srctype_or_candidates(depsconfig_path):
     action = "add"
     srcname = "foo"
 
-    expected_err = r"^add requires either srctype or candidates"
+    expected_err = r"^Either 'srctype' or 'candidates' is required for add"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcname=srcname)
     assert not depsconfig_path.exists()
@@ -806,7 +806,7 @@ def test_config_add_candidates_with_srctype_errors(
 
     pep735_deps({"test": ['"bar"']})
 
-    expected_err = r"^srctype is mutually exclusive with candidates"
+    expected_err = r"^'srctype' is mutually exclusive with 'candidates'"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
             action,
@@ -840,8 +840,8 @@ def test_config_add_sources_with_srcname_errors(depsconfig_path):
     """sources is mutually exclusive with a positional srcname."""
 
     expected_err = (
-        r"^sources is mutually exclusive with single source configuration "
-        r"or candidates$"
+        r"^'sources' is mutually exclusive with single source "
+        r"configuration or 'candidates'$"
     )
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
@@ -857,8 +857,8 @@ def test_config_add_sources_with_candidates_errors(depsconfig_path):
     """sources is mutually exclusive with candidates."""
 
     expected_err = (
-        r"^sources is mutually exclusive with single source configuration "
-        r"or candidates$"
+        r"^'sources' is mutually exclusive with single source "
+        r"configuration or 'candidates'$"
     )
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
@@ -1063,8 +1063,8 @@ def test_config_add_sources_with_single_source_args_errors(
     """sources cannot be combined with srctype or srcargs either."""
 
     expected_err = (
-        r"^sources is mutually exclusive with single source configuration "
-        r"or candidates$"
+        r"^'sources' is mutually exclusive with single source "
+        r"configuration or 'candidates'$"
     )
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
@@ -1080,7 +1080,7 @@ def test_config_add_requires_srcname_or_sources(depsconfig_path):
     """add() with neither a srcname nor sources is an error."""
 
     expected_err = (
-        r"^source name is required with --candidates or single source "
+        r"^'srcname' is required with 'candidates' or single source "
         r"configuration"
     )
     with pytest.raises(ValueError, match=expected_err):

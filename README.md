@@ -597,7 +597,7 @@ Sync stored requirements to configured sources.
 
 > **`--verify-exclude`**
 >
-> Regex patterns; exclude from diff requirements whose PEP 503-normalized names match one of the patterns. Requires `--verify`. Repeated patterns are collapsed (first occurrence kept).
+> Regex patterns; exclude from diff requirements whose PEP 503-normalized names match one of the patterns. Requires `--verify`. Repeated patterns are collapsed (first occurrence kept). An invalid regex is a usage error (exit code `2`).
 >
 > *Default:* `[]`
 >
@@ -678,7 +678,7 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 
 > **`--exclude`**
 >
-> Regex patterns; exclude requirements whose PEP 503-normalized names match one of these patterns. Repeated patterns are collapsed (first occurrence kept).
+> Regex patterns; exclude requirements whose PEP 503-normalized names match one of these patterns. Repeated patterns are collapsed (first occurrence kept). An invalid regex is a usage error (exit code `2`).
 >
 > *Default:* `[]`
 >

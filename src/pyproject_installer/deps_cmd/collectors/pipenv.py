@@ -32,7 +32,7 @@ class PipenvCollector(Collector):
             deps = pipfile_data[self.category]
         except KeyError:
             raise ValueError(
-                "pipenv dependencies are not configured for category: "
+                f"{self.name}: dependencies are not configured for category: "
                 f"{self.category}",
             ) from None
 

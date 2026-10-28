@@ -125,7 +125,7 @@ def render_rpm_filelist(
     """
     if sys.pycache_prefix is not None:
         raise ValueError(
-            "rpm-filelist requires sys.pycache_prefix to be at its "
+            "'rpm_filelist' requires sys.pycache_prefix to be at its "
             "default (None); PYTHONPYCACHEPREFIX / -X pycache_prefix "
             "would redirect computed .pyc paths and corrupt the "
             "filelist",

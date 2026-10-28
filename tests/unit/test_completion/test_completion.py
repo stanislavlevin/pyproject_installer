@@ -11,7 +11,7 @@ from pyproject_installer.completion_cmd import (
 def test_completion_command_unsupported_shell() -> None:
     """Dispatcher raises ValueError for unknown shells."""
     shell = "nonexistent_shell"
-    with pytest.raises(ValueError, match=f"unsupported shell: '{shell}'"):
+    with pytest.raises(ValueError, match=f"Unsupported shell: '{shell}'"):
         completion_command(shell)
 
 

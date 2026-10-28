@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import textwrap
+import tomllib
 
 import pytest
 
@@ -12,9 +13,18 @@ from pyproject_installer.lib.build_backend import BACKEND_CALLER
 
 
 def test_pyproject_invalid_toml(pyproject, wheeldir):
-    pyproject_path = pyproject("content\n")
+    """The error of an invalid pyproject.toml includes the parser's message"""
+    content = "content\n"
+    pyproject_path = pyproject(content)
+    # get the parser's message from the parser itself instead of copying
+    # its text here: the wording belongs to tomllib and may change
+    with pytest.raises(tomllib.TOMLDecodeError) as parser_exc:
+        tomllib.loads(content)
 
-    with pytest.raises(ValueError, match=re.escape("Invalid pyproject.toml")):
+    expected_err = (
+        f"Invalid {pyproject_path / 'pyproject.toml'}: {parser_exc.value}"
+    )
+    with pytest.raises(ValueError, match=f"^{re.escape(expected_err)}$"):
         build_wheel(pyproject_path, outdir=wheeldir)
 
 
@@ -43,7 +53,10 @@ def test_pyproject_invalid_requires(requires, pyproject, wheeldir):
             """,
         ).format(requires),
     )
-    with pytest.raises(TypeError, match="requires should be a list of strings"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape("Invalid build-system.requires: should be a list of"),
+    ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
 
@@ -62,7 +75,12 @@ def test_pyproject_invalid_build_backend(build_backend, pyproject, wheeldir):
             """,
         ).format(build_backend),
     )
-    with pytest.raises(TypeError, match="build-backend should be a string"):
+    with pytest.raises(
+        TypeError,
+        match=re.escape(
+            "Invalid build-system.build-backend: should be a string",
+        ),
+    ):
         build_wheel(pyproject_path, outdir=wheeldir)
 
 
@@ -84,7 +102,7 @@ def test_pyproject_invalid_backend_path(backend_path, pyproject, wheeldir):
     )
     with pytest.raises(
         TypeError,
-        match="backend-path should be a list of strings",
+        match=re.escape("Invalid build-system.backend-path: should be a list"),
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
 

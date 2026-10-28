@@ -19,4 +19,6 @@ Builds/installs PEP 517/518 projects in network-isolated envs (RPM packaging). R
 - Install drops `RECORD` (PEP 627), no bytecompilation — by design.
 - pytest `filterwarnings = ["error"]` — warnings are errors.
 - Logging → **stderr** only; `stdout` is reserved for a command's machine-readable data (`deps eval`/`show`/`sync --verify`). Never `print()`/log diagnostics to stdout.
+- Logs and errors start with a capital letter; usage errors (`parser.error`, `ArgumentTypeError`) start lowercase, like argparse. Exception: collector errors start with `{collector}: ` on purpose.
+- Names in messages: library code quotes argument/option names (`'srctype' is mutually exclusive with 'candidates'`) and never uses CLI flags; usage errors use the flags unquoted (`--depformatextra option must be used with --depformat`), positional names unquoted (`srcname`). Paths and pyproject.toml field paths (`build-system.requires`) stay unquoted.
 - New features need tests + docs; new CLI opts → `README.md` with `name`/`description`/`example`.

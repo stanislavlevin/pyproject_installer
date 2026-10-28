@@ -159,7 +159,7 @@ def test_extract_default_members_uses_memberlist(
     reason="Requires unprivileged user",
 )
 def test_unaccessible_destdir(wheel):
-    with pytest.raises(ValueError, match="Unable to create path for destdir"):
+    with pytest.raises(ValueError, match="Unable to create path for 'destdir'"):
         install_wheel(wheel(), destdir=Path("/unaccessible/dest/dir"))
 
 
@@ -1060,7 +1060,7 @@ def test_rpm_filelist_sys_pycache_prefix(
         "pyproject_installer.install_cmd._install.sys.pycache_prefix",
         "/new_prefix",
     )
-    error_pattern = "rpm-filelist requires sys.pycache_prefix to be at its"
+    error_pattern = "'rpm_filelist' requires sys.pycache_prefix to be at its"
     with pytest.raises(ValueError, match=error_pattern):
         install_wheel(
             wheel(contents=contents),
@@ -1304,7 +1304,7 @@ def test_force_site_invalid_value_rejected(
 
     with pytest.raises(
         ValueError,
-        match=r"force_site must be 'purelib' or 'platlib'",
+        match=r"'force_site' must be 'purelib' or 'platlib'",
     ):
         install_wheel(
             wheel(contents=contents),
