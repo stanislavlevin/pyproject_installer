@@ -22,7 +22,7 @@ def test_pyproject_missing_requires(pyproject, wheeldir):
     pyproject_path = pyproject("[build-system]\n")
 
     with pytest.raises(
-        KeyError,
+        ValueError,
         match=re.escape("Missing mandatory build-system.requires"),
     ):
         build_wheel(pyproject_path, outdir=wheeldir)
