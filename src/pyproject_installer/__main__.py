@@ -16,6 +16,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -90,7 +91,9 @@ def deps(
             and args.depformatextra is not None
             and args.depformat is None
         ):
-            parser.error("depformatextra option must be used with depformat")
+            parser.error(
+                "--depformatextra option must be used with --depformat",
+            )
 
         if hasattr(args, "candidates"):
             if args.sources is not None:
@@ -286,6 +289,17 @@ class DeduplicatingAction(argparse.Action):
         setattr(namespace, self.dest, list(dict.fromkeys(values)))
 
 
+def parse_regex(value: str) -> str:
+    """Check that a regex pattern compiles; a bad one is a usage error."""
+    try:
+        re.compile(value)
+    except re.error as e:
+        raise argparse.ArgumentTypeError(
+            f"invalid regex {value!r}: {e}",
+        ) from None
+    return value
+
+
 def parse_candidates(value: str) -> tuple[tuple[str, ...], ...]:
     """Parse a ;-separated --candidates list into (type, *args) tuples.
 
@@ -442,6 +456,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
             destname,
             "--verify-exclude",
             dest=destname,
+            type=parse_regex,
             nargs="+",
             default=[],
             action=DeduplicatingAction,
@@ -564,6 +579,7 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         destname,
         "--exclude",
         dest=destname,
+        type=parse_regex,
         nargs="+",
         default=[],
         action=DeduplicatingAction,
@@ -1005,7 +1021,7 @@ def main(
             os.chdir(args.cwd)
         except OSError as e:
             parser.error(f"-C: {e}")
-        logger.debug("changed working directory to %s", args.cwd)
+        logger.debug("Changed working directory to %s", args.cwd)
 
     try:
         args.main(args, parser)

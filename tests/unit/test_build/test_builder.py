@@ -222,7 +222,7 @@ def test_uncreatable_outdir(pyproject):
     outdir = Path("/uncreatable_dir")
     with pytest.raises(
         ValueError,
-        match="Unable to create path for outdir: /uncreatable_dir",
+        match="Unable to create path for 'outdir': /uncreatable_dir",
     ):
         build_wheel(pyproject_path, outdir=outdir)
 
@@ -404,7 +404,7 @@ def test_metadata_uncreatable_outdir(pyproject_metadata):
     outdir = Path("/uncreatable_dir")
     with pytest.raises(
         ValueError,
-        match="Unable to create path for outdir: /uncreatable_dir",
+        match="Unable to create path for 'outdir': /uncreatable_dir",
     ):
         build_metadata(pyproject_path, outdir=outdir)
 

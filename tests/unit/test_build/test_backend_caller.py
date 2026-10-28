@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import subprocess
 import sys
 import textwrap
@@ -380,7 +381,9 @@ def test_in_tree_backend_not_used(build_backend, build_backend_path):
     be = build_backend("be")
     with pytest.raises(
         ValueError,
-        match="backend code must be loaded from one of backend-path",
+        match=re.escape(
+            "Backend code must be loaded from one of build-system.backend-path",
+        ),
     ):
         backend_caller.main(
             [be.name, "build_wheel", "--backend-path", build_backend_path],

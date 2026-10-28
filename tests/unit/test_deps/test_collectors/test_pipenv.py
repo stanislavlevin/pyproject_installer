@@ -100,7 +100,7 @@ def test_pipenv_collector_missing_category(pipenv_deps, depsconfig):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     expected_err = re.escape(
-        f"pipenv dependencies are not configured for category: {category}",
+        f"pipenv: dependencies are not configured for category: {category}",
     )
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):

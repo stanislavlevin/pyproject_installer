@@ -83,7 +83,7 @@ def parse_version_from_file(version_file: str | Path) -> str:
     expected format: version = "version_value"
     or annotated:    version: str = "version_value"
     """
-    err_msg = f"missing version in: {version_file}"
+    err_msg = f"Missing version in: {version_file}"
 
     node = ast.parse(Path(version_file).read_text(encoding="utf-8"))
 
@@ -143,12 +143,13 @@ def parse_pep621_metadata(
 
     if "version" in metadata and dynamic and "version" in dynamic:
         raise ValueError(
-            "version cannot be specified as static and dynamic simultaneously",
+            "Version cannot be specified as static and dynamic "
+            "simultaneously",
         )
 
     if "version" in metadata and backend_config["version_file"] is not None:
         raise ValueError(
-            "version cannot be specified as static and version_file "
+            "Version cannot be specified as static and 'version_file' "
             "simultaneously",
         )
 
@@ -228,7 +229,7 @@ class CoreMetadata(Metadata):
         else:
             if license_data.keys() not in ({"file"}, {"text"}):
                 raise ValueError(
-                    "keys of license field should be either file or text, "
+                    "Keys of license field should be either file or text, "
                     f"given: {', '.join(license_data.keys())}",
                 )
 
@@ -293,7 +294,7 @@ class CoreMetadata(Metadata):
                     {"text", "content-type"},
                 ):
                     raise ValueError(
-                        "keys of readme field should be (file or text) "
+                        "Keys of readme field should be (file or text) "
                         f"and content-type, given: {', '.join(readme.keys())}",
                     )
 
@@ -312,7 +313,8 @@ class CoreMetadata(Metadata):
 
             else:
                 raise TypeError(
-                    f"readme should be string or dictionary, given: {readme!r}",
+                    "Invalid readme: should be a string or dictionary, "
+                    f"given: {readme!r}",
                 )
 
     def _parse_authors(

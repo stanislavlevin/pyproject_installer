@@ -142,7 +142,7 @@ def test_pdm_collector_missing_deps(pdm_deps, depsconfig):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     expected_err = re.escape(
-        f"Pdm dependencies are not configured for group: {group}",
+        f"pdm: dependencies are not configured for group: {group}",
     )
     expected_err = f"^{expected_err}$"
     with pytest.raises(ValueError, match=expected_err):

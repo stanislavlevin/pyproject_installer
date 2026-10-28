@@ -97,8 +97,8 @@ def backend_object(backend: str, backend_path: list[str] | None = None) -> Any:
                 break
         else:
             raise ValueError(
-                "backend code must be loaded from one of backend-path, "
-                f"but loaded from {actual_bep}",
+                "Backend code must be loaded from one of "
+                f"build-system.backend-path, but loaded from {actual_bep}",
             )
 
     # arbitrary depth of attrs

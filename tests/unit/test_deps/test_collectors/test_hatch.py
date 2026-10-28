@@ -282,7 +282,7 @@ def test_hatch_collector_missing_deps(config, hatch_deps, depsconfig):
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
     expected_err = re.escape(
-        f"Hatch dependencies are not configured for {hatchenv}: "
+        f"hatch: dependencies are not configured for {hatchenv}: "
         f"missing {hatchenv}.dependencies and {hatchenv}.extra-dependencies",
     )
     expected_err = f"^{expected_err}$"

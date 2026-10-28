@@ -55,7 +55,7 @@ def build(
         outdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for outdir: {outdir}",
+            f"Unable to create path for 'outdir': {outdir}",
         ) from None
     outdir = outdir.resolve(strict=True)
 
@@ -147,7 +147,7 @@ def build_metadata(
         outdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for outdir: {outdir}",
+            f"Unable to create path for 'outdir': {outdir}",
         ) from None
     outdir = outdir.resolve(strict=True)
 

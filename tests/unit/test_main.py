@@ -1896,6 +1896,48 @@ def test_deps_cli_sync_verify_excludes_without_verify(capsys):
     assert expected_msg in captured.err
 
 
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_eval_invalid_exclude_regex(capsys):
+    """An invalid --exclude regex of deps eval is a usage error"""
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(["deps", "eval", "--exclude", "("])
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    assert not capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_sync_invalid_verify_exclude_regex(capsys):
+    """An invalid --verify-exclude regex of deps sync is a usage error"""
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(
+            ["deps", "sync", "--verify", "--verify-exclude", "("],
+        )
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    assert not capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_add_invalid_verify_exclude_regex(capsys):
+    """An invalid --verify-exclude regex of deps add is a usage error"""
+    deps_args = [
+        "deps",
+        "add",
+        "foo",
+        "metadata",
+        "--sync",
+        "--verify",
+        "--verify-exclude",
+        "(",
+    ]
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+    assert not capsys.readouterr().out
+
+
 def test_deps_cli_sync_verify_ignore_version(mock_deps_command):
     """Run deps sync with verify and ignore-version
 
@@ -2100,7 +2142,7 @@ def test_deps_cli_eval_depformatextra_without_depformat(capsys):
 
     captured = capsys.readouterr()
     assert not captured.out
-    expected_msg = "depformatextra option must be used with depformat"
+    expected_msg = "--depformatextra option must be used with --depformat"
     assert expected_msg in captured.err
 
 

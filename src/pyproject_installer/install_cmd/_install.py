@@ -137,7 +137,7 @@ def validate_destdir(destdir: Path) -> Path:
         destdir.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise ValueError(
-            f"Unable to create path for destdir: {destdir}",
+            f"Unable to create path for 'destdir': {destdir}",
         ) from None
 
     return destdir.resolve(strict=True)
@@ -186,7 +186,7 @@ def install_wheel(
 
     if force_site is not None and force_site not in ("purelib", "platlib"):
         raise ValueError(
-            "force_site must be 'purelib' or 'platlib', "
+            "'force_site' must be 'purelib' or 'platlib', "
             f"got: {force_site!r}",
         )
 

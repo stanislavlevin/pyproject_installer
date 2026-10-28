@@ -92,6 +92,22 @@ def test_config_read_invalid(config_data, depsconfig_path):
         deps_command(action, depsconfig_path)
 
 
+def test_config_read_invalid_json_reason(depsconfig_path):
+    """The error of an invalid config includes the parser's message"""
+    content = "{"
+    depsconfig_path.write_text(content, encoding="utf-8")
+    # get the parser's message from the parser itself instead of copying
+    # its text here: the wording belongs to json and may change
+    with pytest.raises(json.JSONDecodeError) as parser_exc:
+        json.loads(content)
+
+    expected_err = re.escape(
+        f"Invalid config file: {depsconfig_path}: {parser_exc.value}",
+    )
+    with pytest.raises(DepsSourcesConfigError, match=f"^{expected_err}$"):
+        deps_command("show", depsconfig_path)
+
+
 def test_config_delete(depsconfig):
     """Delete source"""
 
@@ -566,7 +582,9 @@ def test_config_sync_verify_exclude_without_verify(depsconfig, capsys):
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    expected_err = re.escape("verify_excludes must be used with verify")
+    expected_err = re.escape(
+        "'verify_excludes' must be used with 'verify'",
+    )
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
@@ -783,7 +801,9 @@ def test_config_sync_verify_ignore_version_without_verify(depsconfig, capsys):
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    expected_err = re.escape("verify_ignore_version must be used with verify")
+    expected_err = re.escape(
+        "'verify_ignore_version' must be used with 'verify'",
+    )
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(
@@ -1009,7 +1029,9 @@ def test_config_eval_formatting_depformatextra_only(depsconfig, capsys):
     input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
     depsconfig_path = depsconfig(json.dumps(input_conf))
 
-    expected_err = re.escape("depformatextra must be used with depformat")
+    expected_err = re.escape(
+        "'depformatextra' must be used with 'depformat'",
+    )
     expected_err = f"^{expected_err}"
     with pytest.raises(ValueError, match=expected_err):
         deps_command(action, depsconfig_path, srcnames=[], depformatextra="foo")

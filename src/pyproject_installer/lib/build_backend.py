@@ -110,8 +110,8 @@ def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
     with pyproject_file.open("rb") as f:
         try:
             pyproject_data = tomllib.load(f)
-        except tomllib.TOMLDecodeError:
-            raise ValueError("Invalid pyproject.toml") from None
+        except tomllib.TOMLDecodeError as e:
+            raise ValueError(f"Invalid {pyproject_file}: {e}") from e
 
     build_system = pyproject_data.get("build-system")
     if build_system is None:
@@ -128,13 +128,15 @@ def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
     # requires: list of strings
     if not isinstance(requires, list):
         raise TypeError(
-            f"requires should be a list of strings, given: {requires!r}",
+            "Invalid build-system.requires: should be a list of strings, "
+            f"given: {requires!r}",
         )
 
     for req in requires:
         if not isinstance(req, str):
             raise TypeError(
-                f"requires should be a list of strings, given: {requires!r}",
+                "Invalid build-system.requires: should be a list of "
+                f"strings, given: {requires!r}",
             )
 
     try:
@@ -152,7 +154,8 @@ def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
     # build-backend: a string naming a Python object
     if not isinstance(build_backend, str):
         raise TypeError(
-            f"build-backend should be a string, given: {build_backend!r}",
+            "Invalid build-system.build-backend: should be a string, "
+            f"given: {build_backend!r}",
         )
 
     bs: BuildSystemType = {
@@ -180,15 +183,15 @@ def parse_build_system_spec(srcdir: Path) -> BuildSystemType:
         # backend-path: list of directories
         if not isinstance(backend_path, list):
             raise TypeError(
-                "backend-path should be a list of strings, "
-                f"given: {backend_path!r}",
+                "Invalid build-system.backend-path: should be a list of "
+                f"strings, given: {backend_path!r}",
             )
 
         for path in backend_path:
             if not isinstance(path, str):
                 raise TypeError(
-                    "backend-path should be a list of strings, "
-                    f"given: {backend_path!r}",
+                    "Invalid build-system.backend-path: should be a list "
+                    f"of strings, given: {backend_path!r}",
                 )
             path_p = Path(path)
             if path_p.is_absolute():

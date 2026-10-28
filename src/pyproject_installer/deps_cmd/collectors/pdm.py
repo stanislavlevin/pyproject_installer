@@ -38,7 +38,8 @@ class PdmCollector(Collector):
             deps = deps_data[self.group]
         except KeyError:
             raise ValueError(
-                f"Pdm dependencies are not configured for group: {self.group}",
+                f"{self.name}: dependencies are not configured for group: "
+                f"{self.group}",
             ) from None
 
         yield from filter(is_pep508_requirement, map(str.strip, deps))
