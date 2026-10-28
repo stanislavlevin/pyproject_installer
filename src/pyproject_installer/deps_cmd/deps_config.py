@@ -169,7 +169,7 @@ class DepsSourcesConfig:
                     e,
                 )
                 continue
-            logger.debug(
+            logger.info(
                 "Picked candidate source: %s",
                 " ".join((srctype, *srcargs)),
             )
