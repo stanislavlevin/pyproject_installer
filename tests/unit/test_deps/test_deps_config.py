@@ -1042,6 +1042,151 @@ def test_config_eval_formatting_depformatextra_only(depsconfig, capsys):
 
 
 @pytest.mark.parametrize(
+    "deps,expected",
+    (
+        (["foo>=1.2"], ["foo >= 1.2"]),
+        (["foo>1.2"], ["foo > 1.2"]),
+        (["foo~=1.4.5"], ["foo >= 1.4.5"]),
+        (["foo==1.4.*"], ["foo >= 1.4"]),
+        (["foo==1.*"], ["foo >= 1"]),
+        (["foo==1.4"], ["foo"]),
+        (["foo===1.4"], ["foo"]),
+        (["foo<2,!=1.5"], ["foo"]),
+        (["foo"], ["foo"]),
+        (["foo>=1.2,>=1.5"], ["foo >= 1.5"]),
+        (["foo>=1.3,>1.3"], ["foo > 1.3"]),
+        # '>V' excludes the post-releases of V
+        (["foo>1.3,>=1.3.post1"], ["foo > 1.3"]),
+        # limits that allow the same versions give one output
+        (["foo>=1.0.0,==1.0.*"], ["foo >= 1"]),
+        (["Foo_Bar>=1.2", "foo-bar>=1.5"], ["foo-bar >= 1.5"]),
+        # a requirement filtered out by its marker does not fold
+        (["foo>=2; python_version < '3'", "foo>=1.2"], ["foo >= 1.2"]),
+        (["foo>=01.02.0"], ["foo >= 1.2"]),
+        # trailing zeros dropped: RPM treats 2.0 as older than 2.0.0
+        (["foo>=2.0.0"], ["foo >= 2"]),
+        (["foo~=1.4.0"], ["foo >= 1.4"]),
+        (["foo>2.0.0"], ["foo > 2"]),
+        (["foo>=0.0"], ["foo >= 0"]),
+        (["foo>=1.0.1"], ["foo >= 1.0.1"]),
+        (["foo>=1!2.0"], ["foo >= 2"]),
+        (["foo>=0.1.0a39"], ["foo >= 0.1"]),
+        (["foo>=2.9.0.post1"], ["foo >= 2.9"]),
+        (["foo>=1.0.dev2"], ["foo >= 1"]),
+        (["foo>1!2.0"], ["foo > 2"]),
+        # '>' on a version that lost a pre, post or dev part becomes '>='
+        (["foo>1.3a1"], ["foo >= 1.3"]),
+        (["foo>1.3.post1"], ["foo >= 1.3"]),
+        (["foo>1.3.dev1"], ["foo >= 1.3"]),
+    ),
+)
+def test_config_eval_rpmlowver(deps, expected, depsconfig, capsys):
+    """Eval source with $rpmlowver"""
+    input_conf = {"sources": {"foo": {"srctype": "metadata", "deps": deps}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$rpmlowver",
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out.splitlines() == expected
+
+
+def test_config_eval_rpmlowver_extras(depsconfig, capsys):
+    """$rpmlowver: every extra line gets the limit"""
+    input_conf = {
+        "sources": {"foo": {"srctype": "metadata", "deps": ["foo[a,b]>=1.2"]}},
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$fextra$rpmlowver",
+        depformatextra="+$extra",
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "foo+a >= 1.2\nfoo+b >= 1.2\n"
+
+
+def test_config_eval_rpmlowver_fold_with_extras(depsconfig, capsys):
+    """$rpmlowver: requirements with and without extras fold together"""
+    input_conf = {
+        "sources": {
+            "foo": {"srctype": "metadata", "deps": ["foo>=1.2", "foo[a]>=1.5"]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$fextra$rpmlowver",
+        depformatextra="+$extra",
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "foo >= 1.5\nfoo+a >= 1.5\n"
+
+
+def test_config_eval_rpmlowver_fold_across_sources(depsconfig, capsys):
+    """$rpmlowver: requirements of different sources fold together"""
+    input_conf = {
+        "sources": {
+            "build": {"srctype": "metadata", "deps": ["foo>=1.2"]},
+            "run": {"srctype": "metadata", "deps": ["foo"]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$rpmlowver",
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "foo >= 1.2\n"
+
+
+def test_config_eval_rpmlowver_design_example(depsconfig, capsys):
+    """$rpmlowver: the example of the design"""
+    input_conf = {
+        "sources": {
+            "build": {
+                "srctype": "metadata",
+                "deps": ["foo[a,b]>=1.2.0,>1.3a1,!=1.5,<2", "bar"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$fextra$rpmlowver",
+        depformatextra="+$nextra",
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "bar\nfoo+a >= 1.3\nfoo+b >= 1.3\n"
+
+
+@pytest.mark.parametrize(
     "data",
     (
         (["foo"], ["foo"]),
