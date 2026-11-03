@@ -547,7 +547,10 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
             "Supported substitutions: "
             "$name - project name as written; "
             "$nname - project name, PEP503 normalized; "
-            "$fextra - project's extras (expanded first with --depformatextra)."
+            "$fextra - project's extras (expanded first with "
+            "--depformatextra); "
+            "$rpmlowver - lower version limit converted for RPM, with a "
+            "leading space (e.g. ' >= 1.3'), or '' without one."
         ),
     )
     destname = "depformatextra"

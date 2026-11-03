@@ -3,7 +3,7 @@ import logging
 import re
 import sys
 from collections import deque
-from collections.abc import Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping
 from copy import deepcopy
 from pathlib import Path
 from string import Template
@@ -14,7 +14,13 @@ from ..errors import (
     DepsSourcesConfigError,
     DepsUnsyncedError,
 )
-from ..lib import is_pep508_requirement, requirements, specifiers
+from ..lib import (
+    is_pep508_requirement,
+    requirements,
+    specifiers,
+    utils,
+    version,
+)
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
 from .collectors.collector import Collector
@@ -22,6 +28,51 @@ from .collectors.collector import Collector
 DEFAULT_CONFIG_NAME = "pyproject_deps.json"
 
 logger = logging.getLogger(__name__)
+
+
+def rpm_lower_limit(version_specs: specifiers.SpecifierSet) -> str:
+    """
+    Fold the lower limits of PEP 440 specifiers into the strictest one and
+    convert it for RPM, e.g. '>= 1.3'; '' if there is no lower limit.
+
+    RPM compares versions differently from PEP 440 (it treats 1.0rc1 and
+    1.0.0 as newer than 1.0), so only the release numbers without trailing
+    zeros are kept and the printed limit never rejects a version PEP 440
+    accepts.
+    """
+    picked: specifiers.Specifier | None = None
+    for spec in version_specs:
+        if spec.operator in (">=", ">"):
+            limit = spec
+        elif spec.operator == "~=":
+            limit = specifiers.Specifier(f">={spec.version}")
+        elif spec.operator == "==" and spec.version.endswith(".*"):
+            limit = specifiers.Specifier(f">={spec.version[:-2]}")
+        else:
+            continue
+
+        # keep the strictest limit: the one whose allowed versions are
+        # inside the allowed versions of the other (>=1.5 for >=1.2,>=1.5)
+        if picked is None or specifiers.SpecifierSet([limit]).is_subset(
+            specifiers.SpecifierSet([picked]),
+        ):
+            picked = limit
+
+    if picked is None:
+        return ""
+
+    picked_version = version.Version(picked.version)
+    if (operator := picked.operator) == ">" and (
+        picked_version.is_prerelease or picked_version.is_postrelease
+    ):
+        # > 1.3 would reject 1.3, which >1.3a1 accepts
+        operator = ">="
+
+    release = ".".join(str(x) for x in picked_version.release)
+    # PEP 440 treats 2.0 and 2.0.0 as equal, RPM treats 2.0 as older;
+    # >= 2 accepts both
+    release = utils.canonicalize_version(release, strip_trailing_zero=True)
+    return f"{operator} {release}"
 
 
 class DepsConfigSourceBaseType(TypedDict):
@@ -515,38 +566,63 @@ class DepsSourcesConfig:
             total - updated,
         )
 
-    def depformat(
+    def depsformat(
         self,
-        req: requirements.Requirement,
+        kept_reqs: Collection[tuple[str, requirements.Requirement]],
+        *,
         depformat: str,
         depformatextra: str | None,
     ) -> Iterator[str]:
+        """
+        Format requirements.
+
+        'kept_reqs' are the requirements of all evaluated sources, as
+        (normalized name, requirement) pairs; $rpmlowver folds the lower
+        limits of all requirements with the same name into one.
+        """
         template = Template(depformat)
         identifiers = template.get_identifiers()
 
-        depsubsts = {
-            "name": req.name,
-            "nname": pep503_normalized_name(req.name),
-            "fextra": "",
-        }
-
-        if (
-            depformatextra is not None
-            and "fextra" in identifiers
-            and req.extras
-        ):
-            extratemplate = Template(depformatextra)
-            for extra in req.extras:
-                yield template.safe_substitute(
-                    depsubsts,
-                    fextra=extratemplate.safe_substitute(
-                        extra=extra,
-                        # PEP685 normalizes an extra with the PEP503 rules
-                        nextra=pep503_normalized_name(extra),
+        rpmlowvers = {}
+        if "rpmlowver" in identifiers:
+            rpmlowvers = {
+                name: rpm_lower_limit(
+                    specifiers.SpecifierSet(
+                        spec
+                        for other_name, req in kept_reqs
+                        if other_name == name
+                        for spec in req.specifier
                     ),
                 )
-        else:
-            yield template.safe_substitute(depsubsts)
+                for name in {name for name, _ in kept_reqs}
+            }
+
+        for normalized_name, req in kept_reqs:
+            rpmlowver = rpmlowvers.get(normalized_name, "")
+            depsubsts = {
+                "name": req.name,
+                "nname": normalized_name,
+                "fextra": "",
+                "rpmlowver": f" {rpmlowver}" if rpmlowver else "",
+            }
+
+            if (
+                depformatextra is not None
+                and "fextra" in identifiers
+                and req.extras
+            ):
+                extratemplate = Template(depformatextra)
+                for extra in req.extras:
+                    yield template.safe_substitute(
+                        depsubsts,
+                        fextra=extratemplate.safe_substitute(
+                            extra=extra,
+                            # PEP685 normalizes an extra with the PEP503 rules
+                            nextra=pep503_normalized_name(extra),
+                        ),
+                    )
+            else:
+                yield template.safe_substitute(depsubsts)
 
     def eval(
         self,
@@ -562,9 +638,9 @@ class DepsSourcesConfig:
                 "'depformatextra' must be used with 'depformat'",
             )
         logger.info("Evaluating dependencies")
-        deps = set()
         nsources = 0
         exclude_regexes = {re.compile(x) for x in excludes}
+        kept_reqs: set[tuple[str, requirements.Requirement]] = set()
 
         for srcname, source in self.iter_sources(srcnames):
             nsources += 1
@@ -623,19 +699,19 @@ class DepsSourcesConfig:
                     )
                     continue
 
-                # formatting
-                if depformat is not None:
-                    deps.update(
-                        set(
-                            self.depformat(
-                                parsed_req,
-                                depformat,
-                                depformatextra,
-                            ),
-                        ),
-                    )
-                else:
-                    deps.add(str(parsed_req))
+                kept_reqs.add((normalized_name, parsed_req))
+
+        # formatting
+        if depformat is None:
+            deps = {str(parsed_req) for _, parsed_req in kept_reqs}
+        else:
+            deps = set(
+                self.depsformat(
+                    kept_reqs,
+                    depformat=depformat,
+                    depformatextra=depformatextra,
+                ),
+            )
 
         for dep in sorted(deps):
             sys.stdout.write(dep + "\n")

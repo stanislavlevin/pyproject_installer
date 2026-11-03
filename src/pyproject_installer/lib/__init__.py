@@ -8,6 +8,7 @@ from .._vendor.packaging import (
     requirements,
     specifiers,
     utils,
+    version,
 )
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "specifiers",
     "tomllib",
     "utils",
+    "version",
 ]
 
 

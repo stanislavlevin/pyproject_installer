@@ -632,6 +632,7 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 > - `$name` - project name as written
 > - `$nname` - project name, PEP 503 normalized
 > - `$fextra` - project's extras (expanded first with `--depformatextra`)
+> - `$rpmlowver` - lower version limit converted for RPM, with a leading space (e.g. ` >= 3.2`), or empty without one
 >
 > *Default:* PEP 508 format
 >
@@ -645,6 +646,17 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 > ```
 >
 > Without `--depformatextra` the extras of `project-bar[Extra_Baz]` are dropped: `$fextra` is not in the format and one name is printed per dependency.
+>
+> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nname$rpmlowver'`
+>
+> *Example output* - the same `build` source:
+>
+> ```
+> python3-project-bar
+> python3-project-foo >= 3.2
+> ```
+>
+> `$rpmlowver` prints only the lower limit. All lower limits of one dependency from all evaluated sources are folded into the strictest one. Only the release numbers are kept, and trailing zeros are dropped (`>=1.0rc1` gives `>= 1`, `>=2.9.0.post1` gives `>= 2.9`), so RPM, which compares versions differently from PEP 440, never rejects a version PEP 440 accepts. `==` and `===` give no limit: an exact pin usually names the version upstream tested with, not the oldest one that works.
 
 > **`--depformatextra`**
 >
