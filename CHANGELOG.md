@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 History for releases prior to the first entry below is not captured here —
 see git tags and commit history for earlier changes.
 
+## [0.7.1] - 2026-11-05
+
+### Added
+- feat(deps): add $rpmlowver to --depformat ([#191](https://github.com/stanislavlevin/pyproject_installer/issues/191))
+- feat(cli): report errors without a traceback ([#189](https://github.com/stanislavlevin/pyproject_installer/issues/189))
+
+### Changed
+- maint(lib): raise ValueError for missing build-system.requires ([#189](https://github.com/stanislavlevin/pyproject_installer/issues/189))
+
+### Fixed
+- fix(deps): log the picked candidate source at INFO ([#188](https://github.com/stanislavlevin/pyproject_installer/issues/188))
+- fix: make error messages clearer ([#189](https://github.com/stanislavlevin/pyproject_installer/issues/189))
+
 ## [0.7.0] - 2026-10-27
 
 ### Changed
