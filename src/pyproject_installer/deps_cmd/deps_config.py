@@ -572,6 +572,7 @@ class DepsSourcesConfig:
         *,
         depformat: str,
         depformatextra: str | None,
+        ignore_rpmlowvers: Collection[str] = (),
     ) -> Iterator[str]:
         """
         Format requirements.
@@ -579,6 +580,8 @@ class DepsSourcesConfig:
         'kept_reqs' are the requirements of all evaluated sources, as
         (normalized name, requirement) pairs; $rpmlowver folds the lower
         limits of all requirements with the same name into one.
+        'ignore_rpmlowvers' are PEP503-normalized names whose $rpmlowver
+        substitution is empty.
         """
         template = Template(depformat)
         identifiers = template.get_identifiers()
@@ -595,6 +598,7 @@ class DepsSourcesConfig:
                     ),
                 )
                 for name in {name for name, _ in kept_reqs}
+                if name not in ignore_rpmlowvers
             }
 
         for normalized_name, req in kept_reqs:
@@ -632,10 +636,15 @@ class DepsSourcesConfig:
         depformatextra: str | None = None,
         extra: str | None = None,
         excludes: tuple[str, ...] = (),
+        ignore_rpmlowvers: tuple[str, ...] = (),
     ) -> None:
         if depformatextra is not None and depformat is None:
             raise ValueError(
                 "'depformatextra' must be used with 'depformat'",
+            )
+        if ignore_rpmlowvers and depformat is None:
+            raise ValueError(
+                "'ignore_rpmlowvers' must be used with 'depformat'",
             )
         logger.info("Evaluating dependencies")
         nsources = 0
@@ -710,6 +719,9 @@ class DepsSourcesConfig:
                     kept_reqs,
                     depformat=depformat,
                     depformatextra=depformatextra,
+                    ignore_rpmlowvers={
+                        pep503_normalized_name(x) for x in ignore_rpmlowvers
+                    },
                 ),
             )
 

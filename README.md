@@ -696,6 +696,21 @@ Evaluate stored requirements according to PEP 508 in current Python environment 
 >
 > *Example:* `python -m pyproject_installer deps eval build --exclude types- pytest-cov`
 
+> **`--ignore-rpmlowver`**
+>
+> Project names; the `$rpmlowver` substitution is empty for these requirements, so they are printed without a lower limit. Names are compared PEP 503-normalized and must match exactly (`foo` does not match `foo-bar`). Repeated names are collapsed (first occurrence kept). An invalid project name is a usage error (exit code `2`). Requires `--depformat`.
+>
+> *Default:* `[]`
+>
+> *Example:* `python -m pyproject_installer deps eval build --depformat='python3-$nname$rpmlowver' --ignore-rpmlowver project-foo`
+>
+> *Example output* - the `build` source of the `--depformat` example:
+>
+> ```
+> python3-project-bar
+> python3-project-foo
+> ```
+
 See `python -m pyproject_installer deps eval --help` for full options.
 
 #### delete
