@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 History for releases prior to the first entry below is not captured here —
 see git tags and commit history for earlier changes.
 
+## [0.7.2] - 2026-11-06
+
+### Added
+- feat(deps): add --ignore-rpmlowver to deps eval ([#194](https://github.com/stanislavlevin/pyproject_installer/issues/194))
+
 ## [0.7.1] - 2026-11-05
 
 ### Added
