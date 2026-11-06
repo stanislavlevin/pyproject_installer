@@ -85,3 +85,32 @@ So:
 - `>` on a version that lost a pre, post or dev part becomes `>=`:
   `>1.3a1` -> `>= 1.3`
 - the printed limit never has an RPM epoch (`Epoch:`); not supported
+
+### Turning a limit off
+A lower limit can be wrong for a distro: upstream raises it without
+need, or the distro's version of the dependency is numbered
+differently. `--ignore-rpmlowver NAME...` makes the `$rpmlowver`
+substitution empty for the named requirements:
+
+- exact project names, not patterns; both sides are compared
+  PEP 503-normalized (`Foo_Bar` matches `foo-bar`, `foo` does not)
+- the name gets no limit from any evaluated source
+- the requirement is still printed; `--exclude` drops it instead and
+  wins when a name is in both
+- requires `--depformat`; without the `$rpmlowver` substitution in the
+  format it changes nothing
+
+```
+python -m pyproject_installer deps eval build \
+    --depformat='python3-$nname$fextra$rpmlowver' \
+    --depformatextra='+$nextra' \
+    --ignore-rpmlowver foo
+```
+
+With `build` storing `foo[a,b]>=1.2.0,>1.3a1,!=1.5,<2` and `bar>=2`:
+
+```
+python3-bar >= 2
+python3-foo+a
+python3-foo+b
+```

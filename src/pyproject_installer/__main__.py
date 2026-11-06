@@ -35,6 +35,7 @@ from .errors import (
     RunCommandError,
 )
 from .install_cmd import install_wheel
+from .lib import utils
 from .run_cmd import run_command
 
 logger = logging.getLogger(Path(__file__).parent.name)
@@ -93,6 +94,11 @@ def deps(
         ):
             parser.error(
                 "--depformatextra option must be used with --depformat",
+            )
+
+        if getattr(args, "ignore_rpmlowvers", []) and args.depformat is None:
+            parser.error(
+                "--ignore-rpmlowver option must be used with --depformat",
             )
 
         if hasattr(args, "candidates"):
@@ -296,6 +302,17 @@ def parse_regex(value: str) -> str:
     except re.error as e:
         raise argparse.ArgumentTypeError(
             f"invalid regex {value!r}: {e}",
+        ) from None
+    return value
+
+
+def parse_project_name(value: str) -> str:
+    """Check that a project name is valid; a bad one is a usage error."""
+    try:
+        utils.canonicalize_name(value, validate=True)
+    except utils.InvalidName:
+        raise argparse.ArgumentTypeError(
+            f"invalid project name {value!r}",
         ) from None
     return value
 
@@ -589,6 +606,24 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
         help=(
             "Regex patterns; exclude requirements whose PEP503-normalized "
             "names match one of these patterns (default: [])"
+        ),
+    )
+
+    destname = "ignore_rpmlowvers"
+    add_deps_argument(
+        subparser_eval,
+        destname,
+        "--ignore-rpmlowver",
+        dest=destname,
+        type=parse_project_name,
+        nargs="+",
+        default=[],
+        action=DeduplicatingAction,
+        help=(
+            "Project names; $rpmlowver substitution is empty for these "
+            "requirements, names are compared PEP503-normalized "
+            "(default: []). "
+            "Requires --depformat"
         ),
     )
 

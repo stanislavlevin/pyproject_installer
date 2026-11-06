@@ -162,6 +162,16 @@ DEFAULT_DEPS_ADD_CLI_KWARGS: dict[str, Any] = {
 }
 
 
+DEFAULT_DEPS_EVAL_CLI_KWARGS: dict[str, Any] = {
+    "srcnames": [],
+    "depformat": None,
+    "depformatextra": None,
+    "extra": None,
+    "excludes": [],
+    "ignore_rpmlowvers": [],
+}
+
+
 def test_version():
     result = subprocess.run(
         args=[sys.executable, "-m", "pyproject_installer", "--version"],
@@ -1324,13 +1334,10 @@ def test_deps_cli_eval_srcnames_deduplicated(mock_deps_command):
     deps_args = ["deps", action, "foo", "bar", "foo", "baz", "bar"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcnames": ["foo", "bar", "baz"],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        srcnames=["foo", "bar", "baz"],
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2012,13 +2019,7 @@ def test_deps_cli_eval_default(mock_deps_command):
     deps_args = ["deps", action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs: dict[str, Any] = {
-        "srcnames": [],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(DEFAULT_DEPS_EVAL_CLI_KWARGS)
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2035,13 +2036,7 @@ def test_deps_cli_eval_depsconfig(mock_deps_command):
     deps_args = ["deps", "--depsconfig", depsconfig, action]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs: dict[str, Any] = {
-        "srcnames": [],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(DEFAULT_DEPS_EVAL_CLI_KWARGS)
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2060,13 +2055,10 @@ def test_deps_cli_eval_selected(mock_deps_command, srcnames):
     deps_args.extend(srcnames)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcnames": srcnames,
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        srcnames=srcnames,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2083,13 +2075,10 @@ def test_deps_cli_eval_depformat(mock_deps_command):
     deps_args = ["deps", action, "--depformat", "$name"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs: dict[str, Any] = {
-        "srcnames": [],
-        "depformat": "$name",
-        "depformatextra": None,
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        depformat="$name",
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2113,13 +2102,11 @@ def test_deps_cli_eval_depformat_depformatextra(mock_deps_command):
     ]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs: dict[str, Any] = {
-        "srcnames": [],
-        "depformat": "$name$fextra",
-        "depformatextra": "+$extra",
-        "extra": None,
-        "excludes": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        depformat="$name$fextra",
+        depformatextra="+$extra",
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2158,13 +2145,10 @@ def test_deps_cli_eval_extra(mock_deps_command):
     deps_args = ["deps", action, "--extra", extra]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs: dict[str, Any] = {
-        "srcnames": [],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": extra,
-        "excludes": [],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        extra=extra,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2181,13 +2165,10 @@ def test_deps_cli_eval_exclude_deduplicated(mock_deps_command):
     deps_args = ["deps", action, "--exclude", "foo", "bar", "foo"]
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcnames": [],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": ["foo", "bar"],
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        excludes=["foo", "bar"],
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
@@ -2206,16 +2187,127 @@ def test_deps_cli_eval_exclude(excludes, mock_deps_command):
     deps_args.extend(excludes)
 
     r_args = (action, Path(depsconfig))
-    r_kwargs = {
-        "srcnames": [],
-        "depformat": None,
-        "depformatextra": None,
-        "extra": None,
-        "excludes": excludes,
-    }
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        excludes=excludes,
+    )
 
     project_main.main(deps_args)
     mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_ignore_rpmlowver(mock_deps_command):
+    """Run deps eval with ignore-rpmlowver
+
+    - mock deps_command
+    - check duplicates collapse, first-occurrence order preserved
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--depformat",
+        "$nname$rpmlowver",
+        "--ignore-rpmlowver",
+        "foo",
+        "bar",
+        "foo",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        depformat="$nname$rpmlowver",
+        ignore_rpmlowvers=["foo", "bar"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+def test_deps_cli_eval_ignore_rpmlowver_with_exclude(mock_deps_command):
+    """Run deps eval with both ignore-rpmlowver and exclude after sources
+
+    - mock deps_command
+    - check each option keeps its own values
+    """
+    action = "eval"
+    depsconfig = Path.cwd() / project_main.DEFAULT_CONFIG_NAME
+    deps_args = [
+        "deps",
+        action,
+        "--depformat",
+        "$nname$rpmlowver",
+        "build",
+        "run",
+        "--exclude",
+        "foo",
+        "--ignore-rpmlowver",
+        "bar",
+    ]
+
+    r_args = (action, Path(depsconfig))
+    r_kwargs = dict(
+        DEFAULT_DEPS_EVAL_CLI_KWARGS,
+        srcnames=["build", "run"],
+        depformat="$nname$rpmlowver",
+        excludes=["foo"],
+        ignore_rpmlowvers=["bar"],
+    )
+
+    project_main.main(deps_args)
+    mock_deps_command.assert_called_once_with(*r_args, **r_kwargs)
+
+
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_eval_ignore_rpmlowver_without_depformat(capsys):
+    """Run deps eval with ignore-rpmlowver and without depformat
+
+    - mock deps_command
+    - check error
+    """
+    action = "eval"
+    deps_args = ["deps", action, "--ignore-rpmlowver", "foo"]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = "--ignore-rpmlowver option must be used with --depformat"
+    assert expected_msg in captured.err
+
+
+@pytest.mark.parametrize("name", ("foo>=1", "foo[a]", "foo-", ""))
+@pytest.mark.usefixtures("mock_deps_command")
+def test_deps_cli_eval_ignore_rpmlowver_invalid_name(name, capsys):
+    """Run deps eval with ignore-rpmlowver and an invalid project name
+
+    - mock deps_command
+    - check error
+    """
+    action = "eval"
+    deps_args = [
+        "deps",
+        action,
+        "--depformat",
+        "$nname$rpmlowver",
+        "--ignore-rpmlowver",
+        name,
+    ]
+
+    with pytest.raises(SystemExit) as exc:
+        project_main.main(deps_args)
+
+    assert exc.value.code == ExitCodes.WRONG_USAGE
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    expected_msg = f"invalid project name {name!r}"
+    assert expected_msg in captured.err
 
 
 def test_deps_cli_add_help(capsys):

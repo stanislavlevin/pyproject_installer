@@ -1187,6 +1187,153 @@ def test_config_eval_rpmlowver_design_example(depsconfig, capsys):
 
 
 @pytest.mark.parametrize(
+    "ignore_rpmlowvers,expected",
+    (
+        # an exact name, not a prefix
+        (["foo"], "baz >= 3\nfoo-bar >= 2\nfoo-bar+a >= 2\n"),
+        (["foo-bar"], "baz >= 3\nfoo-bar\nfoo-bar+a\n"),
+        (["Foo_Bar"], "baz >= 3\nfoo-bar\nfoo-bar+a\n"),
+        (["foo", "foo-bar"], "baz >= 3\nfoo-bar\nfoo-bar+a\n"),
+    ),
+)
+def test_config_eval_ignore_rpmlowvers(
+    ignore_rpmlowvers,
+    expected,
+    depsconfig,
+    capsys,
+):
+    """
+    ignore_rpmlowvers: the named requirements print an empty $rpmlowver
+    substitution
+    """
+    input_conf = {
+        "sources": {
+            "foo": {
+                "srctype": "metadata",
+                "deps": ["foo-bar[a]>=1.2", "foo.bar>=2", "baz>=3"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$fextra$rpmlowver",
+        depformatextra="+$nextra",
+        ignore_rpmlowvers=ignore_rpmlowvers,
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == expected
+
+
+def test_config_eval_ignore_rpmlowvers_across_sources(depsconfig, capsys):
+    """ignore_rpmlowvers: a named requirement has no limit from any source"""
+    input_conf = {
+        "sources": {
+            "build": {"srctype": "metadata", "deps": ["foo>=1.2"]},
+            "run": {"srctype": "metadata", "deps": ["foo>=2"]},
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$rpmlowver",
+        ignore_rpmlowvers=["foo"],
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "foo\n"
+
+
+def test_config_eval_ignore_rpmlowvers_with_exclude(depsconfig, capsys):
+    """
+    ignore_rpmlowvers: a name in both excludes and ignore_rpmlowvers is not
+    printed, other ignored names are printed without the lower limit
+    """
+    input_conf = {
+        "sources": {
+            "foo": {
+                "srctype": "metadata",
+                "deps": ["foo>=1.2", "bar>=2", "baz>=3"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$rpmlowver",
+        excludes=["^foo$"],
+        ignore_rpmlowvers=["foo", "baz"],
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "bar >= 2\nbaz\n"
+
+
+def test_config_eval_ignore_rpmlowvers_without_rpmlowver(depsconfig, capsys):
+    """
+    ignore_rpmlowvers: depformat without $rpmlowver substitution prints the
+    same as without ignore_rpmlowvers
+    """
+    input_conf = {
+        "sources": {
+            "foo": {
+                "srctype": "metadata",
+                "deps": ["foo[a]>=1.2", "bar>=2"],
+            },
+        },
+    }
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    deps_command(
+        "eval",
+        depsconfig_path,
+        srcnames=[],
+        depformat="$nname$fextra",
+        depformatextra="+$nextra",
+        ignore_rpmlowvers=["foo", "baz"],
+    )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert captured.out == "bar\nfoo+a\n"
+
+
+def test_config_eval_ignore_rpmlowvers_without_depformat(depsconfig, capsys):
+    """Eval with ignore_rpmlowvers and without depformat"""
+    input_conf = {"sources": {"foo": {"srctype": "metadata"}}}
+    depsconfig_path = depsconfig(json.dumps(input_conf))
+
+    expected_err = re.escape(
+        "'ignore_rpmlowvers' must be used with 'depformat'",
+    )
+    expected_err = f"^{expected_err}"
+    with pytest.raises(ValueError, match=expected_err):
+        deps_command(
+            "eval",
+            depsconfig_path,
+            srcnames=[],
+            ignore_rpmlowvers=["foo"],
+        )
+
+    captured = capsys.readouterr()
+    assert not captured.err
+    assert not captured.out
+
+
+@pytest.mark.parametrize(
     "data",
     (
         (["foo"], ["foo"]),
