@@ -427,6 +427,10 @@ Note: venv's directory name is `.run_venv`.
 Collect PEP 508 requirements from different sources, store and evaluate
 them in Python environment.
 
+Only one process may manage a shared config file or metadata cache at a time.
+Run `deps` and `python_dep` one at a time when using the same config file or
+metadata cache.
+
 ```console
 python -m pyproject_installer deps --help
 ```
@@ -725,6 +729,99 @@ Deconfigure source of Python dependencies.
 
 See `python -m pyproject_installer deps delete --help` for full options.
 
+
+### Python version dependency
+
+`python_dep` collects the project's Python version constraint from core
+metadata's `Requires-Python`. It shares the dependency config with `deps`,
+storing the constraint in the optional top-level `requires_python` field.
+Each command validates its own fields and preserves the other's data. Use
+`python_dep --depsconfig PATH` to select a different config file.
+
+#### sync
+
+```console
+python -m pyproject_installer python_dep sync
+python -m pyproject_installer python_dep sync --verify
+```
+
+`sync` creates a missing config and collects metadata in the same call. It
+stores a normalized PEP 440 constraint, or removes `requires_python` if the
+metadata does not declare one. A declared constraint must be valid.
+Existing configs without the field remain valid.
+
+An empty `Requires-Python` field, including a whitespace-only value, means no
+version restriction and is treated as absent.
+
+As with the `metadata` dependency source, install the project's PEP 518 and
+PEP 517 build dependencies first. Both commands use the same validated
+metadata cache at `dist/metadata_cache`; delete that file to rebuild metadata.
+
+With `--verify`, changes are saved first, then printed as an `old`/`new` JSON
+diff under `requires_python`. An absent side is omitted. Adding, changing,
+or removing the constraint exits with code `4`; an unchanged constraint
+exits with code `0`. Equivalent parsed specifiers compare equal. A first
+sync with a declared constraint also counts as a change.
+
+#### print
+
+```console
+python -m pyproject_installer python_dep print
+python -m pyproject_installer python_dep print --format='python3$rpmlowver'
+```
+
+Bare `print` emits the normalized stored constraint, or nothing if absent.
+`--format` uses safe template substitution once, even without a constraint:
+
+- `$specifier`: the full constraint in `packaging`'s normalized PEP 440
+  format (the string form of `packaging.specifiers.SpecifierSet`), or empty
+  if absent.
+- `$rpmlowver`: lower version limit converted for RPM, with a leading space
+  (e.g. ` >= 3.12`), or empty without one.
+
+  `$rpmlowver` prints only the lower limit. If the constraint contains multiple
+  lower bounds, it uses the strictest one. Only the release numbers are
+  kept, and trailing zeros are dropped (`>=3.12.0rc1` gives `>= 3.12`,
+  `>=3.12.0.post1` gives `>= 3.12`), so RPM, which compares versions differently
+  from PEP 440, never rejects a version PEP 440 accepts. Upper limits and
+  exclusions give no lower limit. `==` and `===` give no limit: an exact pin
+  usually names the version upstream tested with, not the oldest one that
+  works. Wildcard equality such as `==3.12.*` gives `>= 3.12`.
+
+A format cannot combine `$specifier` and `$rpmlowver`; doing so is a usage
+error (exit code `2`). Escaped dollar signs remain literals.
+
+> *Example:* `python -m pyproject_installer python_dep print --format='python3 $specifier'`
+>
+> *Example output* - stored constraint `>=3.12,<4`:
+>
+> ```
+> python3 <4,>=3.12
+> ```
+
+> *Example:* `python -m pyproject_installer python_dep print --format='python3$rpmlowver'`
+>
+> *Example output* - stored constraint `>=3.12,<4`:
+>
+> ```
+> python3 >= 3.12
+> ```
+>
+> *Example output* - no stored constraint:
+>
+> ```
+> python3
+> ```
+
+> *Example:* `python -m pyproject_installer python_dep print --format=python3`
+>
+> *Example output* - with or without a stored constraint:
+>
+> ```
+> python3
+> ```
+
+Exactly empty output is suppressed; nonempty output keeps its whitespace.
 
 ### Bash completion
 

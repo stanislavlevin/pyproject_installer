@@ -36,6 +36,7 @@ from .errors import (
 )
 from .install_cmd import install_wheel
 from .lib import utils
+from .python_dep_cmd import python_dep_command, validate_format
 from .run_cmd import run_command
 
 logger = logging.getLogger(Path(__file__).parent.name)
@@ -303,6 +304,15 @@ def parse_regex(value: str) -> str:
         raise argparse.ArgumentTypeError(
             f"invalid regex {value!r}: {e}",
         ) from None
+    return value
+
+
+def parse_python_dep_format(value: str) -> str:
+    """Reject conflicting Python dependency substitutions as a usage error."""
+    try:
+        validate_format(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
     return value
 
 
@@ -751,6 +761,63 @@ def deps_subparsers(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def python_dep(
+    args: argparse.Namespace,
+    _parser: argparse.ArgumentParser,
+) -> None:
+    """Run the Python dependency action.
+
+    The sync subcommand exits with code 4 if verification finds changes.
+    """
+    kwargs = {x: getattr(args, x) for x in args.main_args}
+    try:
+        python_dep_command(args.action, args.depsconfig, **kwargs)
+    except DepsUnsyncedError:
+        sys.exit(ExitCodes.SYNC_VERIFY_ERROR)
+
+
+def python_dep_subparsers(parser: argparse.ArgumentParser) -> None:
+    """Configure subcommands for managing Python version constraints."""
+    subparsers = parser.add_subparsers(
+        title="python_dep subcommands",
+        help="--help for additional help",
+        dest="action",
+        required=True,
+    )
+    parser_sync = subparsers.add_parser(
+        "sync",
+        description="Sync the stored Python version constraint from metadata.",
+    )
+    parser_sync.add_argument(
+        "--verify",
+        action="store_true",
+        help=(
+            "Save changes, then print the diff and exit with code "
+            f"{ExitCodes.SYNC_VERIFY_ERROR} if the constraint changed"
+        ),
+    )
+    parser_sync.set_defaults(main=python_dep, main_args=["verify"])
+    parser_print = subparsers.add_parser(
+        "print",
+        description="Print the stored Python version constraint.",
+    )
+    parser_print.add_argument(
+        "--format",
+        dest="depformat",
+        metavar="FORMAT",
+        type=parse_python_dep_format,
+        help=(
+            "format of Python version constraint to print "
+            "(default: PEP440 format). Supported substitutions: "
+            "$specifier - full normalized constraint, or '' if absent; "
+            "$rpmlowver - lower version limit converted for RPM, with a "
+            "leading space (e.g. ' >= 3.12'), or '' without one. "
+            "$specifier and $rpmlowver cannot be used together."
+        ),
+    )
+    parser_print.set_defaults(main=python_dep, main_args=["depformat"])
+
+
 def main_parser(prog: str) -> MainArgumentParser:
     parser = MainArgumentParser(
         description=(
@@ -988,6 +1055,26 @@ def main_parser(prog: str) -> MainArgumentParser:
     )
 
     deps_subparsers(parser_deps)
+
+    # python_dep subcli
+    parser_python_dep = subparsers.add_parser(
+        "python_dep",
+        description=(
+            "Collect, store, verify and print the project's Python version "
+            "constraint from core metadata's Requires-Python."
+        ),
+    )
+    parser_python_dep.add_argument(
+        "--depsconfig",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "configuration file to use "
+            f"(default: {{cwd}}/{DEFAULT_CONFIG_NAME})%(default).0s"
+        ),
+    )
+    python_dep_subparsers(parser_python_dep)
 
     # completion subcli
     parser_completion = subparsers.add_parser(
