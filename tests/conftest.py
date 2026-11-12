@@ -137,6 +137,28 @@ def tmpdir(tmp_path: Path) -> Iterator[Path]:
 
 
 @pytest.fixture
+def depsconfig_path(
+    tmpdir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    depsconfig_path = tmpdir / "foo.json"
+    monkeypatch.chdir(tmpdir)
+    return depsconfig_path
+
+
+@pytest.fixture
+def depsconfig(depsconfig_path: Path) -> Callable[..., Path]:
+    """Create deps config"""
+    default_content = '{"sources": {"foo": {"srctype": "metadata"}}}'
+
+    def _gen_depsconfig(content: str = default_content) -> Path:
+        depsconfig_path.write_text(content, encoding="utf-8")
+        return depsconfig_path
+
+    return _gen_depsconfig
+
+
+@pytest.fixture
 def wheeldir(tmpdir: Path) -> Path:
     wheeldir = tmpdir / "dist"
     wheeldir.mkdir()
@@ -254,11 +276,14 @@ def pyproject_metadata(
     def _core_metadata(
         headers: list[str] = default_content_fields,
         reqs: tuple[str, ...] = (),
+        python_req: str | None = None,
     ) -> Path:
         content_fields = [
             *headers,
             *(f"Requires-Dist: {req}" for req in reqs),
         ]
+        if python_req is not None:
+            content_fields.append(f"Requires-Python: {python_req}")
 
         be_content = textwrap.dedent(
             """\
@@ -300,10 +325,13 @@ def pyproject_metadata_wheel(
     def _core_metadata(
         headers: list[str] = default_content_fields,
         reqs: tuple[str, ...] = (),
+        python_req: str | None = None,
     ) -> Path:
         contents = wheel_contents()
         content_fields = list(headers)
         content_fields.extend(f"Requires-Dist: {x}" for x in reqs)
+        if python_req is not None:
+            content_fields.append(f"Requires-Python: {python_req}")
         metadata_content = "\n".join(content_fields) + "\n"
         contents["foo-1.0.dist-info/METADATA"] = metadata_content
         wheel_path = wheel(contents=contents)

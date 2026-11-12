@@ -17,6 +17,28 @@ NONEXISTENT_SOURCE_DATA = (
 )
 
 
+def test_deps_ignores_invalid_requires_python(depsconfig):
+    """Sync sources without validating or changing Python constraint data."""
+    expected_config = {"sources": {}, "requires_python": ">=invalid"}
+    config_path = depsconfig(json.dumps(expected_config))
+
+    deps_command("sync", config_path)
+
+    actual_config = json.loads(config_path.read_text(encoding="utf-8"))
+    assert actual_config == expected_config
+
+
+def test_deps_preserves_requires_python(depsconfig):
+    """Syncing dependency sources preserves the stored Python constraint."""
+    expected_config = {"sources": {}, "requires_python": "<4, >=3.12"}
+    config_path = depsconfig(json.dumps(expected_config))
+
+    deps_command("sync", config_path)
+
+    actual_config = json.loads(config_path.read_text(encoding="utf-8"))
+    assert actual_config == expected_config
+
+
 @pytest.mark.parametrize(
     "config_data",
     (

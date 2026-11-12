@@ -88,6 +88,9 @@ is the caller's to refresh -- to force a fresh build, delete the file
 (or clean `dist/`). There is no automatic invalidation (see the
 trade-off below).
 
+Only one process may use a tree's metadata cache at a time. Concurrent metadata
+collection is unsupported.
+
 ### Behaviour
 - The wheel fallback is unchanged and still allowed -- the metadata is
   required regardless of how cheaply the backend can produce it. The

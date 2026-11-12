@@ -1,13 +1,11 @@
-import json
+"""Manage dependency sources stored in the shared configuration."""
+
 import logging
 import re
 import sys
 from collections import deque
-from collections.abc import Collection, Iterator, Mapping
-from copy import deepcopy
-from pathlib import Path
+from collections.abc import Collection, Iterator
 from string import Template
-from typing import Any, TypedDict
 
 from ..errors import (
     DepsNoCandidateError,
@@ -24,8 +22,7 @@ from ..lib import (
 from ..lib.normalization import pep503_normalized_name
 from .collectors import get_collector
 from .collectors.collector import Collector
-
-DEFAULT_CONFIG_NAME = "pyproject_deps.json"
+from .deps_config_base import DepsConfig, DepsConfigSourceSpec, DepsConfigType
 
 logger = logging.getLogger(__name__)
 
@@ -75,37 +72,12 @@ def rpm_lower_limit(version_specs: specifiers.SpecifierSet) -> str:
     return f"{operator} {release}"
 
 
-class DepsConfigSourceBaseType(TypedDict):
-    srctype: str
-
-
-class DepsConfigSourceOptType(TypedDict, total=False):
-    deps: tuple[str, ...]
-    srcargs: tuple[str, ...]
-
-
-class DepsConfigSourceSpec(DepsConfigSourceBaseType, DepsConfigSourceOptType):
-    pass
-
-
-class DepsConfigType(TypedDict):
-    sources: dict[str, DepsConfigSourceSpec]
-
-
-class DepsSourcesConfig:
-    def __init__(self, file: str | Path | None = None) -> None:
-        self.file = (
-            Path.cwd() / DEFAULT_CONFIG_NAME if file is None else Path(file)
-        )
-        self._config: DepsConfigType | None = None
+class DepsSourcesConfig(DepsConfig):
+    """Manage dependency sources using shared config storage and validation."""
 
     def validate_config(self, config: DepsConfigType) -> None:
-        """Very basic validation of required fields"""
-        if not isinstance(config, dict):
-            raise DepsSourcesConfigError(
-                f"Config should be dict, given: {config!r}",
-            )
-
+        """Validate dependency sources and their stored requirements."""
+        super().validate_config(config)
         if "sources" not in config:
             raise DepsSourcesConfigError("Missing 'sources' field in config")
 
@@ -133,54 +105,34 @@ class DepsSourcesConfig:
                         f"Invalid stored PEP508 requirement: {req}",
                     ) from None
 
-    @property
-    def config(self) -> DepsConfigType:
-        if self._config is None:
-            with self.file.open(encoding="utf-8") as f:
-                try:
-                    config = json.load(f)
-                except json.JSONDecodeError as e:
-                    raise DepsSourcesConfigError(
-                        f"Invalid config file: {self.file}: {e}",
-                    ) from e
-                self.validate_config(config)
-                self._config = config
-            logger.debug("Loaded config file %s", self.file)
-        return self._config
-
-    @config.setter
-    def config(self, value: DepsConfigType) -> None:
-        self._config = deepcopy(value)
-        self.save()
-
-    def set_default(self) -> None:
-        logger.debug("Initializing default config")
-        self.config = {"sources": {}}
-
-    def save(self) -> None:
-        self.validate_config(self.config)
-        # first parse the whole config
-        json_config = self._to_json(self.config)
-        self.file.write_text(json_config, encoding="utf-8")
-        logger.debug("Saved config file %s", self.file)
+    def validate_collector(
+        self,
+        srctype: str,
+        srcargs: tuple[str, ...],
+    ) -> Collector:
+        """Validate a source type and its arguments and create its collector."""
+        collector_cls = get_collector(srctype)
+        if collector_cls is None:
+            raise DepsSourcesConfigError(
+                f"Unsupported collector type: {srctype}",
+            )
+        try:
+            return collector_cls(*srcargs)
+        except TypeError as e:
+            raise DepsSourcesConfigError(
+                f"Unsupported arguments of collector {srctype}: {e!s}",
+            ) from None
 
     def show(self, srcnames: tuple[str, ...] = ()) -> None:
+        """Show configuration and stored dependencies for selected sources."""
         show_conf: DepsConfigType = {"sources": {}}
         for srcname, source in self.iter_sources(srcnames):
             show_conf["sources"][srcname] = source
         self._show(show_conf)
 
-    def _to_json(self, conf: Mapping[str, Any]) -> str:
-        return json.dumps(conf, indent=2, sort_keys=True) + "\n"
-
-    def _show(self, conf: Mapping[str, Any]) -> None:
-        sys.stdout.write(self._to_json(conf))
-        # flush data (stdout) so it precedes any later diagnostics (stderr) in
-        # a merged stream, regardless of stdout block-buffering when piped
-        sys.stdout.flush()
-
     @property
     def sources(self) -> dict[str, DepsConfigSourceSpec]:
+        """Return the configured dependency sources."""
         return self.config["sources"]
 
     def _resolve_candidate(
@@ -381,23 +333,6 @@ class DepsSourcesConfig:
 
         for srcname in srcnames or self.sources:
             yield srcname, self.sources[srcname]
-
-    def validate_collector(
-        self,
-        srctype: str,
-        srcargs: tuple[str, ...],
-    ) -> Collector:
-        collector_cls = get_collector(srctype)
-        if collector_cls is None:
-            raise DepsSourcesConfigError(
-                f"Unsupported collector type: {srctype}",
-            )
-        try:
-            return collector_cls(*srcargs)
-        except TypeError as e:
-            raise DepsSourcesConfigError(
-                f"Unsupported arguments of collector {srctype}: {e!s}",
-            ) from None
 
     def collect(self, srctype: str, srcargs: tuple[str, ...]) -> Iterator[str]:
         collector = self.validate_collector(srctype, srcargs)
