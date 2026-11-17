@@ -90,7 +90,6 @@ jobs:
 
     - name: Unit tests with coverage
       run: |
-        export COVERAGE_PROCESS_START="$(pwd)/pyproject.toml"
         .venv/bin/pytest -vra --cov --cov-config=pyproject.toml tests/unit
 
   unit_tests_self_run:
