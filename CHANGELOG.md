@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 History for releases prior to the first entry below is not captured here —
 see git tags and commit history for earlier changes.
 
+## [0.8.0] - 2026-11-20
+
+### Added
+- feat: add python_dep for Python version constraints ([#201](https://github.com/stanislavlevin/pyproject_installer/issues/201))
+
 ## [0.7.2] - 2026-11-06
 
 ### Added
